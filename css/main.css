@@ -1,15 +1,77 @@
-#map {
-    width: 100vw;
-    height: 100vh;
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600&display=swap');
+
+* {
+    box-sizing: border-box;
 }
 
-/* body, #map { */
-    /* background-image: url(https://gw.alicdn.com/tfs/TB1xzbUumBYBeNjy0FeXXbnmFXa-125-121.png); */
-/* } */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Noto Sans', sans-serif;
+    color: #1f2933;
+    background: linear-gradient(135deg, #f9fbff 0%, #eef2f7 50%, #fdf7ff 100%);
+    min-height: 100vh;
+}
+
+.page {
+    padding: 1.5rem 1rem 3rem;
+}
+
+.page__header {
+    max-width: 960px;
+    margin: 0 auto 1.5rem;
+    text-align: center;
+}
+
+.page__title {
+    margin: 0 0 0.5rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.page__description {
+    margin: 0;
+    color: #4a5568;
+    line-height: 1.6;
+}
+
+.map-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 18px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.06);
+}
+
+#map {
+    width: 100%;
+    height: 70vh;
+    max-height: 780px;
+    min-height: 360px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+@media (max-width: 768px) {
+    .page {
+        padding: 1rem 0.75rem 2rem;
+    }
+
+    .map-container {
+        padding: 0.75rem;
+    }
+
+    #map {
+        height: 65vh;
+        max-height: none;
+        min-height: 320px;
+    }
+}
 
 .highcharts-tooltip span[data-z-index] {
     padding: .4em .8em; }
-  
+
 .tooltip {
     display: flex;
     flex-direction: column; }
@@ -18,19 +80,19 @@
 font-size: .8em; }
 
 .profile {
-display: flex;
-flex-direction: row; }
+ display: flex;
+ flex-direction: row; }
 .profile > .value {
     margin-left: 1em; }
 
 .list {
-display: flex;
-flex-direction: column; }
+ display: flex;
+ flex-direction: column; }
 
 .pinfo {
-display: flex;
-flex-direction: row;
-font-size: .8em; }
+ display: flex;
+ flex-direction: row;
+ font-size: .8em; }
 .pinfo > .pname {
     min-width: 3em; }
 .pinfo > .city, .pinfo > .school {
