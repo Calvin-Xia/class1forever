@@ -6,9 +6,17 @@
     <link rel="stylesheet" type="text/css" href="css/main.css">
 </head>
 <body>
-    <!-- 图表容器 DOM -->
-    <div id="map"></div>
-    
+    <main class="page">
+        <header class="page__header">
+            <h1 class="page__title">蹭饭地图</h1>
+            <p class="page__description">在这里探索各地同学的蹭饭足迹，点击地图深入查看每个省份和城市的精彩故事。</p>
+        </header>
+        <div class="map-container">
+            <!-- 图表容器 DOM -->
+            <div id="map"></div>
+        </div>
+    </main>
+
     <!-- 引入 highcharts -->
     <script src="https://img.hcharts.cn/highmaps/highmaps.js"></script>
     <script src="https://img.hcharts.cn/highcharts/modules/drilldown.js"></script>
@@ -46,7 +54,7 @@
     <script src='js/province/qinghai.js'></script>
     <script src='js/province/ningxia.js'></script>
     <script src='js/province/xinjiang.js'></script>
-    
+
     <script src='js/data.js'></script>
     <script src='js/map.js'></script>
 </body>
