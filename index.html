@@ -57,5 +57,18 @@
 
     <script src='js/data.js'></script>
     <script src='js/map.js'></script>
+
+    <div class="page__note" id="interaction-note" aria-live="polite"></div>
+    <script>
+        const isMobile = /mobile|android|iphone/i.test(navigator.userAgent);
+        const interactionNote = document.getElementById('interaction-note');
+        const interactionMessage = isMobile
+            ? '移动端请长按查看详细信息，可能存在交互异常，推荐在桌面端体验以获得最佳效果。'
+            : '在地图上悬停查看提示，点击省份或城市即可查看更多详细信息。';
+
+        if (interactionNote) {
+            interactionNote.textContent = interactionMessage;
+        }
+    </script>
 </body>
 </html>
