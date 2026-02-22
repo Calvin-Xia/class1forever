@@ -32,105 +32,189 @@ for (let p of Object.values(provinces)) {
         }
     }
 }
-// 初始化图表
+
 let map = new Highcharts.Map('map', {
-chart: {
-    events: {
-        drilldown: function (e) {
-            let name = e.point.name;
-            this.setTitle(null, {text: name});
+    chart: {
+        backgroundColor: 'transparent',
+        style: {
+            fontFamily: "'Nunito', sans-serif"
         },
-        drillup: function () {
-            data = Highcharts.maps['cn/china'];
-            this.setTitle(null, {
-                text: '中国'
-            });
+        events: {
+            drilldown: function (e) {
+                let name = e.point.name;
+                this.setTitle(null, {text: name});
+            },
+            drillup: function () {
+                data = Highcharts.maps['cn/china'];
+                this.setTitle(null, {
+                    text: '中国'
+                });
+            }
         }
-    }
-},
-
-title: {
-    text: '蹭饭地图',
-    style: {"color": "#333333", "fontSize": "24px"}
-},
-
-subtitle: {
-    text: '中国',
-    floating: true,
-    y: 50,
-    style: {
-        fontSize: '16px'
-    }
-},
-
-tooltip: {
-    useHTML: true,
-    backgroundColor: '#357fee',
-    borderRadius: 5,
-    padding: 12,
-    style: {
-        'color': '#dddddd',
-        'cursor': 'default',
-        'fontSize': '14px',
-        'pointerEvents': 'none',
-        'whiteSpace': 'nowrap'
     },
-    formatter: formatter
-},
 
-colorAxis: {
-    min: 0,
-    max: 50,
-    type: 'linear',
-    minColor: '#ffffff',
-    maxColor: '#006cee',
-    stops: [
-        [0, '#ffffff'],
-        [0.02, '#a4d9ee'],
-        [0.04, '#7ebaee'],
-        [0.1, '#357fee'],
-        [0.5, '#0c70ee'],
-        [1, '#006cee']
-    ]
-},
+    title: {
+        text: '蹭饭地图',
+        style: {
+            "color": "#2d2a26",
+            "fontSize": "28px",
+            "fontFamily": "'DM Serif Display', Georgia, serif",
+            "fontWeight": "400",
+            "letterSpacing": "0.05em"
+        },
+        margin: 20
+    },
 
-series: [{
-    data: data,
-    name: '各省人数',
-    joinBy: 'name',
-    tooltip: {
-        pointFormat: `{point.name}: {point.value}`
-    }
-}],
-
-drilldown:
-    {
-        activeDataLabelStyle: {
-            color: '#FFFFFF',
-            textDecoration:
-                'none',
-            textShadow:
-                '0 0 3px #000000'
+    subtitle: {
+        text: '中国',
+        floating: true,
+        y: 50,
+        style: {
+            fontSize: '16px',
+            color: '#5c5650',
+            fontFamily: "'Nunito', sans-serif"
         }
-        ,
+    },
+
+    tooltip: {
+        useHTML: true,
+        backgroundColor: 'transparent',
+        borderWidth: 0,
+        borderRadius: 0,
+        padding: 0,
+        shadow: false,
+        hideDelay: 500,
+        style: {
+            'pointerEvents': 'auto'
+        },
+        formatter: formatter,
+        positioner: function (labelWidth, labelHeight, point) {
+            let chart = this.chart;
+            let tooltipX = point.plotX + chart.plotLeft - labelWidth / 2;
+            let tooltipY = point.plotY + chart.plotTop - labelHeight - 15;
+            
+            if (tooltipX < 10) tooltipX = 10;
+            if (tooltipX + labelWidth > chart.chartWidth - 10) {
+                tooltipX = chart.chartWidth - labelWidth - 10;
+            }
+            if (tooltipY < 10) {
+                tooltipY = point.plotY + chart.plotTop + 20;
+            }
+            
+            return { x: tooltipX, y: tooltipY };
+        }
+    },
+
+    colorAxis: {
+        min: 0,
+        max: 15,
+        type: 'linear',
+        minColor: '#f5efe6',
+        maxColor: '#a85a3a',
+        stops: [
+            [0, '#f5efe6'],
+            [0.167, '#e8c4a8'],
+            [0.333, '#d9a87c'],
+            [0.5, '#c4704b'],
+            [0.75, '#b56540'],
+            [1, '#a85a3a']
+        ]
+    },
+
+    legend: {
+        enabled: true,
+        layout: 'horizontal',
+        align: 'center',
+        verticalAlign: 'bottom',
+        itemStyle: {
+            color: '#5c5650',
+            fontFamily: "'Nunito', sans-serif",
+            fontSize: '12px'
+        }
+    },
+
+    series: [{
+        data: data,
+        name: '各省人数',
+        joinBy: 'name',
+        borderColor: '#e0d8cc',
+        borderWidth: 1,
+        states: {
+            hover: {
+                borderColor: '#c4704b',
+                borderWidth: 2,
+                brightness: 0.1
+            }
+        },
+        tooltip: {
+            pointFormat: `{point.name}: {point.value}`
+        }
+    }],
+
+    drilldown: {
+        activeDataLabelStyle: {
+            color: '#2d2a26',
+            textDecoration: 'none',
+            textShadow: 'none',
+            fontFamily: "'Nunito', sans-serif",
+            fontWeight: '600'
+        },
         drillUpButton: {
             relativeTo: 'spacingBox',
-            position:
-                {
-                    x: 0,
-                    y: 60
+            position: {
+                x: 0,
+                y: 60
+            },
+            theme: {
+                fill: '#faf7f2',
+                'stroke-width': 1,
+                stroke: '#c4704b',
+                r: 6,
+                style: {
+                    color: '#2d2a26',
+                    fontFamily: "'Nunito', sans-serif",
+                    fontWeight: '600'
+                },
+                states: {
+                    hover: {
+                        fill: '#c4704b',
+                        style: {
+                            color: '#ffffff'
+                        }
+                    }
                 }
+            }
         },
         series: makeSeries()
     },
 
-mapNavigation: {
-    enabled: true,
-    buttonOptions:
-        {
-            verticalAlign: 'bottom'
+    mapNavigation: {
+        enabled: true,
+        buttonOptions: {
+            verticalAlign: 'bottom',
+            theme: {
+                fill: '#faf7f2',
+                'stroke-width': 1,
+                stroke: '#e0d8cc',
+                r: 6,
+                style: {
+                    color: '#5c5650'
+                },
+                states: {
+                    hover: {
+                        fill: '#e8a87c',
+                        style: {
+                            color: '#2d2a26'
+                        }
+                    }
+                }
+            }
         }
-}
+    },
+
+    credits: {
+        enabled: false
+    }
 });
 
 function makeSeries() {
@@ -141,9 +225,25 @@ function makeSeries() {
                 id: p.name,
                 name: p.name,
                 data: p.subData,
+                borderColor: '#e0d8cc',
+                borderWidth: 1,
+                states: {
+                    hover: {
+                        borderColor: '#c4704b',
+                        borderWidth: 2,
+                        brightness: 0.1
+                    }
+                },
                 dataLabels: {
                     enabled: true,
-                    format: '{point.name}'
+                    format: '{point.name}',
+                    style: {
+                        color: '#5c5650',
+                        fontFamily: "'Nunito', sans-serif",
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        textOutline: 'none'
+                    }
                 }
             })
         }

@@ -1,23 +1,55 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="蹭饭地图 - 探索各地同学的足迹，发现每个省份和城市的精彩故事">
     <title>蹭饭地图</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="css/main.css">
 </head>
 <body>
-    <main class="page">
-        <header class="page__header">
-            <h1 class="page__title">蹭饭地图</h1>
-            <p class="page__description">在这里探索各地同学的足迹，点击地图深入查看每个省份和城市的精彩故事。</p>
-        </header>
-        <div class="map-container">
-            <!-- 图表容器 DOM -->
-            <div id="map"></div>
+    <div class="page-wrapper">
+        <div class="decorative-bg" aria-hidden="true">
+            <div class="decorative-circle decorative-circle--1"></div>
+            <div class="decorative-circle decorative-circle--2"></div>
+            <div class="decorative-circle decorative-circle--3"></div>
+            <div class="decorative-line decorative-line--1"></div>
+            <div class="decorative-line decorative-line--2"></div>
         </div>
-    </main>
+        
+        <main class="page" role="main">
+            <header class="page__header">
+                <div class="header-content">
+                    <div class="title-wrapper">
+                        <span class="title-decoration title-decoration--left" aria-hidden="true"></span>
+                        <h1 class="page__title">蹭饭地图</h1>
+                        <span class="title-decoration title-decoration--right" aria-hidden="true"></span>
+                    </div>
+                    <p class="page__description">探索各地同学的足迹，点击地图，深入每个省份和城市的精彩故事。</p>
+                </div>
+            </header>
+            
+            <section class="map-section" aria-label="互动地图">
+                <div class="map-container">
+                    <div class="map-frame">
+                        <div class="map-frame__corner map-frame__corner--tl" aria-hidden="true"></div>
+                        <div class="map-frame__corner map-frame__corner--tr" aria-hidden="true"></div>
+                        <div class="map-frame__corner map-frame__corner--bl" aria-hidden="true"></div>
+                        <div class="map-frame__corner map-frame__corner--br" aria-hidden="true"></div>
+                        <div id="map" role="img" aria-label="中国地图，显示同学分布"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
 
-    <!-- 引入 highcharts -->
+        <footer class="page__footer">
+            <div class="note-container" id="interaction-note" aria-live="polite" role="status"></div>
+        </footer>
+    </div>
+
     <script src="https://img.hcharts.cn/highmaps/highmaps.js"></script>
     <script src="https://img.hcharts.cn/highcharts/modules/drilldown.js"></script>
     <script src='js/nunjucks.min.js'></script>
@@ -58,7 +90,6 @@
     <script src='js/data.js'></script>
     <script src='js/map.js'></script>
 
-    <div class="page__note" id="interaction-note" aria-live="polite"></div>
     <script>
         const isMobile = /mobile|android|iphone/i.test(navigator.userAgent);
         const interactionNote = document.getElementById('interaction-note');
@@ -69,6 +100,12 @@
         if (interactionNote) {
             interactionNote.textContent = interactionMessage;
         }
+
+        document.addEventListener('wheel', function(e) {
+            if (e.target.closest('.tooltip .list')) {
+                e.stopPropagation();
+            }
+        }, { capture: true });
     </script>
 </body>
 </html>
