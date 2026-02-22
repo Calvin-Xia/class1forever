@@ -1,0 +1,10 @@
+{
+  "name": "class1forever.github.io",
+  "version": "1.0.0",
+  "description": "蹭饭地图",
+  "scripts": {
+    "build": "node build.js"
+  },
+  "author": "",
+  "license": "MIT"
+}
