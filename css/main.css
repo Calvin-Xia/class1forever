@@ -402,11 +402,28 @@ body {
     overflow: hidden;
 }
 
+.highcharts-credit {
+    position: absolute;
+    bottom: 12px;
+    right: 16px;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    z-index: 10;
+    opacity: 0.7;
+    transition: opacity var(--transition-fast);
+}
+
+.highcharts-credit:hover {
+    opacity: 1;
+    color: var(--color-accent-primary);
+}
+
 .page__footer {
     position: relative;
     z-index: 1;
     max-width: 1200px;
-    margin: var(--spacing-xl) auto 0;
+    margin: var(--spacing-md) auto 0;
     animation: footer-enter 0.8s ease-out 0.6s both;
 }
 
