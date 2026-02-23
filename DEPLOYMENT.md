@@ -29,7 +29,7 @@
 ```json
 [
     {
-        "name": "程语晗",
+        "name": "xxx",
         "school": "北京电子科技学院",
         "city": "丰台区",
         "province": "北京"
