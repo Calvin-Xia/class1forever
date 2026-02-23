@@ -150,7 +150,7 @@ body {
 .page {
     position: relative;
     z-index: 1;
-    padding: var(--spacing-xl) var(--spacing-md) var(--spacing-3xl);
+    padding: var(--spacing-xl) var(--spacing-md) var(--spacing-lg);
     max-width: 1400px;
     margin: 0 auto;
     animation: page-enter 0.8s ease-out;
