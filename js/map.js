@@ -49,6 +49,9 @@ let map = new Highcharts.Map('map', {
                 this.setTitle(null, {
                     text: '中国'
                 });
+            },
+            mouseOut: function () {
+                this.tooltip.hide(0);
             }
         }
     },
@@ -83,23 +86,34 @@ let map = new Highcharts.Map('map', {
         borderRadius: 0,
         padding: 0,
         shadow: false,
-        hideDelay: 500,
+        followPointer: false,
+        showDelay: 250,
+        hideDelay: 250,
         style: {
             'pointerEvents': 'auto'
         },
         formatter: formatter,
         positioner: function (labelWidth, labelHeight, point) {
             let chart = this.chart;
-            let tooltipX = point.plotX + chart.plotLeft - labelWidth / 2;
-            let tooltipY = point.plotY + chart.plotTop - labelHeight - 15;
+            let pointX = point.plotX || 0;
+            let pointY = point.plotY || 0;
+            
+            let offsetX = 1;
+            let offsetY = 1;
+            
+            let tooltipX = pointX + chart.plotLeft + offsetX;
+            let tooltipY = pointY + chart.plotTop + offsetY;
+            
+            if (tooltipX + labelWidth > chart.chartWidth - 10) {
+                tooltipX = pointX + chart.plotLeft - labelWidth - offsetX;
+            }
+            
+            if (tooltipY + labelHeight > chart.chartHeight - 10) {
+                tooltipY = pointY + chart.plotTop - labelHeight - offsetY;
+            }
             
             if (tooltipX < 10) tooltipX = 10;
-            if (tooltipX + labelWidth > chart.chartWidth - 10) {
-                tooltipX = chart.chartWidth - labelWidth - 10;
-            }
-            if (tooltipY < 10) {
-                tooltipY = point.plotY + chart.plotTop + 20;
-            }
+            if (tooltipY < 10) tooltipY = pointY + chart.plotTop + offsetY;
             
             return { x: tooltipX, y: tooltipY };
         }

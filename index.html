@@ -106,6 +106,19 @@
                 e.stopPropagation();
             }
         }, { capture: true });
+
+        document.getElementById('map').addEventListener('mouseleave', function() {
+            if (Highcharts.charts[0]) {
+                Highcharts.charts[0].tooltip.hide(0);
+            }
+        });
+
+        document.getElementById('map').addEventListener('click', function(e) {
+            const clickedOnMapArea = e.target.closest('.highcharts-point');
+            if (!clickedOnMapArea && Highcharts.charts[0]) {
+                Highcharts.charts[0].tooltip.hide(0);
+            }
+        });
     </script>
 </body>
 </html>
