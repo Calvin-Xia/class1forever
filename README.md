@@ -2,7 +2,7 @@
 
 蹭饭地图 - 2022届毕业生去向地图
 
-Forked from [another project](https://github.com/lvris/map)
+Forked from [lvris/map](https://github.com/lvris/map)
 
 ## 访问链接
 

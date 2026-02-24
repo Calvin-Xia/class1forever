@@ -1,2 +1,5 @@
 .trae/
 js/data.js
+node_modules/
+dist/
+test-results/

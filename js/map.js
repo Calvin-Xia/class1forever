@@ -45,12 +45,30 @@ let map = new Highcharts.Map('map', {
             drilldown: function (e) {
                 let name = e.point.name;
                 this.setTitle(null, {text: name});
+                if (this.mapView) {
+                    setTimeout(() => {
+                        this.mapView.fitToBounds(undefined, undefined, true);
+                    }, 50);
+                } else if (this.mapZoom) {
+                    setTimeout(() => {
+                        this.mapZoom();
+                    }, 50);
+                }
             },
             drillup: function () {
                 data = Highcharts.maps['cn/china'];
                 this.setTitle(null, {
                     text: '中国'
                 });
+                if (this.mapView) {
+                    setTimeout(() => {
+                        this.mapView.fitToBounds(undefined, undefined, true);
+                    }, 50);
+                } else if (this.mapZoom) {
+                    setTimeout(() => {
+                        this.mapZoom();
+                    }, 50);
+                }
             },
             mouseOut: function () {
                 this.tooltip.hide(0);
