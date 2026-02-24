@@ -752,3 +752,78 @@ body {
         border-left-color: var(--color-accent-primary);
     }
 }
+
+/* 遮罩层 */
+.bottom-sheet-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-normal);
+}
+.bottom-sheet-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* 底部面板 */
+.bottom-sheet {
+    position: fixed;
+    bottom: -100%;
+    left: 0; width: 100%;
+    background: var(--color-bg-card);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    z-index: 1001;
+    transition: bottom var(--transition-normal);
+    display: flex;
+    flex-direction: column;
+    max-height: 80vh;
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.15);
+}
+.bottom-sheet.active {
+    bottom: 0;
+}
+
+/* 拖拽指示器（装饰用） */
+.bs-drag-indicator {
+    width: 40px;
+    height: 4px;
+    background: var(--color-border);
+    border-radius: 2px;
+    margin: 12px auto;
+}
+
+/* 内部内容区域滚动 */
+.bs-content {
+    padding: 0 var(--spacing-lg) var(--spacing-lg);
+    overflow-y: auto;
+    flex: 1;
+}
+
+.bs-content .tooltip {
+    box-shadow: none;
+    width: 100%;
+    max-height: 60vh;
+}
+
+/* 按钮样式 */
+.bs-btn {
+    width: calc(100% - var(--spacing-lg) * 2);
+    margin: 0 var(--spacing-lg) var(--spacing-lg);
+    padding: 14px;
+    background: var(--color-accent-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 1.1rem;
+    font-weight: 600;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.bs-btn:active {
+    background: var(--color-highlight);
+}

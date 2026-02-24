@@ -1,3 +1,5 @@
+const isTouchDevice = window.innerWidth <= 768 || ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+
 let data = Highcharts.geojson(Highcharts.maps['cn/china']);
 
 let provinces = {};
@@ -68,6 +70,22 @@ let map = new Highcharts.Map('map', {
         margin: 20
     },
 
+    plotOptions: {
+        series: {
+            point: {
+                events: {
+                    click: function (e) {
+                        if (isTouchDevice && !this._isDrillingDown) {
+                            e.preventDefault(); // 阻止默认的即时下钻
+                            showMobileBottomSheet(this);
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+    },
+
     subtitle: {
         text: '中国',
         floating: true,
@@ -80,6 +98,7 @@ let map = new Highcharts.Map('map', {
     },
 
     tooltip: {
+        enabled: !isTouchDevice,
         useHTML: true,
         backgroundColor: 'transparent',
         borderWidth: 0,
@@ -265,8 +284,7 @@ function makeSeries() {
     return series;
 }
 
-function formatter() {
-    let template = `
+const tooltipTemplate = `
     <div class="tooltip">
         <div class="series">{{series}}</div>
         <div class="profile">
@@ -285,10 +303,57 @@ function formatter() {
     </div>
     `;
 
-    return nunjucks.renderString(template, {
+function formatter() {
+    return nunjucks.renderString(tooltipTemplate, {
         name: this.point.name,
         series: this.series.name,
         value: this.point.value,
         people: this.point.people
-    })
+    });
 }
+
+let currentSelectedPoint = null;
+
+function showMobileBottomSheet(point) {
+    currentSelectedPoint = point;
+    
+    let html = nunjucks.renderString(tooltipTemplate, {
+        name: point.name,
+        series: point.series.name,
+        value: point.value,
+        people: point.people
+    });
+    document.getElementById('bs-content').innerHTML = html;
+    
+    const btn = document.getElementById('bs-drilldown-btn');
+    if (point.drilldown) {
+        btn.style.display = 'block';
+        btn.innerText = '进入 ' + point.name + ' 详情';
+    } else {
+        btn.style.display = 'none';
+    }
+    
+    document.getElementById('bottom-sheet').classList.add('active');
+    document.getElementById('bs-overlay').classList.add('active');
+}
+
+function closeBottomSheet() {
+    document.getElementById('bottom-sheet').classList.remove('active');
+    document.getElementById('bs-overlay').classList.remove('active');
+}
+
+document.getElementById('bs-overlay').addEventListener('click', closeBottomSheet);
+
+document.getElementById('bs-drilldown-btn').addEventListener('click', function() {
+    if (currentSelectedPoint) {
+        closeBottomSheet();
+        if (typeof currentSelectedPoint.doDrilldown === 'function') {
+            currentSelectedPoint.doDrilldown();
+        } else {
+            // Fallback for Highcharts trigger
+            currentSelectedPoint._isDrillingDown = true;
+            currentSelectedPoint.firePointEvent('click');
+            currentSelectedPoint._isDrillingDown = false;
+        }
+    }
+});

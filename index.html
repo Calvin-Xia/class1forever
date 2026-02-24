@@ -51,6 +51,20 @@
         </footer>
     </div>
 
+    <!-- 移动端底部面板遮罩 -->
+    <div id="bs-overlay" class="bottom-sheet-overlay"></div>
+
+    <!-- 移动端底部面板 -->
+    <div id="bottom-sheet" class="bottom-sheet">
+        <div class="bs-drag-indicator"></div>
+        <div class="bs-content" id="bs-content">
+            <!-- Nunjucks 渲染后的名单将放置在此 -->
+        </div>
+        <div class="bs-footer">
+            <button id="bs-drilldown-btn" class="bs-btn">进入详情</button>
+        </div>
+    </div>
+
     <script src="https://img.hcharts.cn/highmaps/highmaps.js"></script>
     <script src="https://img.hcharts.cn/highcharts/modules/drilldown.js"></script>
     <script src='js/nunjucks.min.js'></script>
@@ -95,7 +109,7 @@
         const isMobile = /mobile|android|iphone/i.test(navigator.userAgent);
         const interactionNote = document.getElementById('interaction-note');
         const interactionMessage = isMobile
-            ? '移动端请长按查看详细信息，可能存在交互异常，推荐在桌面端体验以获得最佳效果。'
+            ? '点击地图上的省份或城市，在底部查看同学分布与详情。'
             : '在地图上悬停查看提示，点击省份或城市即可查看更多详细信息。';
 
         if (interactionNote) {
