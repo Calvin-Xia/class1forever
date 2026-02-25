@@ -135,8 +135,8 @@ let map = new Highcharts.Map('map', {
             let pointX = point.plotX || 0;
             let pointY = point.plotY || 0;
             
-            let offsetX = 1;
-            let offsetY = 1;
+            let offsetX = 3;
+            let offsetY = 3;
             
             let tooltipX = pointX + chart.plotLeft + offsetX;
             let tooltipY = pointY + chart.plotTop + offsetY;
