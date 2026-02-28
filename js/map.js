@@ -1,4 +1,17 @@
-const isTouchDevice = window.innerWidth <= 768 || ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+// 触摸设备检测：使用 W3C 标准的 pointer: coarse 媒体查询
+// 优先级：pointer: coarse > any-pointer: coarse > 降级方案
+const isTouchDevice = (function() {
+    // 主要检测：主输入设备是否为粗指针（触摸屏）
+    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+        return true;
+    }
+    // 备用检测：任意输入设备是否为粗指针
+    if (window.matchMedia && window.matchMedia('(any-pointer: coarse)').matches) {
+        return true;
+    }
+    // 降级方案：传统触摸检测
+    return ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+})();
 
 let data = Highcharts.geojson(Highcharts.maps['cn/china']);
 
@@ -46,10 +59,12 @@ let map = new Highcharts.Map('map', {
                 let name = e.point.name;
                 this.setTitle(null, {text: name});
                 if (this.mapView) {
+                    // 延迟执行视图适配，等待 Highcharts 内部渲染完成
                     setTimeout(() => {
                         this.mapView.fitToBounds(undefined, undefined, true);
                     }, 50);
                 } else if (this.mapZoom) {
+                    // 延迟执行视图适配，等待 Highcharts 内部渲染完成
                     setTimeout(() => {
                         this.mapZoom();
                     }, 50);
@@ -61,10 +76,12 @@ let map = new Highcharts.Map('map', {
                     text: '中国'
                 });
                 if (this.mapView) {
+                    // 延迟执行视图适配，等待 Highcharts 内部渲染完成
                     setTimeout(() => {
                         this.mapView.fitToBounds(undefined, undefined, true);
                     }, 50);
                 } else if (this.mapZoom) {
+                    // 延迟执行视图适配，等待 Highcharts 内部渲染完成
                     setTimeout(() => {
                         this.mapZoom();
                     }, 50);
@@ -95,8 +112,7 @@ let map = new Highcharts.Map('map', {
                     click: function (e) {
                         if (isTouchDevice && !this._isDrillingDown) {
                             e.preventDefault(); // 阻止默认的即时下钻
-                            showMobileBottomSheet(this);
-                            return false;
+                            BottomSheet.show(this);
                         }
                     }
                 }
@@ -330,48 +346,58 @@ function formatter() {
     });
 }
 
-let currentSelectedPoint = null;
-
-function showMobileBottomSheet(point) {
-    currentSelectedPoint = point;
+// 底部面板模块：封装状态和方法，避免全局变量污染
+const BottomSheet = (function() {
+    let currentSelectedPoint = null;
     
-    let html = nunjucks.renderString(tooltipTemplate, {
-        name: point.name,
-        series: point.series.name,
-        value: point.value,
-        people: point.people
-    });
-    document.getElementById('bs-content').innerHTML = html;
-    
-    const btn = document.getElementById('bs-drilldown-btn');
-    if (point.drilldown) {
-        btn.style.display = 'block';
-        btn.innerText = '进入 ' + point.name + ' 详情';
-    } else {
-        btn.style.display = 'none';
+    function show(point) {
+        currentSelectedPoint = point;
+        
+        let html = nunjucks.renderString(tooltipTemplate, {
+            name: point.name,
+            series: point.series.name,
+            value: point.value,
+            people: point.people
+        });
+        document.getElementById('bs-content').innerHTML = html;
+        
+        const btn = document.getElementById('bs-drilldown-btn');
+        if (point.drilldown) {
+            btn.style.display = 'block';
+            btn.innerText = '进入 ' + point.name + ' 详情';
+        } else {
+            btn.style.display = 'none';
+        }
+        
+        document.getElementById('bottom-sheet').classList.add('active');
+        document.getElementById('bs-overlay').classList.add('active');
     }
     
-    document.getElementById('bottom-sheet').classList.add('active');
-    document.getElementById('bs-overlay').classList.add('active');
-}
-
-function closeBottomSheet() {
-    document.getElementById('bottom-sheet').classList.remove('active');
-    document.getElementById('bs-overlay').classList.remove('active');
-}
-
-document.getElementById('bs-overlay').addEventListener('click', closeBottomSheet);
-
-document.getElementById('bs-drilldown-btn').addEventListener('click', function() {
-    if (currentSelectedPoint) {
-        closeBottomSheet();
-        if (typeof currentSelectedPoint.doDrilldown === 'function') {
-            currentSelectedPoint.doDrilldown();
-        } else {
-            // Fallback for Highcharts trigger
-            currentSelectedPoint._isDrillingDown = true;
-            currentSelectedPoint.firePointEvent('click');
-            currentSelectedPoint._isDrillingDown = false;
+    function close() {
+        document.getElementById('bottom-sheet').classList.remove('active');
+        document.getElementById('bs-overlay').classList.remove('active');
+    }
+    
+    function drilldown() {
+        if (currentSelectedPoint) {
+            close();
+            if (typeof currentSelectedPoint.doDrilldown === 'function') {
+                currentSelectedPoint.doDrilldown();
+            } else {
+                currentSelectedPoint._isDrillingDown = true;
+                currentSelectedPoint.firePointEvent('click');
+                currentSelectedPoint._isDrillingDown = false;
+            }
         }
     }
-});
+    
+    function init() {
+        document.getElementById('bs-overlay').addEventListener('click', close);
+        document.getElementById('bs-drilldown-btn').addEventListener('click', drilldown);
+    }
+    
+    return { show, close, init };
+})();
+
+// 初始化底部面板事件监听
+BottomSheet.init();

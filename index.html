@@ -55,9 +55,10 @@
     <div id="bs-overlay" class="bottom-sheet-overlay"></div>
 
     <!-- 移动端底部面板 -->
-    <div id="bottom-sheet" class="bottom-sheet">
+    <div id="bottom-sheet" class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="bs-title">
         <div class="bs-drag-indicator"></div>
         <div class="bs-content" id="bs-content">
+            <h2 id="bs-title" class="visually-hidden">地区详情</h2>
             <!-- Nunjucks 渲染后的名单将放置在此 -->
         </div>
         <div class="bs-footer">

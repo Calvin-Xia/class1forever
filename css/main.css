@@ -39,6 +39,19 @@
     --shadow-elevated: 0 12px 48px var(--color-shadow-dark);
 }
 
+/* 视觉隐藏但保持可访问性 */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 *, *::before, *::after {
     box-sizing: border-box;
     margin: 0;
@@ -760,7 +773,7 @@ body {
 /* 遮罩层 */
 .bottom-sheet-overlay {
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
+    inset: 0;
     background: rgba(0,0,0,0.5);
     z-index: 1000;
     opacity: 0;
