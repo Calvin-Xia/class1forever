@@ -9,8 +9,78 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="css/main.css">
+    <script>
+    (function() {
+        var cdnLoader = {
+            cdnList: [
+                {
+                    name: 'img.hcharts.cn',
+                    highmaps: 'https://img.hcharts.cn/highmaps/highmaps.js',
+                    drilldown: 'https://img.hcharts.cn/highcharts/modules/drilldown.js'
+                },
+                {
+                    name: 'code.highcharts.com',
+                    highmaps: 'https://code.highcharts.com/maps/highmaps.js',
+                    drilldown: 'https://code.highcharts.com/maps/modules/drilldown.js'
+                },
+                {
+                    name: 'local',
+                    highmaps: 'js/vendor/highmaps.js',
+                    drilldown: 'js/vendor/drilldown.js'
+                }
+            ],
+            
+            loadScript: function(src, callback) {
+                var script = document.createElement('script');
+                script.src = src;
+                script.onload = function() { callback(true); };
+                script.onerror = function() { callback(false); };
+                document.head.appendChild(script);
+            },
+            
+            loadCDN: function(index, callback) {
+                var self = this;
+                if (index >= this.cdnList.length) {
+                    callback(false);
+                    return;
+                }
+                
+                var cdn = this.cdnList[index];
+                this.loadScript(cdn.highmaps, function(success) {
+                    if (success) {
+                        self.loadScript(cdn.drilldown, function(success2) {
+                            if (success2) {
+                                console.log('Highmaps loaded from: ' + cdn.name);
+                                callback(true);
+                            } else {
+                                self.loadCDN(index + 1, callback);
+                            }
+                        });
+                    } else {
+                        self.loadCDN(index + 1, callback);
+                    }
+                });
+            },
+            
+            start: function(callback) {
+                this.loadCDN(0, callback);
+            }
+        };
+        
+        window.HighmapsLoader = cdnLoader;
+    })();
+    </script>
 </head>
 <body>
+    <div id="cdn-error" class="cdn-error" style="display: none;">
+        <div class="cdn-error__content">
+            <div class="cdn-error__icon">⚠️</div>
+            <h3 class="cdn-error__title">地图加载失败</h3>
+            <p class="cdn-error__message">无法加载地图资源，请检查网络连接后刷新页面。</p>
+            <button class="cdn-error__retry" onclick="location.reload()">重新加载</button>
+        </div>
+    </div>
+
     <div class="page-wrapper">
         <div class="decorative-bg" aria-hidden="true">
             <div class="decorative-circle decorative-circle--1"></div>
@@ -39,7 +109,12 @@
                         <div class="map-frame__corner map-frame__corner--tr" aria-hidden="true"></div>
                         <div class="map-frame__corner map-frame__corner--bl" aria-hidden="true"></div>
                         <div class="map-frame__corner map-frame__corner--br" aria-hidden="true"></div>
-                        <div id="map" role="img" aria-label="中国地图，显示同学分布"></div>
+                        <div id="map" role="img" aria-label="中国地图，显示同学分布">
+                            <div id="map-loading" class="map-loading">
+                                <div class="map-loading__spinner"></div>
+                                <p class="map-loading__text">地图加载中...</p>
+                            </div>
+                        </div>
                         <a href="https://www.highcharts.com" target="_blank" rel="noopener noreferrer" class="highcharts-credit">Highcharts.com</a>
                     </div>
                 </div>
@@ -51,65 +126,88 @@
         </footer>
     </div>
 
-    <!-- 移动端底部面板遮罩 -->
     <div id="bs-overlay" class="bottom-sheet-overlay"></div>
 
-    <!-- 移动端底部面板 -->
     <div id="bottom-sheet" class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="bs-title">
         <div class="bs-drag-indicator"></div>
         <div class="bs-content" id="bs-content">
             <h2 id="bs-title" class="visually-hidden">地区详情</h2>
-            <!-- Nunjucks 渲染后的名单将放置在此 -->
         </div>
         <div class="bs-footer">
             <button id="bs-drilldown-btn" class="bs-btn">进入详情</button>
         </div>
     </div>
 
-    <script src="https://img.hcharts.cn/highmaps/highmaps.js"></script>
-    <script src="https://img.hcharts.cn/highcharts/modules/drilldown.js"></script>
-    <script src='js/nunjucks.min.js'></script>
-
-    <script src='js/china.js'></script>
-    <script src='js/province/zhejiang.js'></script>
-    <script src='js/province/beijing.js'></script>
-    <script src='js/province/jiangsu.js'></script>
-    <script src='js/province/neimenggu.js'></script>
-    <script src='js/province/guangdong.js'></script>
-    <script src='js/province/tianjin.js'></script>
-    <script src='js/province/hebei.js'></script>
-    <script src='js/province/shanxi.js'></script>
-    <script src='js/province/liaoning.js'></script>
-    <script src='js/province/jilin.js'></script>
-    <script src='js/province/heilongjiang.js'></script>
-    <script src='js/province/shanghai.js'></script>
-    <script src='js/province/anhui.js'></script>
-    <script src='js/province/fujian.js'></script>
-    <script src='js/province/jiangxi.js'></script>
-    <script src='js/province/shandong.js'></script>
-    <script src='js/province/henan.js'></script>
-    <script src='js/province/hubei.js'></script>
-    <script src='js/province/hunan.js'></script>
-    <script src='js/province/guangxi.js'></script>
-    <script src='js/province/hainan.js'></script>
-    <script src='js/province/chongqing.js'></script>
-    <script src='js/province/sichuan.js'></script>
-    <script src='js/province/guizhou.js'></script>
-    <script src='js/province/yunnan.js'></script>
-    <script src='js/province/xizang.js'></script>
-    <script src='js/province/shanxi2.js'></script>
-    <script src='js/province/gansu.js'></script>
-    <script src='js/province/qinghai.js'></script>
-    <script src='js/province/ningxia.js'></script>
-    <script src='js/province/xinjiang.js'></script>
-
-    <script src='js/data.js'></script>
-    <script src='js/map.js'></script>
+    <script>
+    HighmapsLoader.start(function(success) {
+        if (!success) {
+            document.getElementById('cdn-error').style.display = 'flex';
+            document.getElementById('map-loading').style.display = 'none';
+            return;
+        }
+        
+        var scripts = [
+            'js/nunjucks.min.js',
+            'js/china.js',
+            'js/province/zhejiang.js',
+            'js/province/beijing.js',
+            'js/province/jiangsu.js',
+            'js/province/neimenggu.js',
+            'js/province/guangdong.js',
+            'js/province/tianjin.js',
+            'js/province/hebei.js',
+            'js/province/shanxi.js',
+            'js/province/liaoning.js',
+            'js/province/jilin.js',
+            'js/province/heilongjiang.js',
+            'js/province/shanghai.js',
+            'js/province/anhui.js',
+            'js/province/fujian.js',
+            'js/province/jiangxi.js',
+            'js/province/shandong.js',
+            'js/province/henan.js',
+            'js/province/hubei.js',
+            'js/province/hunan.js',
+            'js/province/guangxi.js',
+            'js/province/hainan.js',
+            'js/province/chongqing.js',
+            'js/province/sichuan.js',
+            'js/province/guizhou.js',
+            'js/province/yunnan.js',
+            'js/province/xizang.js',
+            'js/province/shanxi2.js',
+            'js/province/gansu.js',
+            'js/province/qinghai.js',
+            'js/province/ningxia.js',
+            'js/province/xinjiang.js',
+            'js/data.js',
+            'js/map.js'
+        ];
+        
+        var loadNext = function(index) {
+            if (index >= scripts.length) {
+                var loadingEl = document.getElementById('map-loading');
+                if (loadingEl) loadingEl.style.display = 'none';
+                return;
+            }
+            var script = document.createElement('script');
+            script.src = scripts[index];
+            script.onload = function() { loadNext(index + 1); };
+            script.onerror = function() { 
+                console.error('Failed to load: ' + scripts[index]);
+                loadNext(index + 1); 
+            };
+            document.body.appendChild(script);
+        };
+        
+        loadNext(0);
+    });
+    </script>
 
     <script>
-        const isMobile = /mobile|android|iphone/i.test(navigator.userAgent);
-        const interactionNote = document.getElementById('interaction-note');
-        const interactionMessage = isMobile
+        var isMobile = /mobile|android|iphone/i.test(navigator.userAgent);
+        var interactionNote = document.getElementById('interaction-note');
+        var interactionMessage = isMobile
             ? '点击地图上的省份或城市，在底部查看同学分布与详情。'
             : '在地图上悬停查看提示，点击省份或城市即可查看更多详细信息。';
 
@@ -122,19 +220,6 @@
                 e.stopPropagation();
             }
         }, { capture: true });
-
-        document.getElementById('map').addEventListener('mouseleave', function() {
-            if (Highcharts.charts[0]) {
-                Highcharts.charts[0].tooltip.hide(0);
-            }
-        });
-
-        document.getElementById('map').addEventListener('click', function(e) {
-            const clickedOnMapArea = e.target.closest('.highcharts-point');
-            if (!clickedOnMapArea && Highcharts.charts[0]) {
-                Highcharts.charts[0].tooltip.hide(0);
-            }
-        });
     </script>
 </body>
 </html>
