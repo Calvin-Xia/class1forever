@@ -16,17 +16,20 @@
                 {
                     name: 'img.hcharts.cn',
                     highmaps: 'https://img.hcharts.cn/highmaps/highmaps.js',
-                    drilldown: 'https://img.hcharts.cn/highcharts/modules/drilldown.js'
+                    drilldown: 'https://img.hcharts.cn/highcharts/modules/drilldown.js',
+                    exporting: 'https://img.hcharts.cn/highcharts/modules/exporting.js'
                 },
                 {
                     name: 'code.highcharts.com',
                     highmaps: 'https://code.highcharts.com/maps/highmaps.js',
-                    drilldown: 'https://code.highcharts.com/maps/modules/drilldown.js'
+                    drilldown: 'https://code.highcharts.com/maps/modules/drilldown.js',
+                    exporting: 'https://code.highcharts.com/maps/modules/exporting.js'
                 },
                 {
                     name: 'local',
                     highmaps: 'js/vendor/highmaps.js',
-                    drilldown: 'js/vendor/drilldown.js'
+                    drilldown: 'js/vendor/drilldown.js',
+                    exporting: 'js/vendor/exporting.js'
                 }
             ],
             
@@ -50,8 +53,14 @@
                     if (success) {
                         self.loadScript(cdn.drilldown, function(success2) {
                             if (success2) {
-                                console.log('Highmaps loaded from: ' + cdn.name);
-                                callback(true);
+                                self.loadScript(cdn.exporting, function(success3) {
+                                    if (success3) {
+                                        console.log('Highmaps loaded from: ' + cdn.name);
+                                        callback(true);
+                                    } else {
+                                        self.loadCDN(index + 1, callback);
+                                    }
+                                });
                             } else {
                                 self.loadCDN(index + 1, callback);
                             }

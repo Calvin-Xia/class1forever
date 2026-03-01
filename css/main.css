@@ -980,7 +980,7 @@ body {
 .share-card {
     width: 600px;
     background: var(--color-bg-primary);
-    border-radius: var(--radius-lg);
+    border-radius: 0;
     overflow: hidden;
     box-shadow: var(--shadow-elevated);
 }
@@ -989,6 +989,7 @@ body {
     padding: var(--spacing-lg);
     text-align: center;
     background: linear-gradient(135deg, var(--color-accent-tertiary) 0%, var(--color-accent-primary) 100%);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .share-card__title {
@@ -1051,6 +1052,7 @@ body {
     background: var(--color-bg-secondary);
     font-size: 0.85rem;
     color: var(--color-text-secondary);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
 .share-card__footer p {

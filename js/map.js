@@ -531,6 +531,7 @@ BottomSheet.init();
 /**
  * 分享模块（IIFE 模式封装）
  * 负责生成分享图片和提供分享功能
+ * 使用 Canvas 直接合成图片，避免 html2canvas 的浏览器兼容性问题
  * 
  * @namespace ShareManager
  * @property {Function} generateImage - 生成分享图片
@@ -562,103 +563,159 @@ const ShareManager = (function() {
     }
     
     /**
-     * 填充统计数据到模板
-     * @param {HTMLElement} container - 模板容器
+     * 将 SVG 字符串转换为 Image 对象
+     * @param {string} svgString - SVG 字符串
+     * @returns {Promise<HTMLImageElement>} Image 对象
      */
-    function populateStats(container) {
-        const stats = calculateStats();
-        container.querySelector('#stat-total').textContent = stats.total;
-        container.querySelector('#stat-provinces').textContent = stats.provinces;
-        container.querySelector('#stat-cities').textContent = stats.cities;
-    }
-    
-    /**
-     * 截取地图到模板
-     * @param {HTMLElement} container - 模板容器
-     * @returns {Promise<void>}
-     */
-    async function captureMap(container) {
-        const mapContainer = container.querySelector('#share-map-container');
-        const chart = Highcharts.charts[0];
-        
-        if (!chart) {
-            mapContainer.innerHTML = '<p style="color: var(--color-text-secondary);">地图加载中...</p>';
-            return;
-        }
-        
-        const chartContainer = chart.container;
-        if (!chartContainer) {
-            mapContainer.innerHTML = '<p style="color: var(--color-text-secondary);">地图不可用</p>';
-            return;
-        }
-        
-        try {
-            const canvas = await html2canvas(chartContainer, {
-                scale: 1,
-                useCORS: true,
-                backgroundColor: '#f5efe6',
-                logging: false
-            });
+    function svgToImage(svgString) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
             
-            canvas.style.maxWidth = '100%';
-            canvas.style.maxHeight = '100%';
-            mapContainer.innerHTML = '';
-            mapContainer.appendChild(canvas);
-        } catch (error) {
-            console.error('截取地图失败:', error);
-            mapContainer.innerHTML = '<p style="color: var(--color-text-secondary);">地图截图失败</p>';
-        }
+            img.onload = function() {
+                URL.revokeObjectURL(url);
+                resolve(img);
+            };
+            img.onerror = function(e) {
+                URL.revokeObjectURL(url);
+                reject(e);
+            };
+            img.src = url;
+        });
     }
     
     /**
-     * 生成分享图片
+     * 生成分享图片（使用 Canvas 直接合成）
      * @param {Object} options - 配置选项
      * @returns {Promise<Blob>} 图片 Blob 对象
      */
     async function generateImage(options = {}) {
-        const template = document.getElementById('share-template');
-        if (!template) {
-            throw new Error('分享模板不存在');
+        const chart = Highcharts.charts[0];
+        if (!chart) {
+            throw new Error('地图未加载');
         }
         
-        const clone = template.cloneNode(true);
-        clone.id = 'share-template-clone';
-        clone.style.display = 'block';
-        clone.style.position = 'fixed';
-        clone.style.left = '-9999px';
-        clone.style.top = '0';
-        clone.style.zIndex = '-1';
-        document.body.appendChild(clone);
+        const stats = calculateStats();
         
-        try {
-            populateStats(clone);
-            await captureMap(clone);
-            
-            await new Promise(resolve => setTimeout(resolve, 100));
-            
-            const shareCard = clone.querySelector('.share-card');
-            if (!shareCard) {
-                throw new Error('分享卡片元素不存在');
+        const svg = chart.getSVG({
+            chart: {
+                width: 1200,
+                height: 800,
+                backgroundColor: '#f5efe6'
             }
-            
-            const canvas = await html2canvas(shareCard, {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#faf7f2',
-                logging: false
-            });
-            
-            return new Promise((resolve, reject) => {
-                canvas.toBlob(function(blob) {
-                    if (blob) {
-                        resolve(blob);
-                    } else {
-                        reject(new Error('生成图片失败'));
-                    }
-                }, 'image/png', 0.9);
-            });
-        } finally {
-            document.body.removeChild(clone);
+        });
+        
+        const mapImg = await svgToImage(svg);
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = 1200;
+        canvas.height = 1100;
+        const ctx = canvas.getContext('2d');
+        
+        ctx.fillStyle = '#faf7f2';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        const gradient = ctx.createLinearGradient(0, 0, canvas.width, 150);
+        gradient.addColorStop(0, '#e8a87c');
+        gradient.addColorStop(1, '#c4704b');
+        ctx.fillStyle = gradient;
+        roundRect(ctx, 0, 0, canvas.width, 150, 24, true, false);
+        
+        ctx.fillStyle = 'white';
+        ctx.font = '42px Georgia, serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('金鹰1班蹭饭地图', canvas.width / 2, 55);
+        
+        ctx.font = '18px Arial, sans-serif';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fillText('探索各地同学的足迹', canvas.width / 2, 105);
+        
+        ctx.drawImage(mapImg, 0, 150, 1200, 800);
+        
+        ctx.fillStyle = '#fffaf5';
+        ctx.fillRect(0, 950, canvas.width, 100);
+        
+        const statY = 990;
+        const statLabelY = 1020;
+        
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        ctx.fillStyle = '#c4704b';
+        ctx.font = 'bold 36px Arial, sans-serif';
+        ctx.fillText(stats.total.toString(), 200, statY);
+        ctx.fillStyle = '#5c5650';
+        ctx.font = '16px Arial, sans-serif';
+        ctx.fillText('总人数', 200, statLabelY);
+        
+        ctx.fillStyle = '#c4704b';
+        ctx.font = 'bold 36px Arial, sans-serif';
+        ctx.fillText(stats.provinces.toString(), 600, statY);
+        ctx.fillStyle = '#5c5650';
+        ctx.font = '16px Arial, sans-serif';
+        ctx.fillText('覆盖省份', 600, statLabelY);
+        
+        ctx.fillStyle = '#c4704b';
+        ctx.font = 'bold 36px Arial, sans-serif';
+        ctx.fillText(stats.cities.toString(), 1000, statY);
+        ctx.fillStyle = '#5c5650';
+        ctx.font = '16px Arial, sans-serif';
+        ctx.fillText('覆盖城市', 1000, statLabelY);
+        
+        ctx.fillStyle = '#f5efe6';
+        roundRect(ctx, 0, 1050, canvas.width, 50, 0, true, false, [0, 0, 24, 24]);
+        
+        ctx.fillStyle = '#5c5650';
+        ctx.font = '14px Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('万州二中 · 金鹰1班', canvas.width / 2, 1075);
+        
+        return new Promise((resolve, reject) => {
+            canvas.toBlob(function(blob) {
+                if (blob) {
+                    resolve(blob);
+                } else {
+                    reject(new Error('生成图片失败'));
+                }
+            }, 'image/png', 0.95);
+        });
+    }
+    
+    /**
+     * 绘制圆角矩形
+     * @param {CanvasRenderingContext2D} ctx - Canvas 上下文
+     * @param {number} x - 起始 X 坐标
+     * @param {number} y - 起始 Y 坐标
+     * @param {number} width - 宽度
+     * @param {number} height - 高度
+     * @param {number} radius - 圆角半径
+     * @param {boolean} fill - 是否填充
+     * @param {boolean} stroke - 是否描边
+     * @param {Array} corners - 四个角的圆角 [tl, tr, br, bl]
+     */
+    function roundRect(ctx, x, y, width, height, radius, fill, stroke, corners) {
+        corners = corners || [radius, radius, radius, radius];
+        const [tl, tr, br, bl] = corners;
+        
+        ctx.beginPath();
+        ctx.moveTo(x + tl, y);
+        ctx.lineTo(x + width - tr, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + tr);
+        ctx.lineTo(x + width, y + height - br);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - br, y + height);
+        ctx.lineTo(x + bl, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - bl);
+        ctx.lineTo(x, y + tl);
+        ctx.quadraticCurveTo(x, y, x + tl, y);
+        ctx.closePath();
+        
+        if (fill) {
+            ctx.fill();
+        }
+        if (stroke) {
+            ctx.stroke();
         }
     }
     
@@ -680,30 +737,12 @@ const ShareManager = (function() {
     }
     
     /**
-     * 分享到社交平台（如果支持）
+     * 下载图片（直接下载，不走 Web Share API）
      * @param {Blob} blob - 图片 Blob
      */
     async function shareToSocial(blob) {
-        const file = new File([blob], '蹭饭地图.png', { type: 'image/png' });
-        
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-            try {
-                await navigator.share({
-                    title: '金鹰1班蹭饭地图',
-                    text: '探索各地同学的足迹',
-                    files: [file]
-                });
-                return true;
-            } catch (err) {
-                if (err.name !== 'AbortError') {
-                    console.log('分享取消或失败:', err);
-                }
-                return false;
-            }
-        } else {
-            downloadImage(blob);
-            return true;
-        }
+        downloadImage(blob);
+        return true;
     }
     
     /**
