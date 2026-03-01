@@ -109,6 +109,15 @@
                         <div class="map-frame__corner map-frame__corner--tr" aria-hidden="true"></div>
                         <div class="map-frame__corner map-frame__corner--bl" aria-hidden="true"></div>
                         <div class="map-frame__corner map-frame__corner--br" aria-hidden="true"></div>
+                        <button id="share-btn" class="share-btn" title="分享地图" aria-label="分享地图">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="18" cy="5" r="3"></circle>
+                                <circle cx="6" cy="12" r="3"></circle>
+                                <circle cx="18" cy="19" r="3"></circle>
+                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                            </svg>
+                        </button>
                         <div id="map" role="img" aria-label="中国地图，显示同学分布">
                             <div id="map-loading" class="map-loading">
                                 <div class="map-loading__spinner"></div>
@@ -138,6 +147,33 @@
         </div>
     </div>
 
+    <div id="share-template" class="share-template" style="display: none;">
+        <div class="share-card">
+            <div class="share-card__header">
+                <h2 class="share-card__title">金鹰1班蹭饭地图</h2>
+                <p class="share-card__subtitle">探索各地同学的足迹</p>
+            </div>
+            <div class="share-card__map" id="share-map-container"></div>
+            <div class="share-card__stats">
+                <div class="stat-item">
+                    <span class="stat-value" id="stat-total">0</span>
+                    <span class="stat-label">总人数</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="stat-provinces">0</span>
+                    <span class="stat-label">覆盖省份</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value" id="stat-cities">0</span>
+                    <span class="stat-label">覆盖城市</span>
+                </div>
+            </div>
+            <div class="share-card__footer">
+                <p>万州二中 · 金鹰1班</p>
+            </div>
+        </div>
+    </div>
+
     <script>
     HighmapsLoader.start(function(success) {
         if (!success) {
@@ -147,6 +183,7 @@
         }
         
         var scripts = [
+            'js/vendor/html2canvas.min.js',
             'js/nunjucks.min.js',
             'js/china.js',
             'js/province/zhejiang.js',

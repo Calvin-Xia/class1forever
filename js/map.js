@@ -527,3 +527,218 @@ const BottomSheet = (function() {
 })();
 
 BottomSheet.init();
+
+/**
+ * 分享模块（IIFE 模式封装）
+ * 负责生成分享图片和提供分享功能
+ * 
+ * @namespace ShareManager
+ * @property {Function} generateImage - 生成分享图片
+ * @property {Function} downloadImage - 下载图片
+ * @property {Function} shareToSocial - 分享到社交平台
+ * @property {Function} init - 初始化事件监听
+ */
+const ShareManager = (function() {
+    /**
+     * 计算统计数据
+     * @returns {Object} 统计数据对象
+     */
+    function calculateStats() {
+        let totalPeople = 0;
+        let provinceSet = new Set();
+        let citySet = new Set();
+        
+        for (let s of students) {
+            totalPeople++;
+            provinceSet.add(s.province);
+            citySet.add(s.city);
+        }
+        
+        return {
+            total: totalPeople,
+            provinces: provinceSet.size,
+            cities: citySet.size
+        };
+    }
+    
+    /**
+     * 填充统计数据到模板
+     * @param {HTMLElement} container - 模板容器
+     */
+    function populateStats(container) {
+        const stats = calculateStats();
+        container.querySelector('#stat-total').textContent = stats.total;
+        container.querySelector('#stat-provinces').textContent = stats.provinces;
+        container.querySelector('#stat-cities').textContent = stats.cities;
+    }
+    
+    /**
+     * 截取地图到模板
+     * @param {HTMLElement} container - 模板容器
+     * @returns {Promise<void>}
+     */
+    async function captureMap(container) {
+        const mapContainer = container.querySelector('#share-map-container');
+        const chart = Highcharts.charts[0];
+        
+        if (!chart) {
+            mapContainer.innerHTML = '<p style="color: var(--color-text-secondary);">地图加载中...</p>';
+            return;
+        }
+        
+        const chartContainer = chart.container;
+        if (!chartContainer) {
+            mapContainer.innerHTML = '<p style="color: var(--color-text-secondary);">地图不可用</p>';
+            return;
+        }
+        
+        try {
+            const canvas = await html2canvas(chartContainer, {
+                scale: 1,
+                useCORS: true,
+                backgroundColor: '#f5efe6',
+                logging: false
+            });
+            
+            canvas.style.maxWidth = '100%';
+            canvas.style.maxHeight = '100%';
+            mapContainer.innerHTML = '';
+            mapContainer.appendChild(canvas);
+        } catch (error) {
+            console.error('截取地图失败:', error);
+            mapContainer.innerHTML = '<p style="color: var(--color-text-secondary);">地图截图失败</p>';
+        }
+    }
+    
+    /**
+     * 生成分享图片
+     * @param {Object} options - 配置选项
+     * @returns {Promise<Blob>} 图片 Blob 对象
+     */
+    async function generateImage(options = {}) {
+        const template = document.getElementById('share-template');
+        if (!template) {
+            throw new Error('分享模板不存在');
+        }
+        
+        const clone = template.cloneNode(true);
+        clone.id = 'share-template-clone';
+        clone.style.display = 'block';
+        clone.style.position = 'fixed';
+        clone.style.left = '-9999px';
+        clone.style.top = '0';
+        clone.style.zIndex = '-1';
+        document.body.appendChild(clone);
+        
+        try {
+            populateStats(clone);
+            await captureMap(clone);
+            
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            const shareCard = clone.querySelector('.share-card');
+            if (!shareCard) {
+                throw new Error('分享卡片元素不存在');
+            }
+            
+            const canvas = await html2canvas(shareCard, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#faf7f2',
+                logging: false
+            });
+            
+            return new Promise((resolve, reject) => {
+                canvas.toBlob(function(blob) {
+                    if (blob) {
+                        resolve(blob);
+                    } else {
+                        reject(new Error('生成图片失败'));
+                    }
+                }, 'image/png', 0.9);
+            });
+        } finally {
+            document.body.removeChild(clone);
+        }
+    }
+    
+    /**
+     * 下载图片
+     * @param {Blob} blob - 图片 Blob
+     * @param {string} filename - 文件名
+     */
+    function downloadImage(blob, filename) {
+        filename = filename || '蹭饭地图_' + new Date().toISOString().slice(0, 10) + '.png';
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+    
+    /**
+     * 分享到社交平台（如果支持）
+     * @param {Blob} blob - 图片 Blob
+     */
+    async function shareToSocial(blob) {
+        const file = new File([blob], '蹭饭地图.png', { type: 'image/png' });
+        
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({
+                    title: '金鹰1班蹭饭地图',
+                    text: '探索各地同学的足迹',
+                    files: [file]
+                });
+                return true;
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.log('分享取消或失败:', err);
+                }
+                return false;
+            }
+        } else {
+            downloadImage(blob);
+            return true;
+        }
+    }
+    
+    /**
+     * 处理分享按钮点击
+     */
+    async function handleShare() {
+        const btn = document.getElementById('share-btn');
+        if (!btn) return;
+        
+        btn.classList.add('loading');
+        btn.disabled = true;
+        
+        try {
+            const blob = await generateImage();
+            await shareToSocial(blob);
+        } catch (error) {
+            console.error('生成分享图片失败:', error);
+            alert('生成分享图片失败，请稍后重试');
+        } finally {
+            btn.classList.remove('loading');
+            btn.disabled = false;
+        }
+    }
+    
+    /**
+     * 初始化分享模块事件监听
+     */
+    function init() {
+        const btn = document.getElementById('share-btn');
+        if (btn) {
+            btn.addEventListener('click', handleShare);
+        }
+    }
+    
+    return { generateImage, downloadImage, shareToSocial, init };
+})();
+
+ShareManager.init();

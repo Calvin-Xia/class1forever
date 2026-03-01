@@ -924,3 +924,180 @@ body {
     margin-top: var(--spacing-md);
     font-size: 0.9rem;
 }
+
+.share-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 100;
+    width: 40px;
+    height: 40px;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.share-btn:hover {
+    background: var(--color-accent-primary);
+    border-color: var(--color-accent-primary);
+}
+
+.share-btn:focus {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 2px;
+}
+
+.share-btn svg {
+    width: 20px;
+    height: 20px;
+    color: var(--color-text-secondary);
+    transition: color var(--transition-fast);
+}
+
+.share-btn:hover svg {
+    color: white;
+}
+
+.share-btn.loading {
+    pointer-events: none;
+}
+
+.share-btn.loading svg {
+    animation: spin 1s linear infinite;
+}
+
+.share-template {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+}
+
+.share-card {
+    width: 600px;
+    background: var(--color-bg-primary);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-elevated);
+}
+
+.share-card__header {
+    padding: var(--spacing-lg);
+    text-align: center;
+    background: linear-gradient(135deg, var(--color-accent-tertiary) 0%, var(--color-accent-primary) 100%);
+}
+
+.share-card__title {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 400;
+    color: white;
+    margin: 0 0 var(--spacing-xs) 0;
+    letter-spacing: 0.05em;
+}
+
+.share-card__subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.share-card__map {
+    height: 400px;
+    background: var(--color-bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.share-card__map canvas {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.share-card__stats {
+    display: flex;
+    justify-content: space-around;
+    padding: var(--spacing-lg);
+    background: var(--color-bg-card);
+    border-top: 1px solid var(--color-border-light);
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-value {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-accent-primary);
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    margin-top: var(--spacing-xs);
+}
+
+.share-card__footer {
+    padding: var(--spacing-md);
+    text-align: center;
+    background: var(--color-bg-secondary);
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+}
+
+.share-card__footer p {
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .share-btn {
+        width: 36px;
+        height: 36px;
+        top: 8px;
+        right: 8px;
+    }
+    
+    .share-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .share-card {
+        width: 100%;
+        max-width: 400px;
+    }
+    
+    .share-card__map {
+        height: 300px;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .share-card__map {
+        height: 250px;
+    }
+    
+    .share-card__stats {
+        padding: var(--spacing-md);
+    }
+    
+    .stat-value {
+        font-size: 1.25rem;
+    }
+    
+    .stat-label {
+        font-size: 0.75rem;
+    }
+}
