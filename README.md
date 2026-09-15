@@ -20,14 +20,33 @@ Forked from [lvris/map](https://github.com/lvris/map)
 
 这样做的目的，是避免把完整学生名单作为静态资源直接发给所有访问者。
 
+## 前端地图
+
+地图用 Apache ECharts 渲染，几何数据、渲染库、页面逻辑三者是分开的：
+
+- `js/geo.js` 只提供 `CMapGeo` 注册表，不依赖任何图表库。
+- `js/china.js` 与 `js/province/*.js` 是导出好的 GeoJSON，只调用 `CMapGeo.register(...)`。
+- `js/map.js` 把需要的条目交给 ECharts，负责上色、下钻、悬浮卡片、缩放限制与分享图。
+
+渲染库不走 CDN，而是提交在仓库里的按需构建产物 `js/vendor/echarts.min.js`：
+同源加载让页面完全离线可用，也让 `_headers` 里的 CSP 能收紧成 `script-src 'self'`。
+产物只包含 map / geo / tooltip / visualMap / labelLayout / canvas。
+升级 ECharts 时执行 `npm run vendor:build` 重新生成，产物本身要一起提交。
+
 ## 仓库结构
 
-- `index.html`: 页面结构、地图脚本加载顺序、底部面板结构。
-- `css/main.css`: 页面样式、悬浮卡片、移动端样式。
-- `js/map.js`: 地图初始化、公开数据渲染、详情查看交互。
+- `index.html`: 页面结构、底部面板与弹窗结构。
+- `js/boot.js`: 按顺序加载渲染库、几何数据与页面脚本，失败时给出重试入口。
+- `js/geo.js`: 地图几何数据注册表，以及可下钻省份白名单。
+- `js/china.js`, `js/province/*.js`: 全国与各省 GeoJSON。
+- `js/map.js`: 地图渲染、公开数据、详情查看交互、分享图。
+- `js/vendor/echarts.min.js`: 按需构建的 ECharts。
+- `css/main.css`: 页面样式、地图控件、悬浮卡片、移动端样式。
 - `functions/`: Cloudflare Pages Functions 接口。
 - `shared/data-model.mjs`: 数据规范化、公开聚合统计生成逻辑。
 - `scripts/upload-kv-data.mjs`: 将本地数据写入 Cloudflare KV。
+- `scripts/build-vendor.mjs`: 重新生成 ECharts 按需构建产物。
+- `tests/dev-server.mjs`: 本地前端调试服务器，用假数据顶替 Pages Functions。
 - `wrangler.jsonc`: Cloudflare Pages / KV 绑定配置。
 - `.dev.vars.example`: 本地开发需要的 secret 模板。
 - `DEPLOYMENT.md`: 更完整的部署与排障说明。
@@ -41,10 +60,18 @@ Forked from [lvris/map](https://github.com/lvris/map)
   登录 Cloudflare 账号。上传 KV、启动本地 Pages 环境前需要先完成。
 
 - `npm run build`
-  运行静态安全检查，确认页面没有重新引入 `js/data.js`。
+  静态安全检查：确认页面没有重新引入 `js/data.js`、没有跨域脚本和内联脚本、
+  没有残留旧地图库的引用，并且 `js/geo.js` 的省份白名单与 `js/province/` 目录一致。
+
+- `npm run dev:mock`
+  启动本地调试服务器（默认 http://127.0.0.1:8788），用生成的假数据顶替 Pages Functions，
+  不需要 Cloudflare 账号就能验证地图渲染、下钻、口令流程和分享图。口令默认是 `demo`。
 
 - `npm run cf:dev`
-  启动本地 Pages Functions 开发环境。
+  启动本地 Pages Functions 开发环境，读取远端 KV 与 `.dev.vars`。
+
+- `npm run vendor:build`
+  重新生成 `js/vendor/echarts.min.js`。只在升级 ECharts 时执行。
 
 - `npm run data:upload -- --dry-run`
   检查当前数据源是否能正确生成 KV 需要的两份数据。
@@ -54,6 +81,20 @@ Forked from [lvris/map](https://github.com/lvris/map)
 
 - `npm run data:upload:preview`
   上传预览环境数据到 Cloudflare KV。
+
+### 用真实聚合数据调试前端
+
+公开数据只有人数，可以安全导出，用来看真实数字下的渲染效果：
+
+```bash
+npx wrangler kv key get students:public:v1 \
+  --namespace-id=<wrangler.jsonc 里的 preview_id> --remote --text > public.json
+PUBLIC_DATA_FILE=public.json npm run dev:mock
+```
+
+`students:raw:v1` 含姓名与学校，不要导出。用这种方式调试时，地图上的聚合人数是真实的，
+详情面板里的同学仍然是假数据。
+
 
 ## 首次接手项目
 
@@ -112,6 +153,14 @@ npm run data:upload:preview
 
 ### 4. 启动本地开发服务
 
+只想调前端时，用假数据就够了，也不需要 Cloudflare 账号：
+
+```bash
+npm run dev:mock
+```
+
+需要验证 Pages Functions、远端 KV 与真实口令时，再改用：
+
 ```bash
 npm run cf:dev
 ```
@@ -152,6 +201,19 @@ npx wrangler pages deploy .
 4. 本地页面可以正常显示公开地图。
 5. 输入正确口令后，可以查看某个地区的同学信息。
 6. 浏览器 `Network` 与 `Sources` 中不存在 `js/data.js` 或整包学生名单。
+
+`npm run dev:mock` 起来之后，可以照着下面这份清单手动过一遍：
+
+1. 地图正常渲染，底部色带显示「0 人 ~ 当前最大值」。
+2. 鼠标悬停省份时出现卡片，色带上同步标出对应人数。
+3. 单击有数据的省份下钻，左上角出现「返回全国」，按 Esc 或点它都能回到全国视图。
+4. 台湾、香港、澳门、南海诸岛没有省级地图，点击时直接弹出人数面板，控制台不应出现 404。
+5. 滚轮或按钮放大地图后拖动，地图不会被拖出可视区域；缩放不会小于铺满视图。
+6. 点击「同学信息」输入错误口令会被拒绝，输入正确口令后可以查看地区明细。
+7. 点「退出查看」后回到未登录状态，缓存的明细被清空。
+8. 分享按钮能生成 PNG，图片里包含地图、色带图例和统计数字。
+9. 用窄屏或手机访问，控件不重叠、页面不出现横向滚动。
+
 
 ## 注意事项
 
