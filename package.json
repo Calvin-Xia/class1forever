@@ -7,7 +7,9 @@
     "cf:dev": "npx wrangler pages dev .",
     "cf:types": "npx wrangler types",
     "data:upload": "node scripts/upload-kv-data.mjs",
-    "data:upload:preview": "node scripts/upload-kv-data.mjs --env preview"
+    "data:upload:preview": "node scripts/upload-kv-data.mjs --env preview",
+    "dev:mock": "node tests/dev-server.mjs",
+    "vendor:build": "node scripts/build-vendor.mjs"
   },
   "author": "",
   "license": "MIT",
@@ -21,5 +23,9 @@
   "bugs": {
     "url": "https://github.com/Calvin-Xia/class1forever/issues"
   },
-  "homepage": "https://github.com/Calvin-Xia/class1forever#readme"
+  "homepage": "https://github.com/Calvin-Xia/class1forever#readme",
+  "devDependencies": {
+    "echarts": "^6.1.0",
+    "esbuild": "^0.28.2"
+  }
 }
