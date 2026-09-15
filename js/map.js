@@ -31,6 +31,28 @@ const CHINA_MAP_ID = 'cn/china';
 const PROVINCE_MAP_PREFIX = 'cn/';
 const REGION_SERIES_ID = 'regions';
 const SNAPSHOT_BACKGROUND = '#f5efe6';
+/**
+ * 快照采样倍率。窄屏下地图本身只有 ~374px 宽，裁完却要放进 1200px 宽的画布里，
+ * 2 倍会糊（相当于把快照再放大 1.5 倍），3 倍才够用；桌面端本来就只做缩小，成本可控。
+ */
+const SNAPSHOT_PIXEL_RATIO = 3;
+
+/**
+ * 分享图版式。
+ *
+ * 地图快照的宽高比取决于容器和当前缩放，是变化的，所以画布高度必须按快照算出来。
+ * 之前把它硬画进固定的 1200x800（3:2），而桌面端快照接近 1.83:1，
+ * 结果地图被纵向拉伸了 22%。
+ */
+const SHARE_WIDTH = 1200;
+const SHARE_HEADER_HEIGHT = 150;
+const SHARE_LEGEND_HEIGHT = 60;
+const SHARE_STATS_HEIGHT = 100;
+const SHARE_FOOTER_HEIGHT = 50;
+const SHARE_MAP_MIN_HEIGHT = 460;
+const SHARE_MAP_MAX_HEIGHT = 1000;
+/** 裁剪地图快照时四周保留的留白（快照像素）。 */
+const SHARE_MAP_PADDING = 16;
 
 /** 人数越多颜色越深，起点色同时用作无数据地区的底色。 */
 const HEAT_COLORS = ['#f5efe6', '#e8c4a8', '#d9a87c', '#c4704b', '#b56540', '#a85a3a'];
@@ -897,7 +919,11 @@ function buildVisualMapOption(points) {
             color: '#5c5650',
             fontFamily: "'Nunito', sans-serif",
             fontSize: 12,
-            fontWeight: 600
+            fontWeight: 600,
+            // 图例没有底板，浅色区块上没问题，但压到海南这类深色地块上数字就糊了；
+            // 和地图标注一样加一圈细白边。
+            textBorderColor: 'rgba(255, 255, 255, 0.9)',
+            textBorderWidth: 2
         },
         indicatorIcon: 'circle',
         indicatorSize: '60%',
@@ -1500,6 +1526,44 @@ const ShareManager = (function() {
         };
     }
 
+    /**
+     * 计算要把快照裁到哪里。
+     *
+     * 地图在容器里是居中的，两侧会留下大片奶油色空白；只裁到地图外接矩形，
+     * 分享图里地图才能占满宽度。图例在容器底部居中，水平方向一定落在地图跨度内，
+     * 所以按外接矩形裁剪不会把它切掉。
+     */
+    function computeMapCrop(chart) {
+        const bounds = getMapBounds(AppState.activeMapId);
+        const width = chart.getWidth();
+        const height = chart.getHeight();
+        if (!bounds || !width || !height) {
+            return null;
+        }
+
+        const cornerA = chart.convertToPixel({ seriesIndex: 0 }, [bounds.minX, bounds.minY]);
+        const cornerB = chart.convertToPixel({ seriesIndex: 0 }, [bounds.maxX, bounds.maxY]);
+        if (!cornerA || !cornerB) {
+            return null;
+        }
+
+        const left = Math.max(0, Math.min(cornerA[0], cornerB[0]) - SHARE_MAP_PADDING);
+        const right = Math.min(width, Math.max(cornerA[0], cornerB[0]) + SHARE_MAP_PADDING);
+        const top = Math.max(0, Math.min(cornerA[1], cornerB[1]) - SHARE_MAP_PADDING);
+        const bottom = Math.min(height, Math.max(cornerA[1], cornerB[1]) + SHARE_MAP_PADDING);
+
+        if (right - left < 1 || bottom - top < 1) {
+            return null;
+        }
+
+        return {
+            x: Math.round(left * SNAPSHOT_PIXEL_RATIO),
+            y: Math.round(top * SNAPSHOT_PIXEL_RATIO),
+            width: Math.round((right - left) * SNAPSHOT_PIXEL_RATIO),
+            height: Math.round((bottom - top) * SNAPSHOT_PIXEL_RATIO)
+        };
+    }
+
     /** 取当前地图画面，供分享图复用。 */
     function captureMapSnapshot() {
         const chart = AppState.chart;
@@ -1509,11 +1573,70 @@ const ShareManager = (function() {
 
         chart.dispatchAction({ type: 'hideTip' });
 
-        return chart.getDataURL({
-            type: 'png',
-            pixelRatio: 2,
-            backgroundColor: SNAPSHOT_BACKGROUND
+        const crop = computeMapCrop(chart);
+
+        // 图例由合成图自己画（尺寸可控、窄屏也不会被裁掉），所以拍摄时先把它藏起来。
+        // setOption 是同步的，整个过程在同一个任务里完成，浏览器不会画出中间状态。
+        chart.setOption({ visualMap: { show: false } });
+        let dataUrl;
+        try {
+            dataUrl = chart.getDataURL({
+                type: 'png',
+                pixelRatio: SNAPSHOT_PIXEL_RATIO,
+                backgroundColor: SNAPSHOT_BACKGROUND
+            });
+        } finally {
+            chart.setOption({ visualMap: { show: true } });
+        }
+
+        return { dataUrl, crop };
+    }
+
+    /**
+     * 画底部色带图例。
+     *
+     * 单独占一条带，既不会盖住地图，也不依赖快照里那个被缩小的图例。
+     */
+    function drawHeatLegend(ctx, centerX, bandTop, bandHeight, maxValue) {
+        const lowLabel = '0 人';
+        const highLabel = `${maxValue} 人`;
+        const barWidth = 260;
+        const barHeight = 12;
+        const gap = 14;
+        const paddingX = 20;
+        const pillHeight = 40;
+
+        ctx.font = 'bold 15px Arial, sans-serif';
+        ctx.textBaseline = 'middle';
+        const labelWidth = Math.ceil(Math.max(
+            ctx.measureText(lowLabel).width,
+            ctx.measureText(highLabel).width
+        ));
+
+        const pillWidth = paddingX * 2 + labelWidth * 2 + gap * 2 + barWidth;
+        const pillLeft = centerX - pillWidth / 2;
+        const pillTop = bandTop + (bandHeight - pillHeight) / 2;
+        const centerY = pillTop + pillHeight / 2;
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
+        ctx.strokeStyle = BORDER_COLOR;
+        ctx.lineWidth = 1;
+        roundRect(ctx, pillLeft, pillTop, pillWidth, pillHeight, pillHeight / 2, true, true);
+
+        ctx.fillStyle = '#5c5650';
+        ctx.textAlign = 'right';
+        ctx.fillText(lowLabel, pillLeft + paddingX + labelWidth, centerY);
+        ctx.textAlign = 'left';
+        ctx.fillText(highLabel, pillLeft + pillWidth - paddingX - labelWidth, centerY);
+
+        const barLeft = pillLeft + paddingX + labelWidth + gap;
+        const gradient = ctx.createLinearGradient(barLeft, 0, barLeft + barWidth, 0);
+        HEAT_COLORS.forEach(function(color, index) {
+            gradient.addColorStop(index / (HEAT_COLORS.length - 1), color);
         });
+
+        ctx.fillStyle = gradient;
+        roundRect(ctx, barLeft, centerY - barHeight / 2, barWidth, barHeight, barHeight / 2, true, false);
     }
 
     function loadImage(src) {
@@ -1558,21 +1681,40 @@ const ShareManager = (function() {
 
     async function generateImage() {
         const stats = calculateStats();
-        const mapImage = await loadImage(captureMapSnapshot());
+        const snapshot = captureMapSnapshot();
+        const mapImage = await loadImage(snapshot.dataUrl);
+
+        const source = snapshot.crop || {
+            x: 0,
+            y: 0,
+            width: mapImage.naturalWidth,
+            height: mapImage.naturalHeight
+        };
+
+        // 地图区域的高度由快照真实宽高比决定，宽度固定，这样地图永远不会被拉变形。
+        const mapHeight = Math.round(Math.min(
+            SHARE_MAP_MAX_HEIGHT,
+            Math.max(SHARE_MAP_MIN_HEIGHT, SHARE_WIDTH / (source.width / source.height))
+        ));
+        const mapTop = SHARE_HEADER_HEIGHT;
+        const legendTop = mapTop + mapHeight;
+        const statsTop = legendTop + SHARE_LEGEND_HEIGHT;
+        const footerTop = statsTop + SHARE_STATS_HEIGHT;
+        const canvasHeight = footerTop + SHARE_FOOTER_HEIGHT;
 
         const canvas = document.createElement('canvas');
-        canvas.width = 1200;
-        canvas.height = 1100;
+        canvas.width = SHARE_WIDTH;
+        canvas.height = canvasHeight;
         const ctx = canvas.getContext('2d');
 
         ctx.fillStyle = '#faf7f2';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        const gradient = ctx.createLinearGradient(0, 0, canvas.width, 150);
+        const gradient = ctx.createLinearGradient(0, 0, canvas.width, SHARE_HEADER_HEIGHT);
         gradient.addColorStop(0, '#e8a87c');
         gradient.addColorStop(1, '#c4704b');
         ctx.fillStyle = gradient;
-        roundRect(ctx, 0, 0, canvas.width, 150, 24, true, false);
+        roundRect(ctx, 0, 0, canvas.width, SHARE_HEADER_HEIGHT, 24, true, false, [24, 24, 0, 0]);
 
         ctx.fillStyle = '#ffffff';
         ctx.font = '42px Georgia, serif';
@@ -1584,50 +1726,83 @@ const ShareManager = (function() {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
         ctx.fillText('探索各地同学的足迹', canvas.width / 2, 105);
 
-        ctx.drawImage(mapImage, 0, 150, 1200, 800);
+        // 等比缩放并居中；极端比例被上下限裁到时，留白用快照同色填充。
+        ctx.fillStyle = SNAPSHOT_BACKGROUND;
+        ctx.fillRect(0, mapTop, canvas.width, mapHeight);
+
+        const scale = Math.min(SHARE_WIDTH / source.width, mapHeight / source.height);
+        const drawWidth = source.width * scale;
+        const drawHeight = source.height * scale;
+        ctx.drawImage(
+            mapImage,
+            source.x,
+            source.y,
+            source.width,
+            source.height,
+            (canvas.width - drawWidth) / 2,
+            mapTop + (mapHeight - drawHeight) / 2,
+            drawWidth,
+            drawHeight
+        );
+
+        ctx.fillStyle = '#faf7f2';
+        ctx.fillRect(0, legendTop, canvas.width, SHARE_LEGEND_HEIGHT);
+        drawHeatLegend(ctx, canvas.width / 2, legendTop, SHARE_LEGEND_HEIGHT, computeHeatMax(AppState.regionIndex));
 
         ctx.fillStyle = '#fffaf5';
-        ctx.fillRect(0, 950, canvas.width, 100);
+        ctx.fillRect(0, statsTop, canvas.width, SHARE_STATS_HEIGHT);
 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        ctx.fillStyle = '#c4704b';
-        ctx.font = 'bold 36px Arial, sans-serif';
-        ctx.fillText(String(stats.total), 200, 990);
-        ctx.fillStyle = '#5c5650';
-        ctx.font = '16px Arial, sans-serif';
-        ctx.fillText('总人数', 200, 1020);
+        const statColumns = [
+            { value: stats.total, label: '总人数', x: 200 },
+            { value: stats.provinces, label: '覆盖省份', x: 600 },
+            { value: stats.cities, label: '覆盖城市', x: 1000 }
+        ];
 
-        ctx.fillStyle = '#c4704b';
-        ctx.font = 'bold 36px Arial, sans-serif';
-        ctx.fillText(String(stats.provinces), 600, 990);
-        ctx.fillStyle = '#5c5650';
-        ctx.font = '16px Arial, sans-serif';
-        ctx.fillText('覆盖省份', 600, 1020);
-
-        ctx.fillStyle = '#c4704b';
-        ctx.font = 'bold 36px Arial, sans-serif';
-        ctx.fillText(String(stats.cities), 1000, 990);
-        ctx.fillStyle = '#5c5650';
-        ctx.font = '16px Arial, sans-serif';
-        ctx.fillText('覆盖城市', 1000, 1020);
+        statColumns.forEach(function(column) {
+            ctx.fillStyle = '#c4704b';
+            ctx.font = 'bold 36px Arial, sans-serif';
+            ctx.fillText(String(column.value), column.x, statsTop + 40);
+            ctx.fillStyle = '#5c5650';
+            ctx.font = '16px Arial, sans-serif';
+            ctx.fillText(column.label, column.x, statsTop + 70);
+        });
 
         ctx.fillStyle = '#f5efe6';
-        roundRect(ctx, 0, 1050, canvas.width, 50, 0, true, false, [0, 0, 24, 24]);
+        roundRect(ctx, 0, footerTop, canvas.width, SHARE_FOOTER_HEIGHT, 0, true, false, [0, 0, 24, 24]);
 
         ctx.fillStyle = '#5c5650';
         ctx.font = '14px Arial, sans-serif';
-        ctx.fillText('万州二中 · 金鹰1班', canvas.width / 2, 1075);
+        ctx.fillText('万州二中 · 金鹰1班', canvas.width / 2, footerTop + SHARE_FOOTER_HEIGHT / 2);
 
+        return canvasToPngBlob(canvas);
+    }
+
+    /**
+     * 把 canvas 转成 PNG Blob。
+     *
+     * 实测 canvas.toBlob 在部分 Chromium 环境里会被拖到 7 秒（同一张图 toDataURL 只要 18ms，
+     * 而且空白画布反而比有内容的更慢，明显是调度问题）。分享图导出一次就够，
+     * 与其等异步回调，不如同步编码再自己转 Blob，稳定在几百毫秒内。
+     */
+    function canvasToPngBlob(canvas) {
         return new Promise(function(resolve, reject) {
-            canvas.toBlob(function(blob) {
-                if (blob) {
-                    resolve(blob);
-                    return;
+            let bytes;
+            try {
+                const dataUrl = canvas.toDataURL('image/png');
+                const binary = atob(dataUrl.slice(dataUrl.indexOf(',') + 1));
+                bytes = new Uint8Array(binary.length);
+                for (let index = 0; index < binary.length; index += 1) {
+                    bytes[index] = binary.charCodeAt(index);
                 }
-                reject(new Error('生成图片失败'));
-            }, 'image/png', 0.95);
+            } catch (error) {
+                reject(error);
+                return;
+            }
+
+            resolve(new Blob([bytes], { type: 'image/png' }));
         });
     }
 
