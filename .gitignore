@@ -5,3 +5,6 @@ js/data.js
 node_modules/
 dist/
 test-results/
+
+# Playwright MCP 调试产物
+.playwright-mcp/

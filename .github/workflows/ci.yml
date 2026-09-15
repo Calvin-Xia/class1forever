@@ -15,6 +15,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Static safety check
         run: npm run build
@@ -22,10 +26,17 @@ jobs:
       - name: Syntax check
         run: |
           set -e
-          for file in $(find js shared scripts -type f \( -name '*.js' -o -name '*.mjs' \) ! -path 'js/vendor/*'); do
+          for file in $(find js shared scripts tests -type f \( -name '*.js' -o -name '*.mjs' \) ! -path 'js/vendor/*'); do
             node --check "$file"
           done
           for file in $(find functions -type f \( -name '*.js' -o -name '*.mjs' \)); do
             cat "$file" | node --check --input-type=module
           done
           node --check build.js
+
+      - name: Vendor bundle is in sync
+        run: |
+          set -e
+          node scripts/build-vendor.mjs
+          git diff --exit-code -- js/vendor/echarts.min.js \
+            || { echo "❌ js/vendor/echarts.min.js 与 scripts/vendor/echarts-entry.mjs 不同步，请重新执行 npm run vendor:build"; exit 1; }
