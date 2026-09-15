@@ -1,4 +1,4 @@
-import { buildDetailsPayload } from '../../_lib/data.mjs';
+import { buildDetailsPayload, normalizeRegionQuery } from '../../_lib/data.mjs';
 import { hasValidSession } from '../../_lib/auth.mjs';
 import { errorResponse, jsonResponse } from '../../_lib/http.mjs';
 
@@ -20,20 +20,20 @@ export const onRequestGet = async ({ env, request }) => {
         return errorResponse(400, 'province_required', '缺少地区信息，请重新选择。');
     }
 
+    let region;
     try {
-        const payload = await buildDetailsPayload(env, {
-            province,
-            city
-        });
-
-        return jsonResponse(payload);
+        region = normalizeRegionQuery({ province, city });
     } catch (error) {
+        // 校验信息本身就是给用户看的中文提示，可以原样返回。
+        return errorResponse(400, 'invalid_region_query', error.message);
+    }
+
+    try {
+        return jsonResponse(await buildDetailsPayload(env, region));
+    } catch (error) {
+        // 能走到这里说明 KV 读不到或数据没配好，属于服务端问题：
+        // 不要把内部错误信息透给前端，也不要冒充 400。
         console.error('Failed to load detail map data:', error);
-
-        if (error instanceof TypeError || error instanceof Error) {
-            return errorResponse(400, 'invalid_region_query', error.message);
-        }
-
         return errorResponse(503, 'detail_data_unavailable', '这个地区暂时打不开，请稍后再试。');
     }
 };

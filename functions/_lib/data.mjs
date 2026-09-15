@@ -41,11 +41,20 @@ export async function loadRawStudents(env) {
     return normalizeStudents(students);
 }
 
-export async function buildDetailsPayload(env, region) {
-    const normalizedRegion = {
+/**
+ * 校验并规范化地区查询参数。
+ * 只做参数检查，不读 KV，方便调用方把「参数不对」和「数据读不到」分开处理。
+ * 参数非法时抛错，错误信息可以直接展示给用户。
+ */
+export function normalizeRegionQuery(region) {
+    return {
         province: normalizeProvince(region.province, 'query'),
         city: normalizeQueryCity(region.city)
     };
+}
+
+export async function buildDetailsPayload(env, region) {
+    const normalizedRegion = normalizeRegionQuery(region);
     const students = await loadRawStudents(env);
     const people = sortPeople(filterStudentsByRegion(students, normalizedRegion));
 
