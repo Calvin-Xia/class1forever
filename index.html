@@ -5,83 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="蹭饭地图 - 探索各地同学的足迹，发现每个省份和城市的精彩故事">
     <title>蹭饭地图</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="css/main.css">
-    <script>
-    (function() {
-        var cdnLoader = {
-            cdnList: [
-                {
-                    name: 'img.hcharts.cn',
-                    highmaps: 'https://img.hcharts.cn/highmaps/highmaps.js',
-                    drilldown: 'https://img.hcharts.cn/highcharts/modules/drilldown.js',
-                    exporting: 'https://img.hcharts.cn/highcharts/modules/exporting.js'
-                },
-                {
-                    name: 'code.highcharts.com',
-                    highmaps: 'https://code.highcharts.com/maps/highmaps.js',
-                    drilldown: 'https://code.highcharts.com/maps/modules/drilldown.js',
-                    exporting: 'https://code.highcharts.com/maps/modules/exporting.js'
-                },
-                {
-                    name: 'local',
-                    highmaps: 'js/vendor/highmaps.js',
-                    drilldown: 'js/vendor/drilldown.js',
-                    exporting: 'js/vendor/exporting.js'
-                }
-            ],
-
-            loadScript: function(src, callback) {
-                var script = document.createElement('script');
-                script.src = src;
-                script.onload = function() { callback(true); };
-                script.onerror = function() { callback(false); };
-                document.head.appendChild(script);
-            },
-
-            loadCDN: function(index, callback) {
-                var self = this;
-                if (index >= this.cdnList.length) {
-                    callback(false);
-                    return;
-                }
-
-                var cdn = this.cdnList[index];
-                this.loadScript(cdn.highmaps, function(success) {
-                    if (!success) {
-                        self.loadCDN(index + 1, callback);
-                        return;
-                    }
-
-                    self.loadScript(cdn.drilldown, function(drilldownSuccess) {
-                        if (!drilldownSuccess) {
-                            self.loadCDN(index + 1, callback);
-                            return;
-                        }
-
-                        self.loadScript(cdn.exporting, function(exportingSuccess) {
-                            if (!exportingSuccess) {
-                                self.loadCDN(index + 1, callback);
-                                return;
-                            }
-
-                            console.log('Highmaps loaded from: ' + cdn.name);
-                            callback(true);
-                        });
-                    });
-                });
-            },
-
-            start: function(callback) {
-                this.loadCDN(0, callback);
-            }
-        };
-
-        window.HighmapsLoader = cdnLoader;
-    })();
-    </script>
+    <link rel="preload" as="script" href="js/vendor/echarts.min.js">
+    <link rel="preload" as="script" href="js/china.js">
+    <script src="js/boot.js" defer></script>
 </head>
 <body>
     <div id="cdn-error" class="cdn-error" style="display: none;">
@@ -121,7 +52,13 @@
                         <div class="map-frame__corner map-frame__corner--tr" aria-hidden="true"></div>
                         <div class="map-frame__corner map-frame__corner--bl" aria-hidden="true"></div>
                         <div class="map-frame__corner map-frame__corner--br" aria-hidden="true"></div>
-                        <button id="details-btn" class="details-btn" type="button" aria-label="开启查看详情模式">查看详情</button>
+
+                        <div class="map-toolbar">
+                            <button id="map-back-btn" class="map-back-btn" type="button" hidden>← 返回全国</button>
+                            <button id="details-btn" class="details-btn" type="button" aria-label="开启查看详情模式">同学信息</button>
+                            <span id="map-region-badge" class="map-region-badge">中国</span>
+                        </div>
+
                         <button id="share-btn" class="share-btn" type="button" title="分享地图" aria-label="分享地图">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="18" cy="5" r="3"></circle>
@@ -131,13 +68,38 @@
                                 <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
                             </svg>
                         </button>
+
+                        <div class="map-zoom" role="group" aria-label="地图缩放">
+                            <button id="map-zoom-in" class="map-zoom__btn" type="button" aria-label="放大地图" title="放大">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                            </button>
+                            <button id="map-zoom-out" class="map-zoom__btn" type="button" aria-label="缩小地图" title="缩小">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                            </button>
+                            <button id="map-zoom-reset" class="map-zoom__btn" type="button" aria-label="重置地图缩放" title="重置视图">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M8 3H5a2 2 0 0 0-2 2v3"></path>
+                                    <path d="M16 3h3a2 2 0 0 1 2 2v3"></path>
+                                    <path d="M8 21H5a2 2 0 0 1-2-2v-3"></path>
+                                    <path d="M16 21h3a2 2 0 0 0 2-2v-3"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+
                         <div id="map" role="img" aria-label="中国地图，显示同学分布">
                             <div id="map-loading" class="map-loading">
                                 <div class="map-loading__spinner"></div>
                                 <p class="map-loading__text">地图加载中...</p>
                             </div>
                         </div>
-                        <a href="https://www.highcharts.com" target="_blank" rel="noopener noreferrer" class="highcharts-credit">Highcharts.com</a>
+
+                        <a href="https://echarts.apache.org" target="_blank" rel="noopener noreferrer" class="map-credit">Apache ECharts</a>
                     </div>
                 </div>
             </section>
@@ -175,63 +137,5 @@
             </form>
         </div>
     </div>
-
-    <script>
-    (function() {
-        var criticalScripts = {
-            'js/china.js': true,
-            'js/map.js': true
-        };
-
-        function showFatalError(message) {
-            document.getElementById('cdn-error-title').textContent = '地图加载失败';
-            document.getElementById('cdn-error-message').textContent = message;
-            document.getElementById('cdn-error').style.display = 'flex';
-            document.getElementById('map-loading').style.display = 'none';
-        }
-
-        document.getElementById('cdn-error-retry').addEventListener('click', function() {
-            location.reload();
-        });
-
-        HighmapsLoader.start(function(success) {
-            if (!success) {
-                showFatalError('无法加载地图资源，请检查网络连接后刷新页面。');
-                return;
-            }
-
-            var scripts = [
-                'js/china.js',
-                'js/map.js'
-            ];
-
-            var loadNext = function(index) {
-                if (index >= scripts.length) {
-                    return;
-                }
-
-                var script = document.createElement('script');
-                script.src = scripts[index];
-                script.onload = function() {
-                    loadNext(index + 1);
-                };
-                script.onerror = function() {
-                    console.error('Failed to load: ' + scripts[index]);
-                    if (criticalScripts[scripts[index]]) {
-                        showFatalError('关键地图脚本加载失败，请稍后重试。');
-                        return;
-                    }
-                    loadNext(index + 1);
-                };
-                document.body.appendChild(script);
-            };
-
-            loadNext(0);
-        });
-    })();
-    </script>
 </body>
 </html>
-
-
-

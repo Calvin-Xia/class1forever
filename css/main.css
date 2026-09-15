@@ -407,6 +407,7 @@ body {
 }
 
 #map {
+    position: relative;
     width: 100%;
     height: 70vh;
     max-height: 780px;
@@ -415,7 +416,122 @@ body {
     overflow: hidden;
 }
 
-.highcharts-credit {
+/* 地图左上角工具条：返回、详情口令、当前层级 */
+.map-toolbar {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 100;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacing-sm);
+    max-width: calc(100% - 96px);
+    pointer-events: none;
+}
+
+.map-toolbar > * {
+    pointer-events: auto;
+}
+
+.map-region-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 40px;
+    padding: 0 var(--spacing-md);
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    box-shadow: 0 2px 10px var(--color-shadow);
+    color: var(--color-text-secondary);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.map-back-btn {
+    display: inline-flex;
+    align-items: center;
+    height: 40px;
+    padding: 0 var(--spacing-md);
+    background: var(--color-accent-primary);
+    border: 1px solid var(--color-accent-primary);
+    border-radius: 999px;
+    box-shadow: 0 2px 10px var(--color-shadow);
+    color: #ffffff;
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.map-back-btn[hidden] {
+    display: none;
+}
+
+.map-back-btn:hover {
+    background: var(--color-accent-secondary);
+    border-color: var(--color-accent-secondary);
+}
+
+.map-back-btn:focus {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 2px;
+}
+
+/* 左下角缩放控件：三段式按钮组 */
+.map-zoom {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: 0 2px 10px var(--color-shadow);
+    overflow: hidden;
+}
+
+.map-zoom__btn {
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 0;
+    border-top: 1px solid var(--color-border-light);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.map-zoom__btn:first-child {
+    border-top: 0;
+}
+
+.map-zoom__btn svg {
+    width: 15px;
+    height: 15px;
+}
+
+.map-zoom__btn:hover {
+    background: var(--color-accent-secondary);
+    color: #ffffff;
+}
+
+.map-zoom__btn:focus-visible {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: -2px;
+}
+
+.map-credit {
     position: absolute;
     bottom: 12px;
     right: 16px;
@@ -427,7 +543,7 @@ body {
     transition: opacity var(--transition-fast);
 }
 
-.highcharts-credit:hover {
+.map-credit:hover {
     opacity: 1;
     color: var(--color-accent-primary);
 }
@@ -481,16 +597,10 @@ body {
     pointer-events: none;
 }
 
-.highcharts-tooltip {
-    font-family: var(--font-body) !important;
-}
-
-.highcharts-tooltip span[data-z-index] {
-    padding: 0;
-    background: transparent !important;
-    border: none !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
+/* ECharts 默认给 tooltip 容器加边框和内边距，这里全部交给 .tooltip 自己画 */
+.map-tooltip {
+    font-family: var(--font-body);
+    pointer-events: none;
 }
 
 .tooltip {
@@ -589,25 +699,6 @@ body {
 .pinfo .school {
     color: rgba(255, 255, 255, 0.7);
     font-size: 0.8rem;
-}
-
-.highcharts-button {
-    fill: var(--color-text-secondary) !important;
-    transition: fill var(--transition-fast);
-}
-
-.highcharts-button:hover {
-    fill: var(--color-accent-primary) !important;
-}
-
-.highcharts-legend-item text {
-    font-family: var(--font-body) !important;
-    fill: var(--color-text-secondary) !important;
-}
-
-.highcharts-axis-labels text,
-.highcharts-data-labels text {
-    font-family: var(--font-body) !important;
 }
 
 @media (max-width: 768px) {
@@ -899,11 +990,13 @@ body {
 }
 
 .map-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 50;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100%;
     color: var(--color-text-secondary);
 }
 
@@ -932,9 +1025,10 @@ body {
     z-index: 100;
     width: 40px;
     height: 40px;
-    background: var(--color-bg-card);
+    background: rgba(255, 255, 255, 0.94);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
+    box-shadow: 0 2px 10px var(--color-shadow);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -1105,16 +1199,16 @@ body {
 }
 
 .details-btn {
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    z-index: 100;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-width: 112px;
     height: 40px;
     padding: 0 var(--spacing-md);
-    background: rgba(255, 255, 255, 0.92);
+    background: rgba(255, 255, 255, 0.94);
     border: 1px solid var(--color-border);
     border-radius: 999px;
+    box-shadow: 0 2px 10px var(--color-shadow);
     color: var(--color-text-primary);
     font-family: var(--font-body);
     font-size: 0.9rem;
@@ -1122,6 +1216,10 @@ body {
     letter-spacing: 0.02em;
     cursor: pointer;
     transition: all var(--transition-fast);
+}
+
+.details-btn[hidden] {
+    display: none;
 }
 
 .details-btn:hover,
@@ -1309,19 +1407,59 @@ body {
 }
 
 @media (max-width: 768px) {
-    .details-btn {
+    .map-toolbar {
         top: 8px;
         left: 8px;
-        min-width: 100px;
-        height: 36px;
+        right: 56px;
+        max-width: none;
+        gap: 6px;
+    }
+
+    .details-btn,
+    .map-back-btn,
+    .map-region-badge {
+        height: 34px;
         font-size: 0.82rem;
     }
+
+    .details-btn {
+        min-width: 100px;
+    }
+
+    .map-zoom {
+        left: 8px;
+        bottom: 8px;
+    }
+
+    .map-zoom__btn {
+        width: 30px;
+        height: 30px;
+    }
+
+    .map-zoom__btn svg {
+        width: 13px;
+        height: 13px;
+    }
+
 }
 
 @media (max-width: 480px) {
+    .map-toolbar {
+        right: 8px;
+        top: 8px;
+    }
+
     .details-btn {
-        min-width: 92px;
-        padding: 0 0.75rem;
+        min-width: 0;
+        padding: 0 0.7rem;
+    }
+
+    .map-region-badge {
+        padding: 0 0.6rem;
+    }
+
+    .map-credit {
+        display: none;
     }
 
     .auth-overlay {

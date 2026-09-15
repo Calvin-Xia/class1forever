@@ -1,32 +1,69 @@
 /**
  * @fileoverview 蹭饭地图核心模块
  *
- * 公开地图数据通过 Cloudflare Pages Functions 从 KV 读取。
+ * 地图用 ECharts 渲染（js/vendor/echarts.min.js，按需构建，只含 map/geo/tooltip/visualMap）。
+ * 几何数据来自 js/china.js 和按需懒加载的 js/province/*.js，统一登记在 CMapGeo 里。
+ *
+ * 公开数据通过 Cloudflare Pages Functions 从 KV 读取：
  * 公开访客只看到省市聚合统计，班内明细需要服务端口令会话后按地区拉取。
  */
 
+/**
+ * 判断是否使用移动端交互方式。
+ *
+ * 只看 maxTouchPoints 会把带触摸屏的笔记本一起算进来，而那些设备上鼠标悬停是能用的；
+ * 一旦误判，悬浮卡片永远不出现，点击也被改成打开底部面板。所以优先看主输入设备
+ * 是否支持悬停，只有拿不到媒体查询时才退回能力探测。
+ */
 const isTouchDevice = (function() {
-    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
-        return true;
-    }
-    if (window.matchMedia && window.matchMedia('(any-pointer: coarse)').matches) {
-        return true;
+    if (window.matchMedia) {
+        if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+            return false;
+        }
+        if (window.matchMedia('(pointer: coarse)').matches) {
+            return true;
+        }
     }
     return ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 })();
 
+const CHINA_MAP_ID = 'cn/china';
+const PROVINCE_MAP_PREFIX = 'cn/';
+const REGION_SERIES_ID = 'regions';
+const SNAPSHOT_BACKGROUND = '#f5efe6';
+
+/** 人数越多颜色越深，起点色同时用作无数据地区的底色。 */
+const HEAT_COLORS = ['#f5efe6', '#e8c4a8', '#d9a87c', '#c4704b', '#b56540', '#a85a3a'];
+const BORDER_COLOR = '#e0d8cc';
+const HOVER_AREA_COLOR = '#e8a87c';
+const HOVER_BORDER_COLOR = '#c4704b';
+/**
+ * 默认视图比例。ECharts 自动布局只会用掉容器的 80%，
+ * 放大 1.25 倍正好让地图铺满可用区域，因此它同时是初始比例和最小比例。
+ */
+const BASE_ZOOM = 1.25;
+const ZOOM_MAX = 8;
+/** 判定平移是否越界时的容差（像素）。 */
+const ROAM_TOLERANCE_PX = 0.5;
+
 const AppState = {
     chart: null,
     publicData: null,
-    provinces: {},
+    /** 省份名 -> { name, file, point, loading } */
+    provinceCatalog: {},
     activeProvince: null,
+    activeMapId: CHINA_MAP_ID,
+    /** 当前视图里的地区名 -> 数据点，供 tooltip 与点击事件复用 */
+    regionIndex: new Map(),
     detailsCache: new Map(),
     detailRequestVersion: 0,
     detailAccess: false,
     detailModeAvailable: false,
     detailModeEnabled: false,
     detailsHint: '',
-    pendingPoint: null
+    pendingPoint: null,
+    /** 避免纠偏时自己触发自己 */
+    clampingRoam: false
 };
 
 const ui = {
@@ -36,6 +73,11 @@ const ui = {
     errorMessage: document.getElementById('cdn-error-message'),
     note: document.getElementById('interaction-note'),
     detailsButton: document.getElementById('details-btn'),
+    backButton: document.getElementById('map-back-btn'),
+    regionBadge: document.getElementById('map-region-badge'),
+    zoomIn: document.getElementById('map-zoom-in'),
+    zoomOut: document.getElementById('map-zoom-out'),
+    zoomReset: document.getElementById('map-zoom-reset'),
     authOverlay: document.getElementById('auth-overlay'),
     authClose: document.getElementById('auth-close'),
     authForm: document.getElementById('auth-form'),
@@ -64,153 +106,11 @@ function showProvinceLoading(provinceName) {
     if (!ui.loading) {
         return;
     }
-    var text = ui.loading.querySelector('.map-loading__text');
+    const text = ui.loading.querySelector('.map-loading__text');
     if (text && provinceName) {
         text.textContent = '正在加载 ' + provinceName + ' 地图...';
     }
     ui.loading.style.display = 'flex';
-}
-
-const ProvinceMapLoader = (function() {
-    const pending = {};
-
-    function isLoaded(filename) {
-        return Boolean(filename && Highcharts.maps['cn/' + filename]);
-    }
-
-    function load(filename) {
-        if (isLoaded(filename)) {
-            return Promise.resolve();
-        }
-        if (pending[filename]) {
-            return pending[filename];
-        }
-        pending[filename] = new Promise(function(resolve, reject) {
-            const script = document.createElement('script');
-            script.src = 'js/province/' + filename + '.js';
-            script.onload = function() {
-                delete pending[filename];
-                resolve();
-            };
-            script.onerror = function() {
-                delete pending[filename];
-                reject(new Error('Failed to load province map: ' + filename));
-            };
-            document.body.appendChild(script);
-        });
-        return pending[filename];
-    }
-
-    return {
-        isLoaded: isLoaded,
-        load: load
-    };
-})();
-
-const PUBLIC_CACHE_KEY = 'class1forever:public:v1';
-
-function readPublicCache() {
-    try {
-        const raw = localStorage.getItem(PUBLIC_CACHE_KEY);
-        if (!raw) {
-            return null;
-        }
-        const cached = JSON.parse(raw);
-        if (!cached || typeof cached !== 'object' || typeof cached.generatedAt !== 'string') {
-            return null;
-        }
-        if (!cached.provinces || !cached.stats) {
-            return null;
-        }
-        return cached;
-    } catch (_error) {
-        return null;
-    }
-}
-
-function writePublicCache(data) {
-    try {
-        localStorage.setItem(PUBLIC_CACHE_KEY, JSON.stringify(data));
-    } catch (_error) {
-        // Storage may be unavailable (private mode / quota); cache is best-effort.
-    }
-}
-
-function applyPublicData(data) {
-    AppState.publicData = data;
-    AppState.detailAccess = Boolean(data.detailAccess);
-    AppState.detailModeAvailable = Boolean(data.detailModeAvailable);
-    AppState.detailsHint = typeof data.detailsHint === 'string' ? data.detailsHint : '';
-}
-
-function showFatalError(message, title) {
-    if (ui.errorTitle) {
-        ui.errorTitle.textContent = title || '地图加载失败';
-    }
-    if (ui.errorMessage) {
-        ui.errorMessage.textContent = message;
-    }
-    if (ui.error) {
-        ui.error.style.display = 'flex';
-    }
-    hideMapLoading();
-}
-
-function normalizeApiErrorMessage(error, fallback) {
-    if (error && error.payload && typeof error.payload.message === 'string' && error.payload.message) {
-        return error.payload.message;
-    }
-    if (error && typeof error.message === 'string' && error.message) {
-        return error.message;
-    }
-    return fallback;
-}
-
-async function fetchJson(url, init) {
-    const requestInit = Object.assign({
-        credentials: 'same-origin'
-    }, init || {});
-
-    const response = await fetch(url, requestInit);
-    let payload = null;
-
-    try {
-        payload = await response.json();
-    } catch (_error) {
-        payload = null;
-    }
-
-    if (!response.ok) {
-        const error = new Error(payload && payload.message ? payload.message : `Request failed with status ${response.status}`);
-        error.status = response.status;
-        error.payload = payload;
-        throw error;
-    }
-
-    return payload;
-}
-
-function fitChartToBounds(chart) {
-    if (!chart) {
-        return;
-    }
-
-    if (chart.mapView) {
-        window.setTimeout(function() {
-            chart.mapView.fitToBounds(undefined, undefined, true);
-        }, 50);
-        return;
-    }
-
-    if (chart.mapZoom) {
-        window.setTimeout(function() {
-            chart.mapZoom();
-        }, 50);
-    }
-}
-
-function getPointCount(point) {
-    return Number(point && point.value ? point.value : 0);
 }
 
 function normalizeRegionToken(value) {
@@ -226,45 +126,31 @@ function normalizeRegionToken(value) {
     return normalized;
 }
 
-function getSeriesProvinceName(point) {
-    return normalizeRegionToken(
-        point &&
-        point.series &&
-        point.series.userOptions &&
-        point.series.userOptions.provinceName
-    );
-}
-
 function getActiveProvinceName() {
     return normalizeRegionToken(AppState.activeProvince);
 }
 
+/**
+ * 把地图数据点还原成 { province, city }，供详情接口查询使用。
+ * 点里的字段由 buildNationalPoints / buildProvincePoints 写入，不再依赖图表库的对象结构。
+ */
 function getPointRegion(point) {
-    const activeProvinceName = getActiveProvinceName();
-    const seriesProvinceName = getSeriesProvinceName(point);
-    const pointName = normalizeRegionToken(point && point.name);
     const province = normalizeRegionToken(point && point.province) ||
-        seriesProvinceName ||
-        activeProvinceName ||
-        pointName;
-    let city = normalizeRegionToken(point && point.city);
-
-    if (!city) {
-        if (activeProvinceName && pointName && pointName !== activeProvinceName) {
-            city = pointName;
-        } else if (seriesProvinceName && pointName && pointName !== seriesProvinceName) {
-            city = pointName;
-        }
-    }
+        getActiveProvinceName() ||
+        normalizeRegionToken(point && point.name);
 
     return {
         province: province,
-        city: city
+        city: normalizeRegionToken(point && point.city)
     };
 }
 
 function getRegionKey(region) {
     return region.city ? `${region.province}::${region.city}` : `${region.province}::*`;
+}
+
+function getPointCount(point) {
+    return Number(point && point.value ? point.value : 0);
 }
 
 function getPublicHint() {
@@ -298,10 +184,12 @@ function renderPublicCard(point, options) {
     const calloutHtml = cardOptions.callout
         ? `<div class="tooltip__callout">${escapeHtml(cardOptions.callout)}</div>`
         : '';
+    // 悬浮卡片就贴在省份上，对标的是哪个地区已经一目了然，不用再顶一行标题。
+    const titleHtml = cardOptions.compact ? '' : '<div class="series">公开概况</div>';
 
     return `
         <div class="tooltip">
-            <div class="series">公开概况</div>
+            ${titleHtml}
             <div class="profile">
                 <div class="name">${escapeHtml(point.name)}</div>
                 <div class="value">${count}人</div>
@@ -399,7 +287,7 @@ const BottomSheet = (function() {
             }
         }
 
-        if (currentPoint.drilldown) {
+        if (currentPoint.drilldownFile && !isActiveProvinceView()) {
             elements.drilldownButton.hidden = false;
             elements.drilldownButton.textContent = `进入 ${currentPoint.name} 地图详情`;
         } else {
@@ -470,8 +358,10 @@ const BottomSheet = (function() {
     }
 
     function handleDrilldownClick() {
-        if (currentPoint && currentPoint.drilldown) {
-            drilldownPoint(currentPoint);
+        if (currentPoint && currentPoint.drilldownFile && !isActiveProvinceView()) {
+            drillIntoProvince(currentPoint).catch(function(error) {
+                console.error('Drilldown failed:', error);
+            });
         }
     }
 
@@ -658,45 +548,736 @@ async function showDetailSheetForPoint(point, forceRefresh) {
     }
 }
 
-function doRawDrilldown(point) {
-    if (typeof point.doDrilldown === 'function') {
-        point.doDrilldown();
+function showFatalError(message, title) {
+    if (ui.errorTitle) {
+        ui.errorTitle.textContent = title || '地图加载失败';
+    }
+    if (ui.errorMessage) {
+        ui.errorMessage.textContent = message;
+    }
+    if (ui.error) {
+        ui.error.style.display = 'flex';
+    }
+    hideMapLoading();
+}
+
+function normalizeApiErrorMessage(error, fallback) {
+    if (error && error.payload && typeof error.payload.message === 'string' && error.payload.message) {
+        return error.payload.message;
+    }
+    if (error && typeof error.message === 'string' && error.message) {
+        return error.message;
+    }
+    return fallback;
+}
+
+async function fetchJson(url, init) {
+    const requestInit = Object.assign({
+        credentials: 'same-origin'
+    }, init || {});
+
+    const response = await fetch(url, requestInit);
+    let payload = null;
+
+    try {
+        payload = await response.json();
+    } catch (_error) {
+        payload = null;
+    }
+
+    if (!response.ok) {
+        const error = new Error(payload && payload.message ? payload.message : `Request failed with status ${response.status}`);
+        error.status = response.status;
+        error.payload = payload;
+        throw error;
+    }
+
+    return payload;
+}
+
+const PUBLIC_CACHE_KEY = 'class1forever:public:v1';
+
+function readPublicCache() {
+    try {
+        const raw = localStorage.getItem(PUBLIC_CACHE_KEY);
+        if (!raw) {
+            return null;
+        }
+        const cached = JSON.parse(raw);
+        if (!cached || typeof cached !== 'object' || typeof cached.generatedAt !== 'string') {
+            return null;
+        }
+        if (!cached.provinces || !cached.stats) {
+            return null;
+        }
+        return cached;
+    } catch (_error) {
+        return null;
+    }
+}
+
+function writePublicCache(data) {
+    try {
+        localStorage.setItem(PUBLIC_CACHE_KEY, JSON.stringify(data));
+    } catch (_error) {
+        // Storage may be unavailable (private mode / quota); cache is best-effort.
+    }
+}
+
+function applyPublicData(data) {
+    AppState.publicData = data;
+    AppState.detailAccess = Boolean(data.detailAccess);
+    AppState.detailModeAvailable = Boolean(data.detailModeAvailable);
+    AppState.detailsHint = typeof data.detailsHint === 'string' ? data.detailsHint : '';
+}
+
+/* ------------------------------------------------------------------ *
+ * 地图数据层
+ * ------------------------------------------------------------------ */
+
+const ProvinceMapLoader = (function() {
+    const pending = {};
+
+    function mapIdOf(filename) {
+        return PROVINCE_MAP_PREFIX + filename;
+    }
+
+    function isRegistered(filename) {
+        return Boolean(filename) && Boolean(CMapGeo.get(mapIdOf(filename)));
+    }
+
+    /**
+     * 懒加载省级 GeoJSON，并顺带注册给 ECharts。
+     * 同一份地图只会请求和注册一次。
+     */
+    function load(filename) {
+        const mapId = mapIdOf(filename);
+        const loaded = CMapGeo.get(mapId);
+        if (loaded) {
+            return Promise.resolve(loaded);
+        }
+        if (pending[filename]) {
+            return pending[filename];
+        }
+
+        pending[filename] = new Promise(function(resolve, reject) {
+            const script = document.createElement('script');
+            script.src = 'js/province/' + filename + '.js';
+            script.onload = function() {
+                delete pending[filename];
+                const geoJson = CMapGeo.get(mapId);
+                if (!geoJson) {
+                    reject(new Error('省级地图数据缺失：' + filename));
+                    return;
+                }
+                echarts.registerMap(mapId, geoJson);
+                resolve(geoJson);
+            };
+            script.onerror = function() {
+                delete pending[filename];
+                reject(new Error('省级地图加载失败：' + filename));
+            };
+            document.head.appendChild(script);
+        });
+
+        return pending[filename];
+    }
+
+    return {
+        isRegistered: isRegistered,
+        load: load
+    };
+})();
+
+function buildProvinceCatalog() {
+    const geoJson = CMapGeo.get(CHINA_MAP_ID);
+    if (!geoJson || !Array.isArray(geoJson.features)) {
+        throw new Error('缺少中国地图数据，请刷新页面重试。');
+    }
+
+    const catalog = {};
+    geoJson.features.forEach(function(feature) {
+        const properties = feature.properties || {};
+        const name = normalizeRegionToken(properties.name);
+        if (!name) {
+            return;
+        }
+        if (!catalog[name]) {
+            catalog[name] = {
+                name: name,
+                file: null,
+                point: null,
+                loading: false
+            };
+        }
+        // 只有仓库里确实带省级地图的地区才允许下钻，
+        // 台湾 / 香港 / 澳门 / 南海诸岛没有对应文件，点击时直接看聚合信息。
+        if (CMapGeo.hasProvinceFile(properties.filename)) {
+            catalog[name].file = properties.filename;
+        }
+    });
+
+    return catalog;
+}
+
+function buildNationalPoints() {
+    const summaries = (AppState.publicData && AppState.publicData.provinces) || {};
+
+    return Object.keys(AppState.provinceCatalog).map(function(name) {
+        const entry = AppState.provinceCatalog[name];
+        const summary = summaries[name] || {};
+        const point = entry.point || {
+            name: name,
+            province: name,
+            city: null
+        };
+
+        point.value = Number(summary.count || 0);
+        point.cityCount = Object.keys(summary.cities || {}).length;
+        point.drilldownFile = entry.file;
+        entry.point = point;
+
+        return point;
+    });
+}
+
+function buildProvincePoints(provinceName) {
+    const entry = AppState.provinceCatalog[provinceName];
+    if (!entry || !entry.file) {
+        return [];
+    }
+
+    const geoJson = CMapGeo.get(PROVINCE_MAP_PREFIX + entry.file);
+    if (!geoJson || !Array.isArray(geoJson.features)) {
+        return [];
+    }
+
+    const summaries = (AppState.publicData && AppState.publicData.provinces) || {};
+    const citySummary = (summaries[provinceName] || {}).cities || {};
+    const seen = new Set();
+
+    return geoJson.features.reduce(function(points, feature) {
+        const name = normalizeRegionToken((feature.properties || {}).name);
+        if (!name || seen.has(name)) {
+            return points;
+        }
+        seen.add(name);
+
+        points.push({
+            name: name,
+            value: Number(citySummary[name] || 0),
+            province: provinceName,
+            city: name,
+            cityCount: 0,
+            drilldownFile: null
+        });
+
+        return points;
+    }, []);
+}
+
+function createRegionIndex(points) {
+    const index = new Map();
+    points.forEach(function(point) {
+        index.set(point.name, point);
+    });
+    return index;
+}
+
+function resolveRegionPoint(name) {
+    const regionName = normalizeRegionToken(name);
+    if (!regionName) {
+        return null;
+    }
+
+    const known = AppState.regionIndex.get(regionName);
+    if (known) {
+        return known;
+    }
+
+    // 兜底：数据点缺失时也保证面板能打开，只是没有聚合人数。
+    const activeProvince = getActiveProvinceName();
+    return {
+        name: regionName,
+        value: 0,
+        province: activeProvince || regionName,
+        city: activeProvince ? regionName : null,
+        cityCount: 0,
+        drilldownFile: null
+    };
+}
+
+/* ------------------------------------------------------------------ *
+ * 图表渲染
+ * ------------------------------------------------------------------ */
+
+const mapBoundsCache = new Map();
+
+/**
+ * 取某个地图在数据坐标系里的包围盒，用于限制平移范围。
+ * 结果按地图缓存，避免每次拖动都遍历几何数据。
+ */
+function getMapBounds(mapId) {
+    if (mapBoundsCache.has(mapId)) {
+        return mapBoundsCache.get(mapId);
+    }
+
+    const geoJson = CMapGeo.get(mapId);
+    let bounds = null;
+
+    if (geoJson && Array.isArray(geoJson.features)) {
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+
+        function visit(node) {
+            if (!Array.isArray(node)) {
+                return;
+            }
+            if (typeof node[0] === 'number' && typeof node[1] === 'number') {
+                minX = Math.min(minX, node[0]);
+                maxX = Math.max(maxX, node[0]);
+                minY = Math.min(minY, node[1]);
+                maxY = Math.max(maxY, node[1]);
+                return;
+            }
+            for (let index = 0; index < node.length; index += 1) {
+                visit(node[index]);
+            }
+        }
+
+        geoJson.features.forEach(function(feature) {
+            if (feature && feature.geometry) {
+                visit(feature.geometry.coordinates);
+            }
+        });
+
+        if (minX !== Infinity && minY !== Infinity) {
+            bounds = { minX: minX, minY: minY, maxX: maxX, maxY: maxY };
+        }
+    }
+
+    mapBoundsCache.set(mapId, bounds);
+    return bounds;
+}
+
+/** 数组与 Map 都有 forEach，这里同时支持两者。 */
+function computeHeatMax(points) {
+    let max = 0;
+    points.forEach(function(point) {
+        max = Math.max(max, Number(point.value) || 0);
+    });
+
+    return Math.max(1, Math.ceil(max));
+}
+
+/**
+ * 底部色带图例由 ECharts visualMap 绘制：
+ * 它同时负责上色，hoverLink 让鼠标停在某个省时在色带上标出对应人数。
+ */
+function buildVisualMapOption(points) {
+    const max = computeHeatMax(points);
+
+    return {
+        type: 'continuous',
+        min: 0,
+        max: max,
+        precision: 0,
+        calculable: false,
+        hoverLink: true,
+        orient: 'horizontal',
+        left: 'center',
+        bottom: 8,
+        itemWidth: 13,
+        itemHeight: 150,
+        text: [`${max} 人`, '0 人'],
+        textGap: 8,
+        textStyle: {
+            color: '#5c5650',
+            fontFamily: "'Nunito', sans-serif",
+            fontSize: 12,
+            fontWeight: 600
+        },
+        indicatorIcon: 'circle',
+        indicatorSize: '60%',
+        indicatorStyle: {
+            borderColor: HOVER_BORDER_COLOR,
+            borderWidth: 2,
+            shadowBlur: 4,
+            shadowColor: 'rgba(45, 42, 38, 0.25)'
+        },
+        inRange: {
+            color: HEAT_COLORS
+        }
+    };
+}
+
+function buildMapSeries(mapId, regionName, points, showLabels) {
+    return {
+        id: REGION_SERIES_ID,
+        type: 'map',
+        map: mapId,
+        name: regionName,
+        data: points,
+        roam: true,
+        // 数据已经是等距投影后的平面坐标（EPSG:3415 米制），
+        // ECharts 默认的 0.75（为经纬度数据准备）会把地图纵向拉高 1/3。
+        aspectScale: 1,
+        // 切换省份时把缩放和中心点复位，回到自动铺满的效果
+        zoom: BASE_ZOOM,
+        center: null,
+        scaleLimit: {
+            min: BASE_ZOOM,
+            max: ZOOM_MAX
+        },
+        selectedMode: false,
+        // 区县级别标注很密，重叠时优先隐藏，避免文字糊成一团。
+        labelLayout: {
+            hideOverlap: true
+        },
+        label: {
+            show: Boolean(showLabels),
+            color: '#2d2a26',
+            fontFamily: "'Nunito', sans-serif",
+            fontSize: 11,
+            fontWeight: 700,
+            // 浅色底不需要描边，深色地块上靠这圈细白边保持可读；
+            // 描边再粗会把小字号字形糊掉。
+            textBorderColor: 'rgba(255, 255, 255, 0.92)',
+            textBorderWidth: 1
+        },
+        itemStyle: {
+            areaColor: HEAT_COLORS[0],
+            borderColor: BORDER_COLOR,
+            borderWidth: 1
+        },
+        emphasis: {
+            label: {
+                show: true,
+                color: '#ffffff',
+                fontWeight: 700,
+                textBorderColor: 'rgba(45, 42, 38, 0.55)',
+                textBorderWidth: 2
+            },
+            itemStyle: {
+                areaColor: HOVER_AREA_COLOR,
+                borderColor: HOVER_BORDER_COLOR,
+                borderWidth: 2,
+                shadowBlur: 10,
+                shadowColor: 'rgba(196, 112, 75, 0.35)'
+            }
+        }
+    };
+}
+
+function buildChartOption() {
+    return {
+        backgroundColor: 'transparent',
+        animationDuration: 320,
+        tooltip: {
+            show: !isTouchDevice,
+            trigger: 'item',
+            confine: true,
+            className: 'map-tooltip',
+            backgroundColor: 'transparent',
+            borderWidth: 0,
+            padding: 0,
+            shadowBlur: 0,
+            transitionDuration: 0.15,
+            showDelay: 60,
+            hideDelay: 60,
+            extraCssText: 'box-shadow:none;background:transparent;border:0;padding:0;white-space:normal;',
+            formatter: function(params) {
+                const point = resolveRegionPoint(params && params.name);
+                return point ? renderPublicCard(point, { compact: true }) : '';
+            }
+        },
+        visualMap: buildVisualMapOption([]),
+        series: [buildMapSeries(CHINA_MAP_ID, '中国', [], false)]
+    };
+}
+
+function isActiveProvinceView() {
+    return Boolean(getActiveProvinceName());
+}
+
+function updateMapChrome() {
+    const provinceName = getActiveProvinceName();
+
+    if (ui.regionBadge) {
+        ui.regionBadge.textContent = provinceName || '中国';
+    }
+    if (ui.backButton) {
+        ui.backButton.hidden = !provinceName;
+    }
+}
+
+function applyMapView(view) {
+    AppState.activeProvince = view.province || null;
+    AppState.activeMapId = view.mapId;
+    AppState.regionIndex = createRegionIndex(view.points);
+
+    AppState.chart.setOption({
+        series: [buildMapSeries(view.mapId, view.province || '中国', view.points, view.showLabels)],
+        visualMap: buildVisualMapOption(view.points)
+    });
+
+    updateMapChrome();
+    updateDetailsButton();
+}
+
+function refreshCurrentViewData() {
+    const provinceName = getActiveProvinceName();
+    const points = provinceName ? buildProvincePoints(provinceName) : buildNationalPoints();
+
+    AppState.regionIndex = createRegionIndex(points);
+
+    AppState.chart.setOption({
+        series: [{
+            id: REGION_SERIES_ID,
+            data: points
+        }],
+        visualMap: buildVisualMapOption(points)
+    });
+}
+
+function initChart() {
+    const container = document.getElementById('map');
+    if (!container) {
+        throw new Error('页面缺少地图容器，请刷新页面重试。');
+    }
+
+    echarts.registerMap(CHINA_MAP_ID, CMapGeo.get(CHINA_MAP_ID));
+
+    const chart = echarts.init(container, null, {
+        renderer: 'canvas'
+    });
+
+    // tooltip 与动画等全局配置要先落到实例上，
+    // 后续 applyMapView 只合并 series / visualMap。
+    chart.setOption(buildChartOption());
+
+    chart.on('click', handleRegionClick);
+    // 拖动/滚轮改变视野后立刻纠偏，避免把地图拖出可视区域。
+    chart.on('georoam', clampMapRoam);
+    AppState.chart = chart;
+
+    if (typeof ResizeObserver === 'function') {
+        new ResizeObserver(function() {
+            chart.resize();
+        }).observe(container);
+    } else {
+        window.addEventListener('resize', function() {
+            chart.resize();
+        });
+    }
+
+    return chart;
+}
+
+function getCurrentMapView() {
+    const option = AppState.chart ? AppState.chart.getOption() : null;
+    const series = option && Array.isArray(option.series) ? option.series[0] : null;
+
+    return {
+        zoom: series && typeof series.zoom === 'number' && series.zoom > 0 ? series.zoom : 1,
+        center: series && Array.isArray(series.center) ? series.center : null
+    };
+}
+
+/**
+ * 把地图拉回可视区域：缩放到「刚好铺满」时强制居中，放大后不允许露出背景。
+ */
+function clampMapRoam() {
+    const chart = AppState.chart;
+    if (!chart || AppState.clampingRoam) {
         return;
     }
 
-    point._isDrillingDown = true;
-    point.firePointEvent('click');
-    point._isDrillingDown = false;
+    const bounds = getMapBounds(AppState.activeMapId);
+    const width = chart.getWidth();
+    const height = chart.getHeight();
+    if (!bounds || !width || !height) {
+        return;
+    }
+
+    const cornerA = chart.convertToPixel({ seriesIndex: 0 }, [bounds.minX, bounds.minY]);
+    const cornerB = chart.convertToPixel({ seriesIndex: 0 }, [bounds.maxX, bounds.maxY]);
+    if (!cornerA || !cornerB) {
+        return;
+    }
+
+    const left = Math.min(cornerA[0], cornerB[0]);
+    const right = Math.max(cornerA[0], cornerB[0]);
+    const top = Math.min(cornerA[1], cornerB[1]);
+    const bottom = Math.max(cornerA[1], cornerB[1]);
+    const mapWidth = right - left;
+    const mapHeight = bottom - top;
+
+    let offsetX = 0;
+    let offsetY = 0;
+
+    if (mapWidth <= width) {
+        offsetX = width / 2 - (left + mapWidth / 2);
+    } else if (left > 0) {
+        offsetX = -left;
+    } else if (right < width) {
+        offsetX = width - right;
+    }
+
+    if (mapHeight <= height) {
+        offsetY = height / 2 - (top + mapHeight / 2);
+    } else if (top > 0) {
+        offsetY = -top;
+    } else if (bottom < height) {
+        offsetY = height - bottom;
+    }
+
+    if (Math.abs(offsetX) < ROAM_TOLERANCE_PX && Math.abs(offsetY) < ROAM_TOLERANCE_PX) {
+        return;
+    }
+
+    const view = getCurrentMapView();
+    const anchor = view.center || [(bounds.minX + bounds.maxX) / 2, (bounds.minY + bounds.maxY) / 2];
+    const anchorPixel = chart.convertToPixel({ seriesIndex: 0 }, anchor);
+    if (!anchorPixel) {
+        return;
+    }
+
+    // offsetX/offsetY 是要让地图内容移动的距离，而中心的像素位置要朝相反方向移动。
+    const shiftedPixel = [anchorPixel[0] - offsetX, anchorPixel[1] - offsetY];
+    // 已经是最小比例时交还给 ECharts 的自动居中，避免长期保留一个手算的中心点。
+    const nextCenter = view.zoom <= BASE_ZOOM + 1e-6
+        ? null
+        : chart.convertFromPixel({ seriesIndex: 0 }, shiftedPixel);
+
+    AppState.clampingRoam = true;
+    try {
+        chart.setOption({
+            series: [{
+                id: REGION_SERIES_ID,
+                zoom: view.zoom,
+                center: nextCenter
+            }]
+        });
+    } finally {
+        AppState.clampingRoam = false;
+    }
 }
 
-function drilldownPoint(point) {
+function applyMapZoom(multiplier) {
+    if (!AppState.chart) {
+        return;
+    }
+
+    const current = getCurrentMapView();
+    const nextZoom = Math.min(Math.max(current.zoom * multiplier, BASE_ZOOM), ZOOM_MAX);
+    if (Math.abs(nextZoom - current.zoom) < 1e-3) {
+        return;
+    }
+
+    AppState.chart.setOption({
+        series: [{
+            id: REGION_SERIES_ID,
+            zoom: nextZoom,
+            center: nextZoom <= BASE_ZOOM + 1e-6 ? null : current.center
+        }]
+    });
+
+    clampMapRoam();
+}
+
+function resetMapZoom() {
+    if (!AppState.chart) {
+        return;
+    }
+
+    AppState.chart.setOption({
+        series: [{
+            id: REGION_SERIES_ID,
+            zoom: BASE_ZOOM,
+            center: null
+        }]
+    });
+}
+
+async function drillIntoProvince(point) {
+    const filename = point && point.drilldownFile;
+    if (!filename || point.loading) {
+        return;
+    }
+
+    point.loading = true;
     AppState.detailRequestVersion += 1;
     BottomSheet.close();
+    showProvinceLoading(point.name);
 
-    if (point.drilldown && point._provinceFile && !ProvinceMapLoader.isLoaded(point._provinceFile)) {
-        if (point._provinceLoading) {
-            return;
-        }
-        point._provinceLoading = true;
-        showProvinceLoading(point.name);
-        ensureProvinceMap(point.name).then(function() {
-            point._provinceLoading = false;
-            hideMapLoading();
-            doRawDrilldown(point);
-        }).catch(function(error) {
-            point._provinceLoading = false;
-            hideMapLoading();
-            console.error('Failed to load province map:', error);
-            BottomSheet.showPublic(point, {
-                callout: '省级地图加载失败，请重试。',
-                hideHint: true,
-                hideEmpty: true
-            });
+    try {
+        await ProvinceMapLoader.load(filename);
+        hideMapLoading();
+        applyMapView({
+            mapId: PROVINCE_MAP_PREFIX + filename,
+            province: point.name,
+            points: buildProvincePoints(point.name),
+            showLabels: true
+        });
+    } catch (error) {
+        hideMapLoading();
+        console.error('Failed to load province map:', error);
+        BottomSheet.showPublic(point, {
+            callout: '省级地图加载失败，请重试。',
+            hideHint: true,
+            hideEmpty: true
+        });
+    } finally {
+        point.loading = false;
+    }
+}
+
+function drillUpToCountry() {
+    if (!isActiveProvinceView()) {
+        return;
+    }
+
+    AppState.detailRequestVersion += 1;
+    BottomSheet.close();
+    applyMapView({
+        mapId: CHINA_MAP_ID,
+        province: null,
+        points: buildNationalPoints(),
+        showLabels: false
+    });
+    updateInteractionNote();
+}
+
+function handleRegionClick(params) {
+    if (!params || params.componentType !== 'series') {
+        return;
+    }
+
+    const point = resolveRegionPoint(params.name);
+    if (!point) {
+        return;
+    }
+
+    // 桌面端未开启详情模式时，点击省份可以直接下钻；移动端统一先看聚合面板。
+    const canDrill = Boolean(point.drilldownFile) && !isActiveProvinceView();
+    if (canDrill && !isTouchDevice && !AppState.detailModeEnabled) {
+        drillIntoProvince(point).catch(function(error) {
+            console.error('Drilldown failed:', error);
         });
         return;
     }
 
-    doRawDrilldown(point);
+    if (AppState.detailModeEnabled && AppState.detailAccess) {
+        showDetailSheetForPoint(point, false).catch(function(error) {
+            console.error('Failed to show detail sheet for point:', error);
+        });
+        return;
+    }
+
+    BottomSheet.showPublic(point);
 }
 
 function updateDetailsButton() {
@@ -788,438 +1369,15 @@ function toggleDetailMode() {
     }
 }
 
-function handlePointClick(event) {
-    if (this._isDrillingDown) {
-        return true;
-    }
-
-    const shouldOpenSheet = isTouchDevice || AppState.detailModeEnabled || !this.drilldown;
-    if (!shouldOpenSheet) {
-        if (this._provinceFile && !ProvinceMapLoader.isLoaded(this._provinceFile)) {
-            if (this._provinceLoading) {
-                return false;
-            }
-            if (event && typeof event.preventDefault === 'function') {
-                event.preventDefault();
-            }
-            const point = this;
-            point._provinceLoading = true;
-            showProvinceLoading(point.name);
-            ensureProvinceMap(point.name).then(function() {
-                point._provinceLoading = false;
-                hideMapLoading();
-                doRawDrilldown(point);
-            }).catch(function(error) {
-                point._provinceLoading = false;
-                hideMapLoading();
-                console.error('Failed to load province map:', error);
-                BottomSheet.showPublic(point, {
-                    callout: '省级地图加载失败，请重试。',
-                    hideHint: true,
-                    hideEmpty: true
-                });
-            });
-            return false;
-        }
-        return true;
-    }
-
-    if (event && typeof event.preventDefault === 'function') {
-        event.preventDefault();
-    }
-
-    if (AppState.detailModeEnabled && AppState.detailAccess) {
-        showDetailSheetForPoint(this, false).catch(function(error) {
-            console.error('Failed to show detail sheet for point:', error);
-        });
-        return false;
-    }
-
-    BottomSheet.showPublic(this);
-    return false;
-}
-
-function buildProvinceIndex(dataset) {
-    const provinceData = Highcharts.geojson(Highcharts.maps['cn/china']);
-    const provinces = {};
-    const publicProvinces = (dataset && dataset.provinces) || {};
-
-    Highcharts.each(provinceData, function(point) {
-        const provinceSummary = publicProvinces[point.name] || { count: 0, cities: {} };
-        point.value = Number(provinceSummary.count || 0);
-        point.province = point.name;
-        point.city = null;
-        point.cityCount = Object.keys(provinceSummary.cities || {}).length;
-        point.drilldown = null;
-        point._provinceFile = null;
-        point._provinceLoading = false;
-
-        provinces[point.name] = {
-            name: point.name,
-            pointData: point,
-            cityCount: point.cityCount,
-            cities: {},
-            file: null
-        };
+function renderMapFromData() {
+    applyMapView({
+        mapId: CHINA_MAP_ID,
+        province: null,
+        points: buildNationalPoints(),
+        showLabels: false
     });
-
-    Object.keys(provinces).forEach(function(provinceName) {
-        const province = provinces[provinceName];
-        const filename = province.pointData.properties && province.pointData.properties.filename;
-        if (!filename) {
-            return;
-        }
-
-        province.file = filename;
-        province.pointData._provinceFile = filename;
-        province.pointData.drilldown = provinceName;
-
-        if (Highcharts.maps[`cn/${filename}`]) {
-            buildProvinceSubData(province);
-        }
-    });
-
-    AppState.provinces = provinces;
-    return provinceData;
-}
-
-function buildProvinceSubData(province) {
-    const provinceName = province.name;
-    const filename = province.file;
-    if (!filename || !Highcharts.maps[`cn/${filename}`]) {
-        return;
-    }
-
-    const publicProvince = (AppState.publicData && AppState.publicData.provinces && AppState.publicData.provinces[provinceName]) || {};
-    const citySummary = publicProvince.cities || {};
-    const subData = Highcharts.geojson(Highcharts.maps[`cn/${filename}`]);
-    province.cities = {};
-    Highcharts.each(subData, function(cityPoint) {
-        cityPoint.value = Number(citySummary[cityPoint.name] || 0);
-        cityPoint.province = provinceName;
-        cityPoint.city = cityPoint.name;
-        province.cities[cityPoint.name] = cityPoint;
-    });
-
-    province.subData = subData;
-    if (AppState.drilldownSeries && AppState.drilldownSeries[provinceName]) {
-        AppState.drilldownSeries[provinceName].data = subData;
-    }
-}
-
-async function ensureProvinceMap(provinceName) {
-    const province = AppState.provinces[provinceName];
-    if (!province || !province.file) {
-        throw new Error('这个省份暂时打不开，请重新点一次。');
-    }
-    if (ProvinceMapLoader.isLoaded(province.file)) {
-        return;
-    }
-    await ProvinceMapLoader.load(province.file);
-    buildProvinceSubData(province);
-    syncDrilldownSeries();
-}
-
-function syncDrilldownSeries() {
-    if (!AppState.chart || !AppState.chart.options || !AppState.chart.options.drilldown) {
-        return;
-    }
-    const loaded = [];
-    Object.keys(AppState.drilldownSeries || {}).forEach(function(provinceName) {
-        const province = AppState.provinces[provinceName];
-        if (province && province.subData) {
-            loaded.push(AppState.drilldownSeries[provinceName]);
-        }
-    });
-    AppState.chart.options.drilldown.series = loaded;
-}
-
-function makeDrilldownSeries() {
-    const series = [];
-    AppState.drilldownSeries = {};
-
-    Object.keys(AppState.provinces).forEach(function(provinceName) {
-        const province = AppState.provinces[provinceName];
-        if (!province.file) {
-            return;
-        }
-
-        const seriesOptions = {
-            id: province.name,
-            name: province.name,
-            provinceName: province.name,
-            data: province.subData || [],
-            borderColor: '#e0d8cc',
-            borderWidth: 1,
-            states: {
-                hover: {
-                    borderColor: '#c4704b',
-                    borderWidth: 2,
-                    brightness: 0.1
-                }
-            },
-            dataLabels: {
-                enabled: true,
-                format: '{point.name}',
-                style: {
-                    color: '#5c5650',
-                    fontFamily: "'Nunito', sans-serif",
-                    fontSize: '11px',
-                    fontWeight: '600',
-                    textOutline: 'none'
-                }
-            }
-        };
-
-        AppState.drilldownSeries[provinceName] = seriesOptions;
-        if (province.subData) {
-            series.push(seriesOptions);
-        }
-    });
-
-    return series;
-}
-
-function buildMapOptions(provinceData) {
-    return {
-        chart: {
-            backgroundColor: 'transparent',
-            style: {
-                fontFamily: "'Nunito', sans-serif"
-            },
-            events: {
-                load: function() {
-                    hideMapLoading();
-                },
-                drilldown: function(e) {
-                    if (!e || !e.seriesOptions) {
-                        return;
-                    }
-                    AppState.activeProvince = normalizeRegionToken(e && e.point && e.point.name);
-                    BottomSheet.close();
-                    this.setTitle(null, { text: e.point.name });
-                    fitChartToBounds(this);
-                },
-                drillup: function() {
-                    AppState.activeProvince = null;
-                    BottomSheet.close();
-                    this.setTitle(null, { text: '中国' });
-                    fitChartToBounds(this);
-                },
-                mouseOut: function() {
-                    if (this.tooltip) {
-                        this.tooltip.hide(0);
-                    }
-                }
-            }
-        },
-        title: {
-            text: '蹭饭地图',
-            style: {
-                color: '#2d2a26',
-                fontSize: '28px',
-                fontFamily: "'DM Serif Display', Georgia, serif",
-                fontWeight: '400',
-                letterSpacing: '0.05em'
-            },
-            margin: 20
-        },
-        subtitle: {
-            text: '中国',
-            floating: true,
-            y: 50,
-            style: {
-                fontSize: '16px',
-                color: '#5c5650',
-                fontFamily: "'Nunito', sans-serif"
-            }
-        },
-        plotOptions: {
-            series: {
-                point: {
-                    events: {
-                        click: handlePointClick
-                    }
-                }
-            }
-        },
-        tooltip: {
-            enabled: !isTouchDevice,
-            useHTML: true,
-            backgroundColor: 'transparent',
-            borderWidth: 0,
-            borderRadius: 0,
-            padding: 0,
-            shadow: false,
-            followPointer: false,
-            showDelay: 250,
-            hideDelay: 250,
-            style: {
-                pointerEvents: 'auto'
-            },
-            formatter: function() {
-                return renderPublicCard(this.point, {
-                    compact: true
-                });
-            },
-            positioner: function(labelWidth, labelHeight, point) {
-                const chart = this.chart;
-                const pointX = point.plotX || 0;
-                const pointY = point.plotY || 0;
-                const offsetX = 3;
-                const offsetY = 3;
-                let tooltipX = pointX + chart.plotLeft + offsetX;
-                let tooltipY = pointY + chart.plotTop + offsetY;
-
-                if (tooltipX + labelWidth > chart.chartWidth - 10) {
-                    tooltipX = pointX + chart.plotLeft - labelWidth - offsetX;
-                }
-                if (tooltipY + labelHeight > chart.chartHeight - 10) {
-                    tooltipY = pointY + chart.plotTop - labelHeight - offsetY;
-                }
-                if (tooltipX < 10) {
-                    tooltipX = 10;
-                }
-                if (tooltipY < 10) {
-                    tooltipY = pointY + chart.plotTop + offsetY;
-                }
-
-                return {
-                    x: tooltipX,
-                    y: tooltipY
-                };
-            }
-        },
-        colorAxis: {
-            min: 0,
-            max: 15,
-            type: 'linear',
-            minColor: '#f5efe6',
-            maxColor: '#a85a3a',
-            stops: [
-                [0, '#f5efe6'],
-                [0.167, '#e8c4a8'],
-                [0.333, '#d9a87c'],
-                [0.5, '#c4704b'],
-                [0.75, '#b56540'],
-                [1, '#a85a3a']
-            ]
-        },
-        legend: {
-            enabled: true,
-            layout: 'horizontal',
-            align: 'center',
-            verticalAlign: 'bottom',
-            itemStyle: {
-                color: '#5c5650',
-                fontFamily: "'Nunito', sans-serif",
-                fontSize: '12px'
-            }
-        },
-        series: [{
-            data: provinceData,
-            name: '各省人数',
-            joinBy: 'name',
-            borderColor: '#e0d8cc',
-            borderWidth: 1,
-            states: {
-                hover: {
-                    borderColor: '#c4704b',
-                    borderWidth: 2,
-                    brightness: 0.1
-                }
-            },
-            tooltip: {
-                pointFormat: '{point.name}: {point.value}'
-            }
-        }],
-        drilldown: {
-            activeDataLabelStyle: {
-                color: '#2d2a26',
-                textDecoration: 'none',
-                textShadow: 'none',
-                fontFamily: "'Nunito', sans-serif",
-                fontWeight: '600'
-            },
-            drillUpButton: {
-                relativeTo: 'spacingBox',
-                position: {
-                    x: 0,
-                    y: 60
-                },
-                theme: {
-                    fill: '#faf7f2',
-                    'stroke-width': 1,
-                    stroke: '#c4704b',
-                    r: 6,
-                    style: {
-                        color: '#2d2a26',
-                        fontFamily: "'Nunito', sans-serif",
-                        fontWeight: '600'
-                    },
-                    states: {
-                        hover: {
-                            fill: '#c4704b',
-                            style: {
-                                color: '#ffffff'
-                            }
-                        }
-                    }
-                }
-            },
-            series: makeDrilldownSeries()
-        },
-        mapNavigation: {
-            enabled: true,
-            buttonOptions: {
-                verticalAlign: 'bottom',
-                theme: {
-                    fill: '#faf7f2',
-                    'stroke-width': 1,
-                    stroke: '#e0d8cc',
-                    r: 6,
-                    style: {
-                        color: '#5c5650'
-                    },
-                    states: {
-                        hover: {
-                            fill: '#e8a87c',
-                            style: {
-                                color: '#2d2a26'
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        credits: {
-            enabled: false
-        }
-    };
-}
-
-function initMap(provinceData) {
-    AppState.chart = new Highcharts.Map('map', buildMapOptions(provinceData));
-    syncDrilldownSeries();
-}
-
-function renderMapFromData(publicData) {
-    const provinceData = buildProvinceIndex(publicData);
-    initMap(provinceData);
-    updateDetailsButton();
     updateInteractionNote();
     hideMapLoading();
-}
-
-function refreshChartFromData(publicData) {
-    const provinceData = buildProvinceIndex(publicData);
-    const chart = AppState.chart;
-    if (chart && chart.series && chart.series[0]) {
-        chart.series[0].setData(provinceData, true, true);
-    }
-    syncDrilldownSeries();
-    updateDetailsButton();
-    updateInteractionNote();
 }
 
 async function loadApp() {
@@ -1229,7 +1387,7 @@ async function loadApp() {
     if (cached) {
         try {
             applyPublicData(cached);
-            renderMapFromData(cached);
+            renderMapFromData();
             renderedFromCache = true;
         } catch (error) {
             console.warn('Failed to render cached map data:', error);
@@ -1239,19 +1397,21 @@ async function loadApp() {
     try {
         const fresh = await fetchJson('/api/map/public');
         writePublicCache(fresh);
-        if (renderedFromCache) {
-            const cacheIsStale = !cached || cached.generatedAt !== fresh.generatedAt;
-            applyPublicData(fresh);
-            if (cacheIsStale) {
-                refreshChartFromData(fresh);
-            } else {
-                updateDetailsButton();
-                updateInteractionNote();
-            }
-        } else {
-            applyPublicData(fresh);
-            renderMapFromData(fresh);
+        const cacheIsStale = !renderedFromCache || !cached || cached.generatedAt !== fresh.generatedAt;
+
+        applyPublicData(fresh);
+
+        if (!renderedFromCache) {
+            renderMapFromData();
+            return;
         }
+
+        if (cacheIsStale) {
+            refreshCurrentViewData();
+        }
+
+        updateDetailsButton();
+        updateInteractionNote();
     } catch (error) {
         if (renderedFromCache) {
             console.warn('Failed to refresh public map data:', error);
@@ -1268,6 +1428,26 @@ function setupStaticUi() {
 
     if (ui.detailsButton) {
         ui.detailsButton.addEventListener('click', toggleDetailMode);
+    }
+
+    if (ui.backButton) {
+        ui.backButton.addEventListener('click', drillUpToCountry);
+    }
+
+    if (ui.zoomIn) {
+        ui.zoomIn.addEventListener('click', function() {
+            applyMapZoom(1.35);
+        });
+    }
+
+    if (ui.zoomOut) {
+        ui.zoomOut.addEventListener('click', function() {
+            applyMapZoom(1 / 1.35);
+        });
+    }
+
+    if (ui.zoomReset) {
+        ui.zoomReset.addEventListener('click', resetMapZoom);
     }
 
     if (ui.authForm) {
@@ -1303,7 +1483,10 @@ function setupStaticUi() {
 
         if (BottomSheet.isActive()) {
             BottomSheet.close();
+            return;
         }
+
+        drillUpToCountry();
     });
 }
 
@@ -1317,21 +1500,32 @@ const ShareManager = (function() {
         };
     }
 
-    function svgToImage(svgString) {
-        return new Promise(function(resolve, reject) {
-            const img = new Image();
-            const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
+    /** 取当前地图画面，供分享图复用。 */
+    function captureMapSnapshot() {
+        const chart = AppState.chart;
+        if (!chart) {
+            throw new Error('地图尚未加载完成');
+        }
 
-            img.onload = function() {
-                URL.revokeObjectURL(url);
-                resolve(img);
+        chart.dispatchAction({ type: 'hideTip' });
+
+        return chart.getDataURL({
+            type: 'png',
+            pixelRatio: 2,
+            backgroundColor: SNAPSHOT_BACKGROUND
+        });
+    }
+
+    function loadImage(src) {
+        return new Promise(function(resolve, reject) {
+            const image = new Image();
+            image.onload = function() {
+                resolve(image);
             };
-            img.onerror = function(error) {
-                URL.revokeObjectURL(url);
-                reject(error);
+            image.onerror = function() {
+                reject(new Error('地图画面解析失败'));
             };
-            img.src = url;
+            image.src = src;
         });
     }
 
@@ -1363,20 +1557,8 @@ const ShareManager = (function() {
     }
 
     async function generateImage() {
-        const chart = AppState.chart || Highcharts.charts[0];
-        if (!chart) {
-            throw new Error('地图尚未加载完成');
-        }
-
         const stats = calculateStats();
-        const svg = chart.getSVG({
-            chart: {
-                width: 1200,
-                height: 800,
-                backgroundColor: '#f5efe6'
-            }
-        });
-        const mapImg = await svgToImage(svg);
+        const mapImage = await loadImage(captureMapSnapshot());
 
         const canvas = document.createElement('canvas');
         canvas.width = 1200;
@@ -1402,7 +1584,7 @@ const ShareManager = (function() {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
         ctx.fillText('探索各地同学的足迹', canvas.width / 2, 105);
 
-        ctx.drawImage(mapImg, 0, 150, 1200, 800);
+        ctx.drawImage(mapImage, 0, 150, 1200, 800);
 
         ctx.fillStyle = '#fffaf5';
         ctx.fillRect(0, 950, canvas.width, 100);
@@ -1506,12 +1688,21 @@ const ShareManager = (function() {
     };
 })();
 
-setupStaticUi();
-BottomSheet.init();
-ShareManager.init();
-loadApp();
+function initializeApp() {
+    try {
+        AppState.provinceCatalog = buildProvinceCatalog();
+        initChart();
+    } catch (error) {
+        console.error('Failed to initialize map:', error);
+        showFatalError(normalizeApiErrorMessage(error, '地图初始化失败，请刷新页面重试。'));
+        return;
+    }
 
+    updateMapChrome();
+    setupStaticUi();
+    BottomSheet.init();
+    ShareManager.init();
+    loadApp();
+}
 
-
-
-
+initializeApp();
