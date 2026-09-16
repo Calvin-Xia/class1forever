@@ -416,6 +416,11 @@ body {
     overflow: hidden;
 }
 
+/* 地图只作为焦点锚点（关掉面板时把焦点还回来），不是可交互控件，不画描边。 */
+#map:focus {
+    outline: none;
+}
+
 /* 地图左上角工具条：返回、详情口令、当前层级 */
 .map-toolbar {
     position: absolute;
@@ -466,7 +471,9 @@ body {
     font-weight: 700;
     letter-spacing: 0.02em;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    /* 只过渡 hover 会变的属性：transition: all 会把焦点环也算进去，
+       Tab 之后描边要花 150ms 才成形，看起来像没有焦点提示。 */
+    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
 .map-back-btn[hidden] {
@@ -478,7 +485,7 @@ body {
     border-color: var(--color-accent-secondary);
 }
 
-.map-back-btn:focus {
+.map-back-btn:focus-visible {
     outline: 2px solid var(--color-accent-primary);
     outline-offset: 2px;
 }
@@ -843,6 +850,7 @@ body {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
     
     .decorative-circle,
@@ -894,6 +902,11 @@ body {
     bottom: 0;
 }
 
+/* 同 #map：面板作为对话框容器接收程序化焦点，不为它画描边。 */
+.bottom-sheet:focus {
+    outline: none;
+}
+
 /* 拖拽指示器（装饰用） */
 .bs-drag-indicator {
     width: 40px;
@@ -934,6 +947,11 @@ body {
 
 .bs-btn:active {
     background: var(--color-highlight);
+}
+
+.bs-btn:focus-visible {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 2px;
 }
 
 .cdn-error {
@@ -989,6 +1007,11 @@ body {
     background: var(--color-highlight);
 }
 
+.cdn-error__retry:focus-visible {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 2px;
+}
+
 .map-loading {
     position: absolute;
     inset: 0;
@@ -1033,7 +1056,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all var(--transition-fast);
+    /* 同 .map-back-btn：焦点环不能跟着过渡。 */
+    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
 .share-btn:hover {
@@ -1041,7 +1065,7 @@ body {
     border-color: var(--color-accent-primary);
 }
 
-.share-btn:focus {
+.share-btn:focus-visible {
     outline: 2px solid var(--color-accent-primary);
     outline-offset: 2px;
 }
@@ -1215,7 +1239,8 @@ body {
     font-weight: 700;
     letter-spacing: 0.02em;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    /* 同 .map-back-btn：焦点环不能跟着过渡。 */
+    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
 .details-btn[hidden] {
@@ -1229,7 +1254,7 @@ body {
     color: #ffffff;
 }
 
-.details-btn:focus {
+.details-btn:focus-visible {
     outline: 2px solid var(--color-accent-tertiary);
     outline-offset: 2px;
 }
@@ -1319,6 +1344,11 @@ body {
     cursor: pointer;
 }
 
+.auth-modal__close:focus-visible {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 2px;
+}
+
 .auth-modal__title {
     font-family: var(--font-display);
     font-size: 1.9rem;
@@ -1404,6 +1434,11 @@ body {
     opacity: 0.7;
     cursor: progress;
     transform: none;
+}
+
+.auth-modal__submit:focus-visible {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 2px;
 }
 
 @media (max-width: 768px) {

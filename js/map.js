@@ -271,17 +271,102 @@ function renderDetailCard(payload) {
     `;
 }
 
+/**
+ * 焦点作用域：打开对话框时把背景设为 inert，记住焦点来源，关闭时再归还。
+ *
+ * 用栈而不是单个变量，是因为底部面板之上还能再开口令弹窗：
+ * 内层关闭时不能把外层仍然需要的 inert 一起解除。
+ * inert 生效的瞬间浏览器就会把焦点移出背景，所以必须在设置 inert 之前记录
+ * activeElement，否则拿到的永远是 body。
+ */
+const FocusScope = (function() {
+    const stack = [];
+
+    /**
+     * body 和 html 也有 focus()，直接调用不会报错但也聚焦不到任何东西，
+     * 所以要把它们排除掉，否则"焦点来源不可用"会误判为归还成功。
+     */
+    function isFocusTarget(element) {
+        return Boolean(element) &&
+            element !== document.body &&
+            element !== document.documentElement &&
+            typeof element.focus === 'function' &&
+            document.contains(element);
+    }
+
+    function focusSafely(element) {
+        if (isFocusTarget(element)) {
+            element.focus({ preventScroll: true });
+            return true;
+        }
+        return false;
+    }
+
+    function open(options) {
+        const entry = {
+            restore: document.activeElement,
+            fallback: options.fallback || null,
+            inerted: []
+        };
+
+        (options.inert || []).forEach(function(element) {
+            if (element && !element.inert) {
+                element.inert = true;
+                entry.inerted.push(element);
+            }
+        });
+
+        stack.push(entry);
+
+        if (options.focus) {
+            focusSafely(options.focus);
+        }
+
+        return entry;
+    }
+
+    function close(entry) {
+        const index = stack.indexOf(entry);
+        if (index === -1) {
+            return;
+        }
+        stack.splice(index, 1);
+
+        entry.inerted.forEach(function(element) {
+            const stillNeeded = stack.some(function(outer) {
+                return outer.inerted.indexOf(element) !== -1;
+            });
+            if (!stillNeeded) {
+                element.inert = false;
+            }
+        });
+
+        // 触发元素可能已经不在文档里（面板内容被重建过），那就退到兜底目标。
+        if (!focusSafely(entry.restore)) {
+            focusSafely(entry.fallback);
+        }
+    }
+
+    return {
+        open: open,
+        close: close
+    };
+})();
+
 const BottomSheet = (function() {
     const elements = {
         overlay: document.getElementById('bs-overlay'),
         sheet: document.getElementById('bottom-sheet'),
         content: document.getElementById('bs-content'),
         primaryButton: document.getElementById('bs-primary-btn'),
-        drilldownButton: document.getElementById('bs-drilldown-btn')
+        drilldownButton: document.getElementById('bs-drilldown-btn'),
+        pageWrapper: document.querySelector('.page-wrapper'),
+        map: document.getElementById('map')
     };
 
     let currentPoint = null;
     let currentMode = 'public';
+    let scope = null;
 
     function isActive() {
         return Boolean(elements.sheet && elements.sheet.classList.contains('active'));
@@ -318,14 +403,35 @@ const BottomSheet = (function() {
     }
 
     function open() {
+        const wasActive = isActive();
+
         elements.sheet.classList.add('active');
         elements.overlay.classList.add('active');
+
+        // 悬浮卡片是鼠标位置的产物，留着会和面板叠成两张深色卡片。
+        if (AppState.chart) {
+            AppState.chart.dispatchAction({ type: 'hideTip' });
+        }
+
+        // showPublic / showLoading / showDetail 都会走到这里，作用域只开一次。
+        if (!wasActive) {
+            scope = FocusScope.open({
+                inert: [elements.pageWrapper],
+                focus: elements.sheet,
+                fallback: elements.map
+            });
+        }
     }
 
     function close() {
         elements.sheet.classList.remove('active');
         elements.overlay.classList.remove('active');
         currentMode = 'public';
+
+        if (scope) {
+            FocusScope.close(scope);
+            scope = null;
+        }
     }
 
     function showPublic(point, options) {
@@ -420,12 +526,26 @@ function setAuthFeedback(message, variant) {
     }
 }
 
+let authScope = null;
+
 function openAuthModal(message) {
     ui.authOverlay.hidden = false;
     ui.authHint.textContent = AppState.detailsHint
         ? `口令提示：${AppState.detailsHint}`
         : '如忘记口令，请联系老师或同学。';
     setAuthFeedback(message || '', null);
+
+    if (AppState.chart) {
+        AppState.chart.dispatchAction({ type: 'hideTip' });
+    }
+
+    // 面板之上还能再开这一层，所以底部面板也要一起 inert。
+    if (!authScope) {
+        authScope = FocusScope.open({
+            inert: [document.querySelector('.page-wrapper'), document.getElementById('bottom-sheet')]
+        });
+    }
+
     window.setTimeout(function() {
         ui.authInput.focus();
     }, 0);
@@ -436,6 +556,11 @@ function closeAuthModal() {
     ui.authForm.reset();
     setAuthFeedback('', null);
     AppState.pendingPoint = null;
+
+    if (authScope) {
+        FocusScope.close(authScope);
+        authScope = null;
+    }
 }
 
 async function handleAuthSubmit(event) {
