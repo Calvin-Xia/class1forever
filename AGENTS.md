@@ -8,7 +8,8 @@ Static classmate-distribution map ("蹭饭地图"). The page shows public provin
 - `js/boot.js`: loads the vendor bundle, geo data and app script in order; shows the retry panel on failure.
 - `js/geo.js`: `CMapGeo` registry for geo data plus the whitelist of provinces that ship a map file.
 - `js/china.js`, `js/province/*.js`: national/province GeoJSON as `CMapGeo.register("cn/<slug>", {...})` calls; the data is generated upstream and only the registration call is ours.
-- `js/map.js`: ECharts setup, choropleth + hover card, drilldown/drill-up, view clamping, public-data fetch, passphrase/detail flow, share image.
+- `js/map.js`: ECharts setup, choropleth + hover card, drilldown/drill-up, view clamping, public-data fetch, passphrase/detail flow, dialog focus management, share image.
+- `js/palette.js`: colours shared by the map and the share image (classic script + global registry, same pattern as `js/geo.js`) — `js/map.js` cannot `import`. `css/main.css` keeps its own `:root` tokens; `scripts/check-contrast.js` asserts the two stay in sync.
 - `js/vendor/echarts.min.js`: tree-shaken ECharts build (map/geo/tooltip/visualMap/labelLayout/canvas). Regenerate with `npm run vendor:build`; the committed artifact is what ships.
 - `css/main.css`: layout, theme, map controls, tooltip, bottom-sheet, and auth-modal styles.
 - `js/data.js`: local-only input for the upload script; gitignored, never loaded by the page.
@@ -17,6 +18,7 @@ Static classmate-distribution map ("蹭饭地图"). The page shows public provin
 - `shared/data-model.mjs`: normalization, province aliases, aggregate build, region filter/sort (used by Functions and the upload script).
 - `scripts/upload-kv-data.mjs`: builds `students:raw:v1` / `students:public:v1` and uploads them to `CLASS_MAP_DATA` KV; sources from `js/data.js` or the `STUDENTS_DATA` env var.
 - `scripts/build-vendor.mjs`: rebuilds `js/vendor/echarts.min.js` from `node_modules/echarts`.
+- `scripts/check-contrast.js`: contrast and palette-sync assertions; `build.js` requires it directly, so `npm run build` stays the single entry point.
 - `tests/dev-server.mjs`: local mock of the Pages Functions API plus a static server, used for frontend smoke tests without Cloudflare credentials.
 - `build.js`: static safety checks (see Testing Guidelines).
 - `wrangler.jsonc`, `README.md`, `DEPLOYMENT.md`: Cloudflare config, usage, and deployment docs.
@@ -43,6 +45,8 @@ Static classmate-distribution map ("蹭饭地图"). The page shows public provin
 - ECharts only fills 80% of its layout box, so `BASE_ZOOM` is `1.25`; it doubles as the minimum zoom. Keep `scaleLimit.min` and the initial `zoom` in sync with it.
 - Geometry stays as-is; do not hand-edit `js/china.js` or `js/province/*.js`. If a province map is added or removed, update `AVAILABLE_PROVINCE_FILES` in `js/geo.js` — `npm run build` fails on a mismatch.
 - The China GeoJSON also carries `filename` for Taiwan/Hong Kong/Macau/Nanhai, but no province files exist for them; the whitelist is what prevents a doomed drilldown request.
+- Colours live in two places on purpose (CSS tokens for the page, `js/palette.js` for canvas drawing). Change both or `npm run build` fails. Text on the share image's header gradient is checked at the gradient midpoint, and white text on orange must use `--color-accent-strong`, not `--color-accent-primary` (3.64:1, below AA).
+- Dialogs (bottom sheet, passphrase modal) go through `FocusScope` in `js/map.js`: background `inert`, focus moved inside, focus restored on close. `#map` and `#bottom-sheet` carry `tabindex="-1"` purely as focus anchors. The map itself is not keyboard operable — that is a known limitation, not a bug.
 
 ## Security & Data Rules
 - Never commit `.dev.vars`, `js/data.js`, or any full student list; never serve them as static assets.
@@ -50,7 +54,7 @@ Static classmate-distribution map ("蹭饭地图"). The page shows public provin
 - Keep the page same-origin only: no CDN `<script>` tags and no inline `<script>` blocks, so `_headers` can keep `script-src 'self'`. `build.js` enforces both.
 
 ## Testing Guidelines
-No automated framework; CI (`.github/workflows/ci.yml`) runs `npm run build` plus `node --check` over all app files on push/PR. `build.js` checks required files, that `index.html` does not load `js/data.js`, that no script is cross-origin or inline, that no Highcharts reference remains, that the province whitelist matches `js/province/`, and that `script-src` has no `unsafe-inline`.
+No automated framework; CI (`.github/workflows/ci.yml`) runs `npm run build` plus `node --check` over all app files on push/PR. `build.js` checks required files, that `index.html` does not load `js/data.js`, that no script is cross-origin or inline, that no Highcharts reference remains, that the province whitelist matches `js/province/`, that `script-src` has no `unsafe-inline`, and (via `scripts/check-contrast.js`) that key text/background pairs meet WCAG AA and that the CSS tokens match `js/palette.js`.
 
 Manual smoke tests:
 1. `npm run dev:mock`, open the page, verify map render + the colour-band legend (public aggregates only).
@@ -61,7 +65,8 @@ Manual smoke tests:
 6. Verify the passphrase flow: wrong passphrase rejected, region details load after login, "退出查看" clears the session and cached details.
 7. Share button produces a PNG containing the map, legend band and stats.
 8. Check a narrow viewport (<=480px): controls do not overlap and there is no horizontal scroll.
-9. `npm run build` passes; `npm run data:upload -- --dry-run` succeeds.
+9. Keyboard pass: Tab shows a visible focus ring on every button; with the passphrase modal open, Tab never reaches the background controls and Esc returns focus to "同学信息"; closing the bottom sheet returns focus to the map. Desktop (>=768px) shows the sheet as a centred 560px drawer.
+10. `npm run build` passes; `npm run data:upload -- --dry-run` succeeds.
 
 If automated tests are introduced later, place them under `tests/` with `*.test.js` naming.
 

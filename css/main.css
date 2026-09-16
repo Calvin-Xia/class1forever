@@ -4,8 +4,11 @@
     --color-bg-card: #ffffff;
     --color-text-primary: #2d2a26;
     --color-text-secondary: #5c5650;
-    --color-text-muted: #8a847c;
+    --color-text-muted: #6f695f;
     --color-accent-primary: #c4704b;
+    /* 橙底白字专用档：主橙上的白字只有 3.64:1，实心按钮底色改用这一档（4.81:1）。 */
+    --color-accent-strong: #b05a38;
+    --color-accent-strong-hover: #a85a3a;
     --color-accent-secondary: #e8a87c;
     --color-accent-tertiary: #4a7c7c;
     --color-highlight: #d4956a;
@@ -416,6 +419,11 @@ body {
     overflow: hidden;
 }
 
+/* 地图只作为焦点锚点（关掉面板时把焦点还回来），不是可交互控件，不画描边。 */
+#map:focus {
+    outline: none;
+}
+
 /* 地图左上角工具条：返回、详情口令、当前层级 */
 .map-toolbar {
     position: absolute;
@@ -456,8 +464,8 @@ body {
     align-items: center;
     height: 40px;
     padding: 0 var(--spacing-md);
-    background: var(--color-accent-primary);
-    border: 1px solid var(--color-accent-primary);
+    background: var(--color-accent-strong);
+    border: 1px solid var(--color-accent-strong);
     border-radius: 999px;
     box-shadow: 0 2px 10px var(--color-shadow);
     color: #ffffff;
@@ -466,7 +474,9 @@ body {
     font-weight: 700;
     letter-spacing: 0.02em;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    /* 只过渡 hover 会变的属性：transition: all 会把焦点环也算进去，
+       Tab 之后描边要花 150ms 才成形，看起来像没有焦点提示。 */
+    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
 .map-back-btn[hidden] {
@@ -474,11 +484,11 @@ body {
 }
 
 .map-back-btn:hover {
-    background: var(--color-accent-secondary);
-    border-color: var(--color-accent-secondary);
+    background: var(--color-accent-strong-hover);
+    border-color: var(--color-accent-strong-hover);
 }
 
-.map-back-btn:focus {
+.map-back-btn:focus-visible {
     outline: 2px solid var(--color-accent-primary);
     outline-offset: 2px;
 }
@@ -522,7 +532,7 @@ body {
 }
 
 .map-zoom__btn:hover {
-    background: var(--color-accent-secondary);
+    background: var(--color-accent-strong);
     color: #ffffff;
 }
 
@@ -545,7 +555,7 @@ body {
 
 .map-credit:hover {
     opacity: 1;
-    color: var(--color-accent-primary);
+    color: var(--color-accent-strong);
 }
 
 .page__footer {
@@ -843,6 +853,7 @@ body {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
     
     .decorative-circle,
@@ -894,6 +905,27 @@ body {
     bottom: 0;
 }
 
+/* 同 #map：面板作为对话框容器接收程序化焦点，不为它画描边。 */
+.bottom-sheet:focus {
+    outline: none;
+}
+
+/* 宽屏下做成居中抽屉：通栏面板在 1280px 下两侧会留下大片空白。
+   停靠位置改用 bottom: 16px 而不是贴底，四角圆角才不会被视口边缘切掉；
+   显隐动画走的就是 bottom，-100% → 16px 依然是平滑上滑。 */
+@media (min-width: 768px) {
+    .bottom-sheet {
+        left: 50%;
+        width: min(560px, calc(100% - 32px));
+        transform: translateX(-50%);
+        border-radius: var(--radius-xl);
+    }
+
+    .bottom-sheet.active {
+        bottom: 16px;
+    }
+}
+
 /* 拖拽指示器（装饰用） */
 .bs-drag-indicator {
     width: 40px;
@@ -921,7 +953,7 @@ body {
     width: calc(100% - var(--spacing-lg) * 2);
     margin: 0 var(--spacing-lg) var(--spacing-lg);
     padding: 14px;
-    background: var(--color-accent-primary);
+    background: var(--color-accent-strong);
     color: white;
     border: none;
     border-radius: var(--radius-md);
@@ -933,7 +965,12 @@ body {
 }
 
 .bs-btn:active {
-    background: var(--color-highlight);
+    background: var(--color-accent-strong-hover);
+}
+
+.bs-btn:focus-visible {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 2px;
 }
 
 .cdn-error {
@@ -974,7 +1011,7 @@ body {
 
 .cdn-error__retry {
     padding: var(--spacing-sm) var(--spacing-xl);
-    background: var(--color-accent-primary);
+    background: var(--color-accent-strong);
     color: white;
     border: none;
     border-radius: var(--radius-md);
@@ -986,7 +1023,12 @@ body {
 }
 
 .cdn-error__retry:hover {
-    background: var(--color-highlight);
+    background: var(--color-accent-strong-hover);
+}
+
+.cdn-error__retry:focus-visible {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 2px;
 }
 
 .map-loading {
@@ -1033,15 +1075,16 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all var(--transition-fast);
+    /* 同 .map-back-btn：焦点环不能跟着过渡。 */
+    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
 .share-btn:hover {
-    background: var(--color-accent-primary);
-    border-color: var(--color-accent-primary);
+    background: var(--color-accent-strong);
+    border-color: var(--color-accent-strong);
 }
 
-.share-btn:focus {
+.share-btn:focus-visible {
     outline: 2px solid var(--color-accent-primary);
     outline-offset: 2px;
 }
@@ -1065,94 +1108,6 @@ body {
     animation: spin 1s linear infinite;
 }
 
-.share-template {
-    position: absolute;
-    left: -9999px;
-    top: 0;
-}
-
-.share-card {
-    width: 600px;
-    background: var(--color-bg-primary);
-    border-radius: 0;
-    overflow: hidden;
-    box-shadow: var(--shadow-elevated);
-}
-
-.share-card__header {
-    padding: var(--spacing-lg);
-    text-align: center;
-    background: linear-gradient(135deg, var(--color-accent-tertiary) 0%, var(--color-accent-primary) 100%);
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-}
-
-.share-card__title {
-    font-family: var(--font-display);
-    font-size: 1.75rem;
-    font-weight: 400;
-    color: white;
-    margin: 0 0 var(--spacing-xs) 0;
-    letter-spacing: 0.05em;
-}
-
-.share-card__subtitle {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 0.9rem;
-    margin: 0;
-}
-
-.share-card__map {
-    height: 400px;
-    background: var(--color-bg-secondary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.share-card__map canvas {
-    max-width: 100%;
-    max-height: 100%;
-}
-
-.share-card__stats {
-    display: flex;
-    justify-content: space-around;
-    padding: var(--spacing-lg);
-    background: var(--color-bg-card);
-    border-top: 1px solid var(--color-border-light);
-}
-
-.stat-item {
-    text-align: center;
-}
-
-.stat-value {
-    display: block;
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--color-accent-primary);
-    line-height: 1.2;
-}
-
-.stat-label {
-    font-size: 0.85rem;
-    color: var(--color-text-secondary);
-    margin-top: var(--spacing-xs);
-}
-
-.share-card__footer {
-    padding: var(--spacing-md);
-    text-align: center;
-    background: var(--color-bg-secondary);
-    font-size: 0.85rem;
-    color: var(--color-text-secondary);
-    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-}
-
-.share-card__footer p {
-    margin: 0;
-}
-
 @media (max-width: 768px) {
     .share-btn {
         width: 36px;
@@ -1160,41 +1115,10 @@ body {
         top: 8px;
         right: 8px;
     }
-    
+
     .share-btn svg {
         width: 18px;
         height: 18px;
-    }
-    
-    .share-card {
-        width: 100%;
-        max-width: 400px;
-    }
-    
-    .share-card__map {
-        height: 300px;
-    }
-    
-    .stat-value {
-        font-size: 1.5rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .share-card__map {
-        height: 250px;
-    }
-    
-    .share-card__stats {
-        padding: var(--spacing-md);
-    }
-    
-    .stat-value {
-        font-size: 1.25rem;
-    }
-    
-    .stat-label {
-        font-size: 0.75rem;
     }
 }
 
@@ -1215,7 +1139,8 @@ body {
     font-weight: 700;
     letter-spacing: 0.02em;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    /* 同 .map-back-btn：焦点环不能跟着过渡。 */
+    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
 .details-btn[hidden] {
@@ -1229,7 +1154,7 @@ body {
     color: #ffffff;
 }
 
-.details-btn:focus {
+.details-btn:focus-visible {
     outline: 2px solid var(--color-accent-tertiary);
     outline-offset: 2px;
 }
@@ -1319,6 +1244,11 @@ body {
     cursor: pointer;
 }
 
+.auth-modal__close:focus-visible {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 2px;
+}
+
 .auth-modal__title {
     font-family: var(--font-display);
     font-size: 1.9rem;
@@ -1386,7 +1316,7 @@ body {
     padding: 14px 16px;
     border: none;
     border-radius: var(--radius-md);
-    background: linear-gradient(135deg, var(--color-accent-tertiary) 0%, var(--color-accent-primary) 100%);
+    background: linear-gradient(135deg, var(--color-accent-tertiary) 0%, var(--color-accent-strong) 100%);
     color: #ffffff;
     font-family: var(--font-body);
     font-size: 1rem;
@@ -1404,6 +1334,11 @@ body {
     opacity: 0.7;
     cursor: progress;
     transform: none;
+}
+
+.auth-modal__submit:focus-visible {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 2px;
 }
 
 @media (max-width: 768px) {

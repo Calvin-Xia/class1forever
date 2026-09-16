@@ -30,7 +30,13 @@ const isTouchDevice = (function() {
 const CHINA_MAP_ID = 'cn/china';
 const PROVINCE_MAP_PREFIX = 'cn/';
 const REGION_SERIES_ID = 'regions';
-const SNAPSHOT_BACKGROUND = '#f5efe6';
+/**
+ * 色值集中放在 js/palette.js，这里只取别名。
+ * 下面的常量名在渲染和分享图代码里被引用多次，改名会拉大改动面，
+ * 所以保留原名字，只把来源换掉。
+ */
+const palette = window.CMapPalette;
+const SNAPSHOT_BACKGROUND = palette.snapshotBackground;
 /**
  * 快照采样倍率。窄屏下地图本身只有 ~374px 宽，裁完却要放进 1200px 宽的画布里，
  * 2 倍会糊（相当于把快照再放大 1.5 倍），3 倍才够用；桌面端本来就只做缩小，成本可控。
@@ -54,11 +60,10 @@ const SHARE_MAP_MAX_HEIGHT = 1000;
 /** 裁剪地图快照时四周保留的留白（快照像素）。 */
 const SHARE_MAP_PADDING = 16;
 
-/** 人数越多颜色越深，起点色同时用作无数据地区的底色。 */
-const HEAT_COLORS = ['#f5efe6', '#e8c4a8', '#d9a87c', '#c4704b', '#b56540', '#a85a3a'];
-const BORDER_COLOR = '#e0d8cc';
-const HOVER_AREA_COLOR = '#e8a87c';
-const HOVER_BORDER_COLOR = '#c4704b';
+const HEAT_COLORS = palette.heat;
+const BORDER_COLOR = palette.regionBorder;
+const HOVER_AREA_COLOR = palette.hoverArea;
+const HOVER_BORDER_COLOR = palette.hoverBorder;
 /**
  * 默认视图比例。ECharts 自动布局只会用掉容器的 80%，
  * 放大 1.25 倍正好让地图铺满可用区域，因此它同时是初始比例和最小比例。
@@ -271,17 +276,102 @@ function renderDetailCard(payload) {
     `;
 }
 
+/**
+ * 焦点作用域：打开对话框时把背景设为 inert，记住焦点来源，关闭时再归还。
+ *
+ * 用栈而不是单个变量，是因为底部面板之上还能再开口令弹窗：
+ * 内层关闭时不能把外层仍然需要的 inert 一起解除。
+ * inert 生效的瞬间浏览器就会把焦点移出背景，所以必须在设置 inert 之前记录
+ * activeElement，否则拿到的永远是 body。
+ */
+const FocusScope = (function() {
+    const stack = [];
+
+    /**
+     * body 和 html 也有 focus()，直接调用不会报错但也聚焦不到任何东西，
+     * 所以要把它们排除掉，否则"焦点来源不可用"会误判为归还成功。
+     */
+    function isFocusTarget(element) {
+        return Boolean(element) &&
+            element !== document.body &&
+            element !== document.documentElement &&
+            typeof element.focus === 'function' &&
+            document.contains(element);
+    }
+
+    function focusSafely(element) {
+        if (isFocusTarget(element)) {
+            element.focus({ preventScroll: true });
+            return true;
+        }
+        return false;
+    }
+
+    function open(options) {
+        const entry = {
+            restore: document.activeElement,
+            fallback: options.fallback || null,
+            inerted: []
+        };
+
+        (options.inert || []).forEach(function(element) {
+            if (element && !element.inert) {
+                element.inert = true;
+                entry.inerted.push(element);
+            }
+        });
+
+        stack.push(entry);
+
+        if (options.focus) {
+            focusSafely(options.focus);
+        }
+
+        return entry;
+    }
+
+    function close(entry) {
+        const index = stack.indexOf(entry);
+        if (index === -1) {
+            return;
+        }
+        stack.splice(index, 1);
+
+        entry.inerted.forEach(function(element) {
+            const stillNeeded = stack.some(function(outer) {
+                return outer.inerted.indexOf(element) !== -1;
+            });
+            if (!stillNeeded) {
+                element.inert = false;
+            }
+        });
+
+        // 触发元素可能已经不在文档里（面板内容被重建过），那就退到兜底目标。
+        if (!focusSafely(entry.restore)) {
+            focusSafely(entry.fallback);
+        }
+    }
+
+    return {
+        open: open,
+        close: close
+    };
+})();
+
 const BottomSheet = (function() {
     const elements = {
         overlay: document.getElementById('bs-overlay'),
         sheet: document.getElementById('bottom-sheet'),
         content: document.getElementById('bs-content'),
         primaryButton: document.getElementById('bs-primary-btn'),
-        drilldownButton: document.getElementById('bs-drilldown-btn')
+        drilldownButton: document.getElementById('bs-drilldown-btn'),
+        pageWrapper: document.querySelector('.page-wrapper'),
+        map: document.getElementById('map')
     };
 
     let currentPoint = null;
     let currentMode = 'public';
+    let scope = null;
 
     function isActive() {
         return Boolean(elements.sheet && elements.sheet.classList.contains('active'));
@@ -318,14 +408,35 @@ const BottomSheet = (function() {
     }
 
     function open() {
+        const wasActive = isActive();
+
         elements.sheet.classList.add('active');
         elements.overlay.classList.add('active');
+
+        // 悬浮卡片是鼠标位置的产物，留着会和面板叠成两张深色卡片。
+        if (AppState.chart) {
+            AppState.chart.dispatchAction({ type: 'hideTip' });
+        }
+
+        // showPublic / showLoading / showDetail 都会走到这里，作用域只开一次。
+        if (!wasActive) {
+            scope = FocusScope.open({
+                inert: [elements.pageWrapper],
+                focus: elements.sheet,
+                fallback: elements.map
+            });
+        }
     }
 
     function close() {
         elements.sheet.classList.remove('active');
         elements.overlay.classList.remove('active');
         currentMode = 'public';
+
+        if (scope) {
+            FocusScope.close(scope);
+            scope = null;
+        }
     }
 
     function showPublic(point, options) {
@@ -420,12 +531,26 @@ function setAuthFeedback(message, variant) {
     }
 }
 
+let authScope = null;
+
 function openAuthModal(message) {
     ui.authOverlay.hidden = false;
     ui.authHint.textContent = AppState.detailsHint
         ? `口令提示：${AppState.detailsHint}`
         : '如忘记口令，请联系老师或同学。';
     setAuthFeedback(message || '', null);
+
+    if (AppState.chart) {
+        AppState.chart.dispatchAction({ type: 'hideTip' });
+    }
+
+    // 面板之上还能再开这一层，所以底部面板也要一起 inert。
+    if (!authScope) {
+        authScope = FocusScope.open({
+            inert: [document.querySelector('.page-wrapper'), document.getElementById('bottom-sheet')]
+        });
+    }
+
     window.setTimeout(function() {
         ui.authInput.focus();
     }, 0);
@@ -436,6 +561,11 @@ function closeAuthModal() {
     ui.authForm.reset();
     setAuthFeedback('', null);
     AppState.pendingPoint = null;
+
+    if (authScope) {
+        FocusScope.close(authScope);
+        authScope = null;
+    }
 }
 
 async function handleAuthSubmit(event) {
@@ -916,7 +1046,7 @@ function buildVisualMapOption(points) {
         text: [`${max} 人`, '0 人'],
         textGap: 8,
         textStyle: {
-            color: '#5c5650',
+            color: palette.visualMapText,
             fontFamily: "'Nunito', sans-serif",
             fontSize: 12,
             fontWeight: 600,
@@ -964,7 +1094,7 @@ function buildMapSeries(mapId, regionName, points, showLabels) {
         },
         label: {
             show: Boolean(showLabels),
-            color: '#2d2a26',
+            color: palette.mapLabel,
             fontFamily: "'Nunito', sans-serif",
             fontSize: 11,
             fontWeight: 700,
@@ -981,7 +1111,7 @@ function buildMapSeries(mapId, regionName, points, showLabels) {
         emphasis: {
             label: {
                 show: true,
-                color: '#ffffff',
+                color: palette.mapLabelEmphasis,
                 fontWeight: 700,
                 textBorderColor: 'rgba(45, 42, 38, 0.55)',
                 textBorderWidth: 2
@@ -1618,12 +1748,12 @@ const ShareManager = (function() {
         const pillTop = bandTop + (bandHeight - pillHeight) / 2;
         const centerY = pillTop + pillHeight / 2;
 
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
+        ctx.fillStyle = palette.share.legendPill;
         ctx.strokeStyle = BORDER_COLOR;
         ctx.lineWidth = 1;
         roundRect(ctx, pillLeft, pillTop, pillWidth, pillHeight, pillHeight / 2, true, true);
 
-        ctx.fillStyle = '#5c5650';
+        ctx.fillStyle = palette.share.legendText;
         ctx.textAlign = 'right';
         ctx.fillText(lowLabel, pillLeft + paddingX + labelWidth, centerY);
         ctx.textAlign = 'left';
@@ -1707,23 +1837,23 @@ const ShareManager = (function() {
         canvas.height = canvasHeight;
         const ctx = canvas.getContext('2d');
 
-        ctx.fillStyle = '#faf7f2';
+        ctx.fillStyle = palette.share.background;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         const gradient = ctx.createLinearGradient(0, 0, canvas.width, SHARE_HEADER_HEIGHT);
-        gradient.addColorStop(0, '#e8a87c');
-        gradient.addColorStop(1, '#c4704b');
+        gradient.addColorStop(0, palette.share.headerFrom);
+        gradient.addColorStop(1, palette.share.headerTo);
         ctx.fillStyle = gradient;
         roundRect(ctx, 0, 0, canvas.width, SHARE_HEADER_HEIGHT, 24, true, false, [24, 24, 0, 0]);
 
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = palette.share.headerTitle;
         ctx.font = '42px Georgia, serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('金鹰1班蹭饭地图', canvas.width / 2, 55);
 
         ctx.font = '18px Arial, sans-serif';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fillStyle = palette.share.headerSubtitle;
         ctx.fillText('探索各地同学的足迹', canvas.width / 2, 105);
 
         // 等比缩放并居中；极端比例被上下限裁到时，留白用快照同色填充。
@@ -1745,11 +1875,11 @@ const ShareManager = (function() {
             drawHeight
         );
 
-        ctx.fillStyle = '#faf7f2';
+        ctx.fillStyle = palette.share.background;
         ctx.fillRect(0, legendTop, canvas.width, SHARE_LEGEND_HEIGHT);
         drawHeatLegend(ctx, canvas.width / 2, legendTop, SHARE_LEGEND_HEIGHT, computeHeatMax(AppState.regionIndex));
 
-        ctx.fillStyle = '#fffaf5';
+        ctx.fillStyle = palette.share.statsBackground;
         ctx.fillRect(0, statsTop, canvas.width, SHARE_STATS_HEIGHT);
 
         ctx.textAlign = 'center';
@@ -1762,18 +1892,18 @@ const ShareManager = (function() {
         ];
 
         statColumns.forEach(function(column) {
-            ctx.fillStyle = '#c4704b';
+            ctx.fillStyle = palette.share.statValue;
             ctx.font = 'bold 36px Arial, sans-serif';
             ctx.fillText(String(column.value), column.x, statsTop + 40);
-            ctx.fillStyle = '#5c5650';
+            ctx.fillStyle = palette.share.statLabel;
             ctx.font = '16px Arial, sans-serif';
             ctx.fillText(column.label, column.x, statsTop + 70);
         });
 
-        ctx.fillStyle = '#f5efe6';
+        ctx.fillStyle = palette.share.footerBackground;
         roundRect(ctx, 0, footerTop, canvas.width, SHARE_FOOTER_HEIGHT, 0, true, false, [0, 0, 24, 24]);
 
-        ctx.fillStyle = '#5c5650';
+        ctx.fillStyle = palette.share.footerText;
         ctx.font = '14px Arial, sans-serif';
         ctx.fillText('万州二中 · 金鹰1班', canvas.width / 2, footerTop + SHARE_FOOTER_HEIGHT / 2);
 
