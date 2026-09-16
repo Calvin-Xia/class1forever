@@ -910,6 +910,22 @@ body {
     outline: none;
 }
 
+/* 宽屏下做成居中抽屉：通栏面板在 1280px 下两侧会留下大片空白。
+   停靠位置改用 bottom: 16px 而不是贴底，四角圆角才不会被视口边缘切掉；
+   显隐动画走的就是 bottom，-100% → 16px 依然是平滑上滑。 */
+@media (min-width: 768px) {
+    .bottom-sheet {
+        left: 50%;
+        width: min(560px, calc(100% - 32px));
+        transform: translateX(-50%);
+        border-radius: var(--radius-xl);
+    }
+
+    .bottom-sheet.active {
+        bottom: 16px;
+    }
+}
+
 /* 拖拽指示器（装饰用） */
 .bs-drag-indicator {
     width: 40px;
