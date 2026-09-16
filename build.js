@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const checkContrast = require('./scripts/check-contrast.js');
 
 const rootDirectory = __dirname;
 const failures = [];
@@ -108,6 +109,9 @@ if (scriptSourceDirective.includes('unsafe-inline')) {
     fail('_headers 的 script-src 仍包含 unsafe-inline。');
 }
 
+/* 7. 关键配色的对比度，以及 CSS 变量与 js/palette.js 的同值约定 */
+const contrastAssertions = checkContrast.check(rootDirectory, fail);
+
 if (failures.length > 0) {
     for (const message of failures) {
         console.error(`❌ ${message}`);
@@ -115,4 +119,4 @@ if (failures.length > 0) {
     process.exit(1);
 }
 
-console.log('✅ 静态检查通过：地图数据仍由 Cloudflare Pages Functions + KV 提供，前端渲染使用本地 ECharts。');
+console.log(`✅ 静态检查通过：地图数据仍由 Cloudflare Pages Functions + KV 提供，前端渲染使用本地 ECharts；对比度断言 ${contrastAssertions} 项全部达标。`);
