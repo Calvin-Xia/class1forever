@@ -30,7 +30,13 @@ const isTouchDevice = (function() {
 const CHINA_MAP_ID = 'cn/china';
 const PROVINCE_MAP_PREFIX = 'cn/';
 const REGION_SERIES_ID = 'regions';
-const SNAPSHOT_BACKGROUND = '#f5efe6';
+/**
+ * 色值集中放在 js/palette.js，这里只取别名。
+ * 下面的常量名在渲染和分享图代码里被引用多次，改名会拉大改动面，
+ * 所以保留原名字，只把来源换掉。
+ */
+const palette = window.CMapPalette;
+const SNAPSHOT_BACKGROUND = palette.snapshotBackground;
 /**
  * 快照采样倍率。窄屏下地图本身只有 ~374px 宽，裁完却要放进 1200px 宽的画布里，
  * 2 倍会糊（相当于把快照再放大 1.5 倍），3 倍才够用；桌面端本来就只做缩小，成本可控。
@@ -54,11 +60,10 @@ const SHARE_MAP_MAX_HEIGHT = 1000;
 /** 裁剪地图快照时四周保留的留白（快照像素）。 */
 const SHARE_MAP_PADDING = 16;
 
-/** 人数越多颜色越深，起点色同时用作无数据地区的底色。 */
-const HEAT_COLORS = ['#f5efe6', '#e8c4a8', '#d9a87c', '#c4704b', '#b56540', '#a85a3a'];
-const BORDER_COLOR = '#e0d8cc';
-const HOVER_AREA_COLOR = '#e8a87c';
-const HOVER_BORDER_COLOR = '#c4704b';
+const HEAT_COLORS = palette.heat;
+const BORDER_COLOR = palette.regionBorder;
+const HOVER_AREA_COLOR = palette.hoverArea;
+const HOVER_BORDER_COLOR = palette.hoverBorder;
 /**
  * 默认视图比例。ECharts 自动布局只会用掉容器的 80%，
  * 放大 1.25 倍正好让地图铺满可用区域，因此它同时是初始比例和最小比例。
@@ -1041,7 +1046,7 @@ function buildVisualMapOption(points) {
         text: [`${max} 人`, '0 人'],
         textGap: 8,
         textStyle: {
-            color: '#5c5650',
+            color: palette.visualMapText,
             fontFamily: "'Nunito', sans-serif",
             fontSize: 12,
             fontWeight: 600,
@@ -1089,7 +1094,7 @@ function buildMapSeries(mapId, regionName, points, showLabels) {
         },
         label: {
             show: Boolean(showLabels),
-            color: '#2d2a26',
+            color: palette.mapLabel,
             fontFamily: "'Nunito', sans-serif",
             fontSize: 11,
             fontWeight: 700,
@@ -1106,7 +1111,7 @@ function buildMapSeries(mapId, regionName, points, showLabels) {
         emphasis: {
             label: {
                 show: true,
-                color: '#ffffff',
+                color: palette.mapLabelEmphasis,
                 fontWeight: 700,
                 textBorderColor: 'rgba(45, 42, 38, 0.55)',
                 textBorderWidth: 2
@@ -1743,12 +1748,12 @@ const ShareManager = (function() {
         const pillTop = bandTop + (bandHeight - pillHeight) / 2;
         const centerY = pillTop + pillHeight / 2;
 
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
+        ctx.fillStyle = palette.share.legendPill;
         ctx.strokeStyle = BORDER_COLOR;
         ctx.lineWidth = 1;
         roundRect(ctx, pillLeft, pillTop, pillWidth, pillHeight, pillHeight / 2, true, true);
 
-        ctx.fillStyle = '#5c5650';
+        ctx.fillStyle = palette.share.legendText;
         ctx.textAlign = 'right';
         ctx.fillText(lowLabel, pillLeft + paddingX + labelWidth, centerY);
         ctx.textAlign = 'left';
@@ -1832,23 +1837,23 @@ const ShareManager = (function() {
         canvas.height = canvasHeight;
         const ctx = canvas.getContext('2d');
 
-        ctx.fillStyle = '#faf7f2';
+        ctx.fillStyle = palette.share.background;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         const gradient = ctx.createLinearGradient(0, 0, canvas.width, SHARE_HEADER_HEIGHT);
-        gradient.addColorStop(0, '#e8a87c');
-        gradient.addColorStop(1, '#c4704b');
+        gradient.addColorStop(0, palette.share.headerFrom);
+        gradient.addColorStop(1, palette.share.headerTo);
         ctx.fillStyle = gradient;
         roundRect(ctx, 0, 0, canvas.width, SHARE_HEADER_HEIGHT, 24, true, false, [24, 24, 0, 0]);
 
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = palette.share.headerTitle;
         ctx.font = '42px Georgia, serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('金鹰1班蹭饭地图', canvas.width / 2, 55);
 
         ctx.font = '18px Arial, sans-serif';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fillStyle = palette.share.headerSubtitle;
         ctx.fillText('探索各地同学的足迹', canvas.width / 2, 105);
 
         // 等比缩放并居中；极端比例被上下限裁到时，留白用快照同色填充。
@@ -1870,11 +1875,11 @@ const ShareManager = (function() {
             drawHeight
         );
 
-        ctx.fillStyle = '#faf7f2';
+        ctx.fillStyle = palette.share.background;
         ctx.fillRect(0, legendTop, canvas.width, SHARE_LEGEND_HEIGHT);
         drawHeatLegend(ctx, canvas.width / 2, legendTop, SHARE_LEGEND_HEIGHT, computeHeatMax(AppState.regionIndex));
 
-        ctx.fillStyle = '#fffaf5';
+        ctx.fillStyle = palette.share.statsBackground;
         ctx.fillRect(0, statsTop, canvas.width, SHARE_STATS_HEIGHT);
 
         ctx.textAlign = 'center';
@@ -1887,18 +1892,18 @@ const ShareManager = (function() {
         ];
 
         statColumns.forEach(function(column) {
-            ctx.fillStyle = '#c4704b';
+            ctx.fillStyle = palette.share.statValue;
             ctx.font = 'bold 36px Arial, sans-serif';
             ctx.fillText(String(column.value), column.x, statsTop + 40);
-            ctx.fillStyle = '#5c5650';
+            ctx.fillStyle = palette.share.statLabel;
             ctx.font = '16px Arial, sans-serif';
             ctx.fillText(column.label, column.x, statsTop + 70);
         });
 
-        ctx.fillStyle = '#f5efe6';
+        ctx.fillStyle = palette.share.footerBackground;
         roundRect(ctx, 0, footerTop, canvas.width, SHARE_FOOTER_HEIGHT, 0, true, false, [0, 0, 24, 24]);
 
-        ctx.fillStyle = '#5c5650';
+        ctx.fillStyle = palette.share.footerText;
         ctx.font = '14px Arial, sans-serif';
         ctx.fillText('万州二中 · 金鹰1班', canvas.width / 2, footerTop + SHARE_FOOTER_HEIGHT / 2);
 

@@ -23,6 +23,7 @@ const requiredFiles = [
     'js/boot.js',
     'js/geo.js',
     'js/china.js',
+    'js/palette.js',
     'js/map.js',
     'js/vendor/echarts.min.js',
     'functions/api/map/public.js',
