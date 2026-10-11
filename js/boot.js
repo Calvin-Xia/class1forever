@@ -13,7 +13,8 @@
         'js/geo.js',
         'js/china.js',
         'js/palette.js',
-        'js/map.js'
+        'js/map.js',
+        'js/motion.js'
     ];
 
     const FAILURE_MESSAGES = {
@@ -21,7 +22,8 @@
         'js/geo.js': '地图数据加载失败，请刷新页面重试。',
         'js/china.js': '中国地图数据加载失败，请刷新页面重试。',
         'js/palette.js': '配色文件加载失败，请刷新页面重试。',
-        'js/map.js': '页面逻辑加载失败，请刷新页面重试。'
+        'js/map.js': '页面逻辑加载失败，请刷新页面重试。',
+        'js/motion.js': '页面动效加载失败，请刷新页面重试。'
     };
 
     function showFatalError(message) {

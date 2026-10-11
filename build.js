@@ -26,6 +26,7 @@ const requiredFiles = [
     'js/china.js',
     'js/palette.js',
     'js/map.js',
+    'js/motion.js',
     'js/vendor/echarts.min.js',
     'functions/api/map/public.js',
     'functions/api/map/details.js',

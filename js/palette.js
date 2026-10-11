@@ -7,44 +7,73 @@
  *
  * tokens 里逐条标了对应的 CSS 变量名，两边必须一起改；
  * scripts/check-contrast.js 会读这份调色板和 CSS 变量做对比度断言。
+ *
+ * 设计依据见 DESIGN.md「纸本图志」：宣纸米白 + 墨绿 + 朱砂。
  */
 
 (function (global) {
     'use strict';
 
     const tokens = {
-        paper: '#faf7f2',              // --color-bg-primary
-        inset: '#f5efe6',              // --color-bg-secondary
-        border: '#e0d8cc',             // --color-border
-        ink: '#2d2a26',                // --color-text-primary
-        inkMuted: '#5c5650',           // --color-text-secondary
-        accent: '#c4704b',             // --color-accent-primary
-        accentSoft: '#e8a87c',         // --color-accent-secondary
-        accentStrong: '#b05a38',       // --color-accent-strong
-        accentStrongHover: '#a85a3a'   // --color-accent-strong-hover
+        paper: '#f7f4ec',              // --color-bg-primary
+        inset: '#eae5d8',              // --color-bg-secondary
+        border: '#ddd6c6',             // --color-border
+        ink: '#17241f',                // --color-text-primary
+        inkMuted: '#4c5852',           // --color-text-secondary
+        accent: '#4f7f63',             // --color-accent-primary
+        accentSoft: '#9ed3bd',         // --color-accent-secondary
+        accentStrong: '#1f5245',       // --color-accent-strong
+        accentStrongHover: '#1a4539',  // --color-accent-strong-hover
+        seal: '#a63c31',               // --color-accent-tertiary
+        highlight: '#e0b463'           // --color-highlight
+    };
+
+    /**
+     * 画布上的字体也得跟 CSS 一致：ECharts 不认识 CSS 变量，
+     * 写在这里至少让「页面字体」与「canvas 字体」只有一个来源。
+     * 这里刻意不写 -apple-system / BlinkMacSystemFont：canvas 的 font 简写
+     * 对非标准关键字更挑剔，整串解析失败会静默退回默认字体。
+     */
+    const fonts = {
+        body: "'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+        display: "'Noto Serif SC', 'Songti SC', 'SimSun', serif"
     };
 
     global.CMapPalette = {
         /**
          * 人数越多颜色越深，第 0 档同时用作无数据地区的底色。
          * 后三档是逐步加深的同一色相，改色时保持亮度单调递减。
+         * 第 1、2、5 档只在 canvas 上用，没有对应的 CSS 变量。
          */
-        heat: [tokens.inset, '#e8c4a8', '#d9a87c', tokens.accent, '#b56540', tokens.accentStrongHover],
+        heat: [tokens.inset, '#d2dbc2', '#96b58a', tokens.accent, '#35604d', tokens.accentStrongHover],
 
         regionBorder: tokens.border,
         hoverArea: tokens.accentSoft,
-        hoverBorder: tokens.accent,
+        // 悬浮描边用朱砂：绿色色阶上，冷色描边会糊在一起，印章红才跳得出来。
+        hoverBorder: tokens.seal,
         mapLabel: tokens.ink,
         mapLabelEmphasis: '#ffffff',
         visualMapText: tokens.inkMuted,
         snapshotBackground: tokens.inset,
 
+        fonts: fonts,
+
+        /**
+         * 字外描边。地图标注与图例刻度都会压到深色地块上，
+         * 靠一圈浅色（或深色）描边保住可读性，比例尺本体不铺底板。
+         */
+        mapLabelHalo: 'rgba(255, 253, 248, 0.92)',
+        mapLabelEmphasisHalo: 'rgba(23, 36, 31, 0.55)',
+        visualMapHalo: 'rgba(255, 253, 248, 0.92)',
+        hoverShadow: 'rgba(166, 60, 49, 0.32)',
+        indicatorShadow: 'rgba(23, 36, 31, 0.22)',
+
         share: {
             background: tokens.paper,
             /**
              * 头部渐变。整条带上压着 42px 白标题和 18px 白副标题，
-             * 按渐变中点校验：4.91:1，两者都过 AA；
-             * 起点用 accentStrong 而不是 accent（中点只有 4.26:1，副标题会差一点）。
+             * 按渐变中点校验：9.76:1，两者都过 AA；
+             * 起点用 accentStrong 而不是 accent（主绿上压不住白字）。
              */
             headerFrom: tokens.accentStrong,
             headerTo: tokens.accentStrongHover,
@@ -52,11 +81,12 @@
             headerSubtitle: '#ffffff',
             legendPill: 'rgba(255, 255, 255, 0.94)',
             legendText: tokens.inkMuted,
-            statsBackground: '#fffaf5',
+            statsBackground: '#fbf7ec',
             statValue: tokens.accent,
             statLabel: tokens.inkMuted,
             footerBackground: tokens.inset,
-            footerText: tokens.inkMuted
+            footerText: tokens.inkMuted,
+            rule: 'rgba(23, 36, 31, 0.14)'
         }
     };
 })(window);

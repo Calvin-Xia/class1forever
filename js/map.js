@@ -242,25 +242,44 @@ function renderLoadingCard(point) {
     `;
 }
 
+/**
+ * 名册按城市分组渲染。
+ * sortPeople 已经把同城的人排在一起，这里只需要在 city 变化时插一个分组头。
+ * 入场延迟封顶在第 12 行，长名单的尾巴才不会等上好几秒。
+ */
+function renderRoster(people) {
+    let html = '';
+    let currentCity = null;
+    let index = 0;
+
+    people.forEach(function(person) {
+        if (person.city !== currentCity) {
+            currentCity = person.city;
+            html += `
+                <div class="roster__group"><span class="roster__city">${escapeHtml(person.city)}</span></div>
+            `;
+        }
+
+        index += 1;
+        html += `
+            <div class="roster__row" style="--i:${Math.min(index, 12)}">
+                <span class="roster__index">${String(index).padStart(2, '0')}</span>
+                <span class="roster__name">${escapeHtml(person.name)}</span>
+                <span class="roster__school">${escapeHtml(person.school)}</span>
+            </div>
+        `;
+    });
+
+    return `<div class="roster">${html}</div>`;
+}
+
 function renderDetailCard(payload) {
     const metaHtml = payload.city
         ? `<div class="tooltip__meta"><strong>${escapeHtml(payload.province)}</strong> · ${escapeHtml(payload.city)}</div>`
         : '<div class="tooltip__meta">省内班内明细</div>';
 
     const listHtml = payload.people.length > 0
-        ? `
-            <div class="list">
-                ${payload.people.map(function(person) {
-                    return `
-                        <div class="pinfo">
-                            <div class="pname">${escapeHtml(person.name)}</div>
-                            <div class="city">${escapeHtml(person.city)}</div>
-                            <div class="school">${escapeHtml(person.school)}</div>
-                        </div>
-                    `;
-                }).join('')}
-            </div>
-        `
+        ? renderRoster(payload.people)
         : '<div class="tooltip__empty">该地区暂无已登记的班内明细。</div>';
 
     return `
@@ -1025,11 +1044,38 @@ function computeHeatMax(points) {
 }
 
 /**
+ * 图例标尺的尺寸与位置。
+ *
+ * 横向下「色带 + 两端刻度」是一个整体，宽度固定不了：340px 的长度在
+ * 320px 宽的手机上会顶出图面。窄屏还有第二个约束 —— 左下角被三段式缩放
+ * 控件占着（44px 宽 + 8px 边距），所以色带整体右移并缩短，
+ * 否则「0 人」那个刻度正好压在重置按钮上。
+ */
+function legendLayout() {
+    const viewport = window.innerWidth || 1024;
+
+    if (viewport < 768) {
+        return {
+            length: Math.max(120, Math.min(200, viewport - 200)),
+            left: 56,
+            bottom: 12
+        };
+    }
+
+    return {
+        length: Math.max(200, Math.min(340, viewport - 160)),
+        left: 'center',
+        bottom: 12
+    };
+}
+
+/**
  * 底部色带图例由 ECharts visualMap 绘制：
  * 它同时负责上色，hoverLink 让鼠标停在某个省时在色带上标出对应人数。
  */
 function buildVisualMapOption(points) {
     const max = computeHeatMax(points);
+    const layout = legendLayout();
 
     return {
         type: 'continuous',
@@ -1039,20 +1085,20 @@ function buildVisualMapOption(points) {
         calculable: false,
         hoverLink: true,
         orient: 'horizontal',
-        left: 'center',
-        bottom: 8,
-        itemWidth: 13,
-        itemHeight: 150,
+        left: layout.left,
+        bottom: layout.bottom,
+        itemWidth: 12,
+        itemHeight: layout.length,
         text: [`${max} 人`, '0 人'],
-        textGap: 8,
+        textGap: 10,
         textStyle: {
             color: palette.visualMapText,
-            fontFamily: "'Nunito', sans-serif",
+            fontFamily: palette.fonts.body,
             fontSize: 12,
             fontWeight: 600,
             // 图例没有底板，浅色区块上没问题，但压到海南这类深色地块上数字就糊了；
-            // 和地图标注一样加一圈细白边。
-            textBorderColor: 'rgba(255, 255, 255, 0.9)',
+            // 和地图标注一样加一圈细纸白边。
+            textBorderColor: palette.visualMapHalo,
             textBorderWidth: 2
         },
         indicatorIcon: 'circle',
@@ -1061,7 +1107,7 @@ function buildVisualMapOption(points) {
             borderColor: HOVER_BORDER_COLOR,
             borderWidth: 2,
             shadowBlur: 4,
-            shadowColor: 'rgba(45, 42, 38, 0.25)'
+            shadowColor: palette.indicatorShadow
         },
         inRange: {
             color: HEAT_COLORS
@@ -1095,12 +1141,12 @@ function buildMapSeries(mapId, regionName, points, showLabels) {
         label: {
             show: Boolean(showLabels),
             color: palette.mapLabel,
-            fontFamily: "'Nunito', sans-serif",
+            fontFamily: palette.fonts.body,
             fontSize: 11,
             fontWeight: 700,
             // 浅色底不需要描边，深色地块上靠这圈细白边保持可读；
             // 描边再粗会把小字号字形糊掉。
-            textBorderColor: 'rgba(255, 255, 255, 0.92)',
+            textBorderColor: palette.mapLabelHalo,
             textBorderWidth: 1
         },
         itemStyle: {
@@ -1113,7 +1159,7 @@ function buildMapSeries(mapId, regionName, points, showLabels) {
                 show: true,
                 color: palette.mapLabelEmphasis,
                 fontWeight: 700,
-                textBorderColor: 'rgba(45, 42, 38, 0.55)',
+                textBorderColor: palette.mapLabelEmphasisHalo,
                 textBorderWidth: 2
             },
             itemStyle: {
@@ -1121,7 +1167,7 @@ function buildMapSeries(mapId, regionName, points, showLabels) {
                 borderColor: HOVER_BORDER_COLOR,
                 borderWidth: 2,
                 shadowBlur: 10,
-                shadowColor: 'rgba(196, 112, 75, 0.35)'
+                shadowColor: palette.hoverShadow
             }
         }
     };
@@ -1736,7 +1782,7 @@ const ShareManager = (function() {
         const paddingX = 20;
         const pillHeight = 40;
 
-        ctx.font = 'bold 15px Arial, sans-serif';
+        ctx.font = 'bold 15px ' + palette.fonts.body;
         ctx.textBaseline = 'middle';
         const labelWidth = Math.ceil(Math.max(
             ctx.measureText(lowLabel).width,
@@ -1847,12 +1893,13 @@ const ShareManager = (function() {
         roundRect(ctx, 0, 0, canvas.width, SHARE_HEADER_HEIGHT, 24, true, false, [24, 24, 0, 0]);
 
         ctx.fillStyle = palette.share.headerTitle;
-        ctx.font = '42px Georgia, serif';
+        // 分享图上的字体也得跟页面一致，否则导出图和网页是两套字。
+        ctx.font = '600 42px ' + palette.fonts.display;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('金鹰1班蹭饭地图', canvas.width / 2, 55);
+        ctx.fillText('金鹰 1 班蹭饭地图', canvas.width / 2, 55);
 
-        ctx.font = '18px Arial, sans-serif';
+        ctx.font = '18px ' + palette.fonts.body;
         ctx.fillStyle = palette.share.headerSubtitle;
         ctx.fillText('探索各地同学的足迹', canvas.width / 2, 105);
 
@@ -1893,10 +1940,10 @@ const ShareManager = (function() {
 
         statColumns.forEach(function(column) {
             ctx.fillStyle = palette.share.statValue;
-            ctx.font = 'bold 36px Arial, sans-serif';
+            ctx.font = 'bold 36px ' + palette.fonts.body;
             ctx.fillText(String(column.value), column.x, statsTop + 40);
             ctx.fillStyle = palette.share.statLabel;
-            ctx.font = '16px Arial, sans-serif';
+            ctx.font = '16px ' + palette.fonts.body;
             ctx.fillText(column.label, column.x, statsTop + 70);
         });
 
@@ -1904,8 +1951,8 @@ const ShareManager = (function() {
         roundRect(ctx, 0, footerTop, canvas.width, SHARE_FOOTER_HEIGHT, 0, true, false, [0, 0, 24, 24]);
 
         ctx.fillStyle = palette.share.footerText;
-        ctx.font = '14px Arial, sans-serif';
-        ctx.fillText('万州二中 · 金鹰1班', canvas.width / 2, footerTop + SHARE_FOOTER_HEIGHT / 2);
+        ctx.font = '14px ' + palette.fonts.body;
+        ctx.fillText('万州二中 · 金鹰 1 班', canvas.width / 2, footerTop + SHARE_FOOTER_HEIGHT / 2);
 
         return canvasToPngBlob(canvas);
     }

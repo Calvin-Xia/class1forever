@@ -3,12 +3,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="蹭饭地图 - 探索各地同学的足迹，发现每个省份和城市的精彩故事">
-    <title>蹭饭地图</title>
+    <meta name="description" content="蹭饭地图 - 金鹰 1 班同学分布图志，点击地图查看各省市的落点">
+    <meta name="theme-color" content="#f7f4ec">
+    <title>金鹰 1 班蹭饭地图</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="css/main.css">
     <link rel="preload" as="script" href="js/vendor/echarts.min.js">
     <link rel="preload" as="script" href="js/china.js">
@@ -17,31 +18,58 @@
 <body>
     <div id="cdn-error" class="cdn-error" style="display: none;">
         <div class="cdn-error__content">
-            <div class="cdn-error__icon">⚠️</div>
+            <div class="cdn-error__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 4 2.6 20h18.8L12 4z"></path>
+                    <line x1="12" y1="10" x2="12" y2="14.4"></line>
+                    <line x1="12" y1="17.2" x2="12" y2="17.3"></line>
+                </svg>
+            </div>
             <h3 id="cdn-error-title" class="cdn-error__title">地图加载失败</h3>
             <p id="cdn-error-message" class="cdn-error__message">无法加载地图资源，请检查网络连接后刷新页面。</p>
             <button id="cdn-error-retry" class="cdn-error__retry" type="button">重新加载</button>
         </div>
     </div>
 
-    <div class="page-wrapper">
-        <div class="decorative-bg" aria-hidden="true">
-            <div class="decorative-circle decorative-circle--1"></div>
-            <div class="decorative-circle decorative-circle--2"></div>
-            <div class="decorative-circle decorative-circle--3"></div>
-            <div class="decorative-line decorative-line--1"></div>
-            <div class="decorative-line decorative-line--2"></div>
-        </div>
+    <div class="atmosphere" aria-hidden="true">
+        <div class="atmosphere__grid"></div>
+        <div class="atmosphere__grain"></div>
+        <div class="atmosphere__glow"></div>
+    </div>
 
+    <div class="page-wrapper">
         <main class="page" role="main">
             <header class="page__header">
-                <div class="header-content">
-                    <div class="title-wrapper">
-                        <span class="title-decoration title-decoration--left" aria-hidden="true"></span>
-                        <h1 class="page__title">金鹰 1 班蹭饭地图</h1>
-                        <span class="title-decoration title-decoration--right" aria-hidden="true"></span>
+                <div class="plate">
+                    <div class="plate__main">
+                        <p class="plate__eyebrow">金鹰 1 班 · 同学分布图志</p>
+                        <h1 class="page__title" aria-label="金鹰 1 班蹭饭地图">
+                            <span aria-hidden="true"><span class="char" style="--i:0">金</span><span class="char" style="--i:1">鹰</span><span class="char char--gap" style="--i:2"> </span><span class="char" style="--i:3">1</span><span class="char char--gap" style="--i:4"> </span><span class="char" style="--i:5">班</span><span class="char" style="--i:6">蹭</span><span class="char" style="--i:7">饭</span><span class="char" style="--i:8">地</span><span class="char" style="--i:9">图</span></span>
+                        </h1>
+                        <p class="page__description">地图上先摊开各省市的落点与人数。姓名和学校不写在公开图面上 —— 要口令才翻得开。</p>
                     </div>
-                    <p class="page__description">探索各地同学的足迹，点击地图，深入每个省份和城市的精彩故事。</p>
+
+                    <aside class="plate__meta" aria-label="图幅信息">
+                        <dl>
+                            <div>
+                                <dt>图幅</dt>
+                                <dd>中华人民共和国</dd>
+                            </div>
+                            <div>
+                                <dt>投影</dt>
+                                <dd>EPSG:3415 等距</dd>
+                            </div>
+                            <div>
+                                <dt>比例</dt>
+                                <dd>不按比例 · 按饭量</dd>
+                            </div>
+                            <div>
+                                <dt>口径</dt>
+                                <dd>人数公开</dd>
+                            </div>
+                        </dl>
+                        <span class="plate__seal" aria-hidden="true">蹭饭</span>
+                    </aside>
                 </div>
             </header>
 
@@ -54,13 +82,13 @@
                         <div class="map-frame__corner map-frame__corner--br" aria-hidden="true"></div>
 
                         <div class="map-toolbar">
-                            <button id="map-back-btn" class="map-back-btn" type="button" hidden>← 返回全国</button>
-                            <button id="details-btn" class="details-btn" type="button" aria-label="开启查看详情模式">同学信息</button>
-                            <span id="map-region-badge" class="map-region-badge">中国</span>
+                            <button id="map-back-btn" class="chip map-back-btn" type="button" hidden>← 返回全国</button>
+                            <button id="details-btn" class="chip details-btn" type="button" aria-label="开启查看详情模式">同学信息</button>
+                            <span id="map-region-badge" class="chip map-region-badge">中国</span>
                         </div>
 
-                        <button id="share-btn" class="share-btn" type="button" title="分享地图" aria-label="分享地图">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <button id="share-btn" class="share-btn magnet spotlight" type="button" title="分享地图" aria-label="分享地图">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <circle cx="18" cy="5" r="3"></circle>
                                 <circle cx="6" cy="12" r="3"></circle>
                                 <circle cx="18" cy="19" r="3"></circle>
@@ -82,7 +110,7 @@
                                 </svg>
                             </button>
                             <button id="map-zoom-reset" class="map-zoom__btn" type="button" aria-label="重置地图缩放" title="重置视图">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     <path d="M8 3H5a2 2 0 0 0-2 2v3"></path>
                                     <path d="M16 3h3a2 2 0 0 1 2 2v3"></path>
                                     <path d="M8 21H5a2 2 0 0 1-2-2v-3"></path>
@@ -91,11 +119,15 @@
                             </button>
                         </div>
 
+                        <div class="map-scale" aria-hidden="true">
+                            <span class="map-scale__bar"></span>
+                            <span class="map-scale__label">200 km</span>
+                        </div>
 
                         <div id="map" role="img" aria-label="中国地图，显示同学分布" tabindex="-1">
                             <div id="map-loading" class="map-loading">
                                 <div class="map-loading__spinner"></div>
-                                <p class="map-loading__text">地图加载中...</p>
+                                <p class="map-loading__text">正在展开图面…</p>
                             </div>
                         </div>
 
@@ -113,13 +145,13 @@
     <div id="bs-overlay" class="bottom-sheet-overlay"></div>
 
     <div id="bottom-sheet" class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="bs-title" tabindex="-1">
-        <div class="bs-drag-indicator"></div>
+        <div class="bs-drag-indicator" aria-hidden="true"></div>
         <div class="bs-content" id="bs-content">
             <h2 id="bs-title" class="visually-hidden">地区详情</h2>
         </div>
         <div class="bs-footer">
-            <button id="bs-primary-btn" class="bs-btn bs-btn--secondary" type="button">查看详情</button>
-            <button id="bs-drilldown-btn" class="bs-btn" type="button">进入地图详情</button>
+            <button id="bs-primary-btn" class="bs-btn bs-btn--secondary spotlight" type="button">查看详情</button>
+            <button id="bs-drilldown-btn" class="bs-btn magnet spotlight" type="button">进入地图详情</button>
         </div>
     </div>
 
@@ -127,7 +159,7 @@
         <div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
             <button id="auth-close" class="auth-modal__close" type="button" aria-label="关闭">×</button>
             <h2 id="auth-title" class="auth-modal__title">查看详情</h2>
-            <p class="auth-modal__description">地图上先显示各地人数。输入口令后，可以按地区查看姓名和学校。</p>
+            <p class="auth-modal__description">地图上先摊开各地人数。输入口令后，才能按地区翻到姓名和学校。</p>
             <p id="auth-hint" class="auth-modal__hint"></p>
             <form id="auth-form" class="auth-modal__form">
                 <label class="auth-modal__label" for="auth-passphrase">查看口令</label>
