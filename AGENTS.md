@@ -9,7 +9,8 @@ Static classmate-distribution map ("蹭饭地图"). The page shows public provin
 - `js/geo.js`: `CMapGeo` registry for geo data plus the whitelist of provinces that ship a map file.
 - `js/china.js`, `js/province/*.js`: national/province GeoJSON as `CMapGeo.register("cn/<slug>", {...})` calls; the data is generated upstream and only the registration call is ours.
 - `js/map.js`: ECharts setup, choropleth + hover card, drilldown/drill-up, view clamping, public-data fetch, passphrase/detail flow, dialog focus management, share image.
-- `js/palette.js`: colours shared by the map and the share image (classic script + global registry, same pattern as `js/geo.js`) — `js/map.js` cannot `import`. `css/main.css` keeps its own `:root` tokens; `scripts/check-contrast.js` asserts the two stay in sync.
+- `js/palette.js`: colours shared by the map and the share image (classic script + global registry, same pattern as `js/geo.js`) — `js/map.js` cannot `import`. `css/main.css` keeps its own `:root` tokens; `scripts/check-contrast.js` asserts the two stay in sync. Canvas fonts live here too, so the share image uses the same faces as the page.
+- `js/motion.js`: the L2 motion layer — cursor glow, button magnet, card spotlight. No dependencies, rAF-throttled, and registers no listeners at all under `prefers-reduced-motion: reduce` or a coarse pointer.
 - `js/vendor/echarts.min.js`: tree-shaken ECharts build (map/geo/tooltip/visualMap/labelLayout/canvas). Regenerate with `npm run vendor:build`; the committed artifact is what ships.
 - `css/main.css`: layout, theme, map controls, tooltip, bottom-sheet, and auth-modal styles.
 - `js/data.js`: local-only input for the upload script; gitignored, never loaded by the page.
@@ -22,6 +23,7 @@ Static classmate-distribution map ("蹭饭地图"). The page shows public provin
 - `tests/dev-server.mjs`: local mock of the Pages Functions API plus a static server, used for frontend smoke tests without Cloudflare credentials.
 - `build.js`: static safety checks (see Testing Guidelines).
 - `wrangler.jsonc`, `README.md`, `DEPLOYMENT.md`: Cloudflare config, usage, and deployment docs.
+- `DESIGN.md`: the visual spec ("纸本图志" — rice-paper white / ink green / seal red). Read it before touching `css/main.css`, `js/palette.js` or any canvas colour; it lists the 12 required CSS variables and the 11 CSS↔palette same-value pairs.
 
 ## Build, Test, and Development Commands
 - `npm install`: install dependencies.
@@ -37,6 +39,8 @@ Static classmate-distribution map ("蹭饭地图"). The page shows public provin
 - Use UTF-8 for reads/writes; 4-space indentation in HTML/CSS/JS.
 - JavaScript uses camelCase; keep functions focused.
 - CSS follows existing component/modifier patterns such as `map-frame__corner--tl`.
+- All page colours must resolve through `:root` custom properties. The only literal values allowed outside that block are the two `.auth-modal__feedback[data-variant=...]` colours — `scripts/check-contrast.js` reads them with a regex and cannot parse `var(...)` — and the `black` stop in the `.atmosphere__grid` mask, which is an alpha channel rather than a design colour.
+- `.spotlight` must never declare `position`. It sits after `.share-btn` in the cascade, so `position: relative` there silently overrides that button's `position: absolute` and drops it into the document flow, pushing the map down by 40px. Elements that need positioning declare it themselves.
 - Province map filenames stay lowercase pinyin (example: `zhejiang.js`).
 - No linter/formatter; keep changes minimal and consistent with nearby code.
 
@@ -45,7 +49,8 @@ Static classmate-distribution map ("蹭饭地图"). The page shows public provin
 - ECharts only fills 80% of its layout box, so `BASE_ZOOM` is `1.25`; it doubles as the minimum zoom. Keep `scaleLimit.min` and the initial `zoom` in sync with it.
 - Geometry stays as-is; do not hand-edit `js/china.js` or `js/province/*.js`. If a province map is added or removed, update `AVAILABLE_PROVINCE_FILES` in `js/geo.js` — `npm run build` fails on a mismatch.
 - The China GeoJSON also carries `filename` for Taiwan/Hong Kong/Macau/Nanhai, but no province files exist for them; the whitelist is what prevents a doomed drilldown request.
-- Colours live in two places on purpose (CSS tokens for the page, `js/palette.js` for canvas drawing). Change both or `npm run build` fails. Text on the share image's header gradient is checked at the gradient midpoint, and white text on orange must use `--color-accent-strong`, not `--color-accent-primary` (3.64:1, below AA).
+- Colours live in two places on purpose (CSS tokens for the page, `js/palette.js` for canvas drawing). Change both or `npm run build` fails. Text on the share image's header gradient is checked at the gradient midpoint. Solid button fills use white on `--color-accent-strong` (8.93:1); `--color-accent-primary` is the focus-ring / stat-number colour, and while white on it technically clears AA (4.62:1) it is not a button fill.
+- The `visualMap` legend is sized and placed by `legendLayout()` in `js/map.js`: below 768px the ruler shortens and shifts right so the `0 人` tick clears the 44px zoom cluster in the bottom-left corner. It reads `window.innerWidth` when the option is built, so a live resize re-centres the legend but keeps its length until the next view change.
 - Dialogs (bottom sheet, passphrase modal) go through `FocusScope` in `js/map.js`: background `inert`, focus moved inside, focus restored on close. `#map` and `#bottom-sheet` carry `tabindex="-1"` purely as focus anchors. The map itself is not keyboard operable — that is a known limitation, not a bug.
 
 ## Security & Data Rules

@@ -27,6 +27,10 @@ Forked from [lvris/map](https://github.com/lvris/map)
 - `js/geo.js` 只提供 `CMapGeo` 注册表，不依赖任何图表库。
 - `js/china.js` 与 `js/province/*.js` 是导出好的 GeoJSON，只调用 `CMapGeo.register(...)`。
 - `js/map.js` 把需要的条目交给 ECharts，负责上色、下钻、悬浮卡片、缩放限制与分享图。
+- `js/palette.js` 是画布调色板：`js/map.js` 不能用 `import`，所以沿用注册表模式，
+  canvas 上的颜色与字体都从这里取，页面侧同值变量在 `css/main.css` 的 `:root`。
+- `js/motion.js` 只做光标墨晕、按钮磁吸、卡片聚光三件事，纯原生、无依赖，
+  在 `prefers-reduced-motion` 或没有精确指针的设备上完全不注册监听。
 
 渲染库不走 CDN，而是提交在仓库里的按需构建产物 `js/vendor/echarts.min.js`：
 同源加载让页面完全离线可用，也让 `_headers` 里的 CSP 能收紧成 `script-src 'self'`。
@@ -40,13 +44,17 @@ Forked from [lvris/map](https://github.com/lvris/map)
 - `js/geo.js`: 地图几何数据注册表，以及可下钻省份白名单。
 - `js/china.js`, `js/province/*.js`: 全国与各省 GeoJSON。
 - `js/map.js`: 地图渲染、公开数据、详情查看交互、分享图。
+- `js/palette.js`: 地图与分享图共用的调色板与 canvas 字体。
+- `js/motion.js`: L2 动效层（光标墨晕、磁吸、聚光），无第三方依赖。
 - `js/vendor/echarts.min.js`: 按需构建的 ECharts。
 - `css/main.css`: 页面样式、地图控件、悬浮卡片、移动端样式。
 - `functions/`: Cloudflare Pages Functions 接口。
 - `shared/data-model.mjs`: 数据规范化、公开聚合统计生成逻辑。
 - `scripts/upload-kv-data.mjs`: 将本地数据写入 Cloudflare KV。
 - `scripts/build-vendor.mjs`: 重新生成 ECharts 按需构建产物。
+- `scripts/check-contrast.js`: 关键配色的对比度断言，以及 CSS 与 `js/palette.js` 的同值校验。
 - `tests/dev-server.mjs`: 本地前端调试服务器，用假数据顶替 Pages Functions。
+- `DESIGN.md`: 视觉设计规范（纸本图志），改样式前先读它。
 - `wrangler.jsonc`: Cloudflare Pages / KV 绑定配置。
 - `.dev.vars.example`: 本地开发需要的 secret 模板。
 - `DEPLOYMENT.md`: 更完整的部署与排障说明。
