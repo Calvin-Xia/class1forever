@@ -1,16 +1,19 @@
 # class1forever
 
-班级同学分布地图。公开页面只展示省市聚合统计；姓名和学校信息通过 Cloudflare Pages Functions + KV 在口令验证后按地区读取。
+班级同学分布地图。公开页面只展示省市聚合统计；姓名和学校信息通过 Cloudflare Worker + KV 在口令验证后按地区读取。
 
 Forked from [lvris/map](https://github.com/lvris/map)
 
 ## 访问地址
 
-- Cloudflare Pages: https://class1forever.pages.dev/
+- Cloudflare Pages（切换前的线上形态）: https://class1forever.pages.dev/
+
+本分支已经把部署面改成 **Cloudflare Worker + Workers Assets**。生产域名切换与 Pages 下线由人工执行，
+命令、密钥、KV 核对、回滚与人工步骤见 `docs/cutover-runbook.md`。
 
 ## 当前架构
 
-项目已经从“静态打包整份学生数据”的方式切换到 Cloudflare Pages Functions + KV：
+项目已经从“静态打包整份学生数据”的方式切换到 Cloudflare Worker + KV：
 
 - 公开页面只请求 `/api/map/public`，只返回省市聚合统计。
 - 完整学生数据只保存在 Cloudflare KV 绑定 `CLASS_MAP_DATA` 中。
@@ -32,14 +35,13 @@ Forked from [lvris/map](https://github.com/lvris/map)
 - `js/motion.js` 只做光标墨晕、按钮磁吸、卡片聚光三件事，纯原生、无依赖，
   在 `prefers-reduced-motion` 或没有精确指针的设备上完全不注册监听。
 
-渲染库不走 CDN，而是提交在仓库里的按需构建产物 `js/vendor/echarts.min.js`：
-同源加载让页面完全离线可用，也让 `_headers` 里的 CSP 能收紧成 `script-src 'self'`。
-产物只包含 map / geo / tooltip / visualMap / labelLayout / canvas。
-升级 ECharts 时执行 `npm run vendor:build` 重新生成，产物本身要一起提交。
+渲染库不走 CDN：ECharts 是 npm 依赖（`echarts`），由 Vite 打进 `/_astro/*` 的同源 chunk，
+页面因此仍然可以完全离线用，`_headers` 里的 CSP 也保持 `script-src 'self'`。
+迁移前提交在仓库里的按需产物 `js/vendor/echarts.min.js` 与它的生成脚本已按 ADR-0002 退役删除。
 
 ## 仓库结构
 
-- `index.html`: 页面结构、底部面板与弹窗结构。
+- `legacy/index.html`: 迁移前的旧入口，**已归档**（根目录不再有 `index.html`，否则会遮蔽 `astro dev` 的 `/`）；新站对应 `src/pages/index.astro`。
 - `js/boot.js`: 按顺序加载渲染库、几何数据与页面脚本，失败时给出重试入口。
 - `js/geo.js`: 地图几何数据注册表，以及可下钻省份白名单。
 - `js/china.js`, `js/province/*.js`: 全国与各省 GeoJSON。
@@ -47,16 +49,19 @@ Forked from [lvris/map](https://github.com/lvris/map)
 - `js/palette.js`: 地图与分享图共用的调色板与 canvas 字体。
 - `js/motion.js`: L2 动效层（光标墨晕、磁吸、聚光），无第三方依赖。
 - `favicon.svg`: 站点图标 —— 纸面 + 方环 + 罗盘玫瑰（北点朱砂）。**刻意不含地图几何**，原因见下方「已知限制」。
-- `js/vendor/echarts.min.js`: 按需构建的 ECharts。
 - `css/main.css`: 页面样式、地图控件、悬浮卡片、移动端样式。
-- `functions/`: Cloudflare Pages Functions 接口。
+- `functions/`: 迁移前的 Pages Functions 接口（等价性对照；本分支跑的是 `src/pages/api/**`）。
 - `shared/data-model.mjs`: 数据规范化、公开聚合统计生成逻辑。
 - `scripts/upload-kv-data.mjs`: 将本地数据写入 Cloudflare KV。
-- `scripts/build-vendor.mjs`: 重新生成 ECharts 按需构建产物。
 - `scripts/check-contrast.js`: 关键配色的对比度断言，以及 CSS 与 `js/palette.js` 的同值校验。
-- `tests/dev-server.mjs`: 本地前端调试服务器，用假数据顶替 Pages Functions。
+- `scripts/local-runtime.mjs`: 本地运行通路（不需要 Cloudflare 凭据）：从构建产物派生本地 Worker 配置、把夹具数据写进本地 KV、起 `wrangler dev`。
+- `tests/api-contract.test.mjs`: 四个 API 路由的成功/失败态契约断言（`npm run test:api`）。
+- `tests/dev-server.mjs`: 迁移前的本地假 API 服务器，**已退役**，不再是可执行主路径（保留仅为对照）。
+- `astro.config.mjs`, `tsconfig.json`, `worker-configuration.d.ts`: Astro 6 SSR 工程配置、TypeScript 严格预设，以及 `wrangler types` 生成的绑定类型。
+- `src/`: 新站源码（`pages/` 路由、`components/`、`layouts/`、`lib/`、`styles/`）；`pages/api/**` 是四个接口路由。
+- `legacy/index.html`, `js/**`, `css/**`, `functions/**`: 迁移前的 Pages 实现，保留对照，不再是本分支的运行/部署主路径。
 - `DESIGN.md`: 视觉设计规范（纸本图志），改样式前先读它。
-- `wrangler.jsonc`: Cloudflare Pages / KV 绑定配置。
+- `wrangler.jsonc`: Cloudflare Worker + Workers Assets / KV 绑定配置（`main` 指向适配器入口，静态资源走 `ASSETS` 绑定）。
 - `.dev.vars.example`: 本地开发需要的 secret 模板。
 - `DEPLOYMENT.md`: 更完整的部署与排障说明。
 
@@ -66,21 +71,45 @@ Forked from [lvris/map](https://github.com/lvris/map)
   安装依赖。首次接手项目时先执行一次。
 
 - `npx wrangler login`
-  登录 Cloudflare 账号。上传 KV、启动本地 Pages 环境前需要先完成。
+  登录 Cloudflare 账号。上传 KV、往 Worker 写 secret（`npx wrangler secret put <KEY>`）之前需要先完成。
 
 - `npm run build`
-  静态安全检查：确认页面没有重新引入 `js/data.js`、没有跨域脚本和内联脚本、
-  没有残留旧地图库的引用，并且 `js/geo.js` 的省份白名单与 `js/province/` 目录一致。
+  唯一入口：`node build.js`，依次跑静态安全断言（明细数据与密钥名不进客户端面、脚本同源无内联、
+  `script-src` 无 `unsafe-inline`、`public/_headers` 与 `src/lib/security-headers.ts` 防漂移、
+  省份白名单与 `js/province/` 一致、Node engines 匹配、对比度/调色板同值），再跑
+  `wrangler types --check`、`astro check`、`astro build` 与产物扫描，产出 `dist/`。
 
-- `npm run dev:mock`
-  启动本地调试服务器（默认 http://127.0.0.1:8788），用生成的假数据顶替 Pages Functions，
-  不需要 Cloudflare 账号就能验证地图渲染、下钻、口令流程和分享图。口令默认是 `demo`。
+- `npm run astro:check`
+  Astro + TypeScript 类型检查（包含 `src/**` 与生成类型）。
+
+- `npm run dev:local`
+  **不需要 Cloudflare 凭据的完整通路**（推荐）：从 `dist/` 派生一份本地 Worker 配置，
+  把夹具数据写进本地 KV（`students:public:v1` / `students:raw:v1`），再起 `wrangler dev`：
+  http://127.0.0.1:8788。演示口令是 `demo`。**需要先 `npm run build`**。
+  参数：`--port 9000`、`--reset`（先清空本地 KV）、`--public-file <路径>`、`--raw-file <路径>`。
+
+- `npm run seed:local`
+  只把夹具数据写进本地 KV，不起服务（配合 `astro dev` 或 `npm run cf:dev` 用）。
+
+- `npm run test:api`
+  四个 API 路由的成功/失败态契约断言（`node --test`），自己起本地 Worker、
+  自己写本地 KV，不读 `.dev.vars`、不需要 Cloudflare 凭据。**需要先 `npm run build`**。
+
+- `npm run dev`
+  `astro dev`：Astro 开发服务器，绑定走本地模拟，KV 是本地空数据；口令等 secret 来自 `.dev.vars`。
+  旧入口已归档到 `legacy/index.html`，所以它渲染的是**新站**。
 
 - `npm run cf:dev`
-  启动本地 Pages Functions 开发环境，读取远端 KV 与 `.dev.vars`。
+  `wrangler dev`：Worker 运行时，读 `wrangler.jsonc` 里 KV 的 `remote: true`，因此会连
+  Cloudflare 上的远端 KV，需要先 `npx wrangler login`。
 
-- `npm run vendor:build`
-  重新生成 `js/vendor/echarts.min.js`。只在升级 ECharts 时执行。
+- `npm run check:runtime`
+  真起一次本地 Worker（不需要凭据）：断言渲染页没有内联脚本、文档响应与静态资产的安全头逐条一致、
+  `/.dev.vars` / `/js/data.js` / `js/vendor/echarts.min.js` 都不可请求。
+
+- `npm run cf:types`
+  重新生成 `worker-configuration.d.ts`（`wrangler types`）。改了 `wrangler.jsonc` 的绑定后必须重跑；
+  `npm run build` 里已经包含 `wrangler types --check` 防漂移。
 
 - `npm run data:upload -- --dry-run`
   检查当前数据源是否能正确生成 KV 需要的两份数据。
@@ -98,11 +127,11 @@ Forked from [lvris/map](https://github.com/lvris/map)
 ```bash
 npx wrangler kv key get students:public:v1 \
   --namespace-id=<wrangler.jsonc 里的 preview_id> --remote --text > public.json
-PUBLIC_DATA_FILE=public.json npm run dev:mock
+STUDENTS_PUBLIC_FILE=public.json npm run dev:local
 ```
 
-`students:raw:v1` 含姓名与学校，不要导出。用这种方式调试时，地图上的聚合人数是真实的，
-详情面板里的同学仍然是假数据。
+`students:raw:v1` 含姓名与学校，不要导出、也不要提交；如果确实需要本地验证详情面板，
+只在本地用 `STUDENTS_RAW_FILE=<本地文件> npm run dev:local`，文件不要入库。
 
 
 ## 首次接手项目
@@ -115,7 +144,8 @@ PUBLIC_DATA_FILE=public.json npm run dev:mock
 4. 检查 `wrangler.jsonc` 中的 `CLASS_MAP_DATA` 绑定、`preview_id`、`remote: true` 是否仍然指向正确环境。
 5. 执行 `npm run data:upload -- --dry-run` 检查本地数据。
 6. 执行 `npm run data:upload:preview`，先把预览环境数据上传到 KV。
-7. 执行 `npm run cf:dev` 启动本地调试。
+7. 执行 `npm run build`，再执行 `npm run dev:local` 起本地站（演示口令 `demo`，不需要 Cloudflare 账号）。
+   要连远端预览 KV 时才用 `npm run cf:dev`（需先 `npx wrangler login`）。
 
 ## 本地开发
 
@@ -162,43 +192,57 @@ npm run data:upload:preview
 
 ### 4. 启动本地开发服务
 
-只想调前端时，用假数据就够了，也不需要 Cloudflare 账号：
+**推荐：不需要 Cloudflare 账号的完整通路**（带 `/api/*`、本地 KV 与演示口令）：
 
 ```bash
-npm run dev:mock
+npm run build      # 先产出 dist/
+npm run dev:local  # http://127.0.0.1:8788，演示口令 demo
 ```
 
-需要验证 Pages Functions、远端 KV 与真实口令时，再改用：
+它会把夹具数据写进本地 KV（`.wrangler/local/state`），并派生一份本地 Worker 配置，
+因此不会碰到 `.dev.vars` 里的真实密钥，也不会连任何线上资源。想在真实聚合数字下调试，
+用 `STUDENTS_PUBLIC_FILE=public.json npm run dev:local`（见上一节）。
+
+> Windows 沙箱提示：workerd 需要往临时目录写文件。如果 `npm run build` / `npm run dev:local` /
+> `npm run test:api` 报 `CreateDirectory #5 拒绝访问`（或 workerd 起不来），把 `TEMP` 和 `TMP`
+> 指向工作区内的目录再执行即可，例如：
+> `TEMP="$PWD/.wrangler/probe-tmp" TMP="$PWD/.wrangler/probe-tmp" npm run test:api`。
+
+> 同源 POST 必须带 `Origin` 头（Astro 默认开启 `security.checkOrigin`，挡住跨站表单提交）。
+> 浏览器对每个 POST（含同源）会自动带上，不用管；用 `curl` / Node 脚本联调时请手动加
+> `-H "Origin: http://127.0.0.1:8788"`，否则会收到 403 `Cross-site POST form submissions are forbidden`。
+
+需要验证远端预览 KV 与真实口令时，再改用（必须先 `npx wrangler login`）：
 
 ```bash
-npm run cf:dev
+TEMP="$PWD/.wrangler/probe-tmp" TMP="$PWD/.wrangler/probe-tmp" npm run cf:dev   # TEMP/TMP 仅本机 Windows 沙箱需要
 ```
 
-当前 `wrangler.jsonc` 已为 `CLASS_MAP_DATA` 配置 `remote: true` 和 `preview_id`。因此本地开发时，Pages Functions 会直接读 Cloudflare 上的远端 KV，而不是读一个空的本地 KV 模拟环境。
+当前 `wrangler.jsonc` 已为 `CLASS_MAP_DATA` 配置 `remote: true` 和 `preview_id`。因此 `cf:dev`
+会直接读 Cloudflare 上的远端 KV；而 `dev:local` / `astro dev` 读的是本地模拟 KV。
 
 如果本地打开后看到“地图公开数据尚未配置”，通常说明预览环境 KV 里还没有 `students:public:v1`，需要先执行一次 `npm run data:upload:preview`。
 
 ## 部署方式
 
-### GitHub 自动部署
+### 部署（Worker 口径）
 
-这个仓库当前主分支是 `main`。如果你的 Cloudflare Pages 项目已经连接到这个仓库，并把 `main` 配置为 production branch，那么：
-
-```bash
-git add <需要提交的文件>
-git commit -m "Your commit message"
-git push origin main
-```
-
-推送完成后，Cloudflare Pages 会自动开始新的生产部署。
-
-### 手动部署
-
-如果需要手动发布当前版本，可以在仓库根目录执行：
+本分支的部署面是 **Cloudflare Worker + Workers Assets**，不再使用 `wrangler pages deploy`：
 
 ```bash
-npx wrangler pages deploy .
+npx wrangler login
+npx wrangler secret put DETAILS_PASSPHRASE
+npx wrangler secret put DETAILS_SESSION_SECRET
+npm run build
+npx wrangler deploy            # 部署 Worker + Assets；也可先 npx wrangler versions upload 预览
 ```
+
+KV 绑定沿用 `CLASS_MAP_DATA` 的同一个 `id` / `preview_id`，两个数据键不需要重传；
+**Pages 项目保留到人工确认后再下线**。完整的切换包（密钥清单、KV 核对、回滚、发布后检查项、
+人工步骤 M1–M10）见 `docs/cutover-runbook.md`。
+
+切换前的线上形态仍是 `main` 分支的 Pages 站点：推送到 `main` 会触发 Pages 的自动部署；
+Worker 的 Git 集成/production branch 属人工配置项。
 
 ## 推送前检查
 
@@ -206,12 +250,14 @@ npx wrangler pages deploy .
 
 1. `.dev.vars` 没有被加入暂存区。
 2. `js/data.js` 没有被加入暂存区。
-3. `npm run build` 能正常通过。
-4. 本地页面可以正常显示公开地图。
-5. 输入正确口令后，可以查看某个地区的同学信息。
-6. 浏览器 `Network` 与 `Sources` 中不存在 `js/data.js` 或整包学生名单。
+3. `npm run build` 能正常通过（含 `astro build`）。
+4. `npm run test:api` 能正常通过。
+5. `npm run check:runtime` 能正常通过。
+5. 本地页面可以正常显示公开地图。
+6. 输入正确口令后，可以查看某个地区的同学信息。
+7. 浏览器 `Network` 与 `Sources` 中不存在 `js/data.js` 或整包学生名单。
 
-`npm run dev:mock` 起来之后，可以照着下面这份清单手动过一遍：
+`npm run dev:local` 起来之后，可以照着下面这份清单手动过一遍：
 
 1. 地图正常渲染，底部色带显示「0 人 ~ 当前最大值」。
 2. 鼠标悬停省份时出现卡片，色带上同步标出对应人数。
