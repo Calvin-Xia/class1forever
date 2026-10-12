@@ -1,0 +1,49 @@
+id: l4_cutover
+type: task
+label: 切换包与人工 gate
+level: 4
+context: ctx_delivery
+status: running
+plan:
+  description: >-
+    产出生产切换包：Worker 配置与部署命令、需要重新绑定的口令与会话密钥、KV 绑定核对清单、预览部署证据、回滚步骤（保留现有 Pages 项目与 main
+    分支现状直到人工确认）、以及需要在浏览器侧复核的发布后检查项；生产域名切换与 Pages 下线由人工执行，agent 不触碰生产配置。范围：文档与预览部署；不改生产 Pages 与域名、不改写 KV 两键数据。
+expected_outcome:
+  definition_of_done:
+    - 切换包文档含部署命令、密钥与 KV 清单、预览地址与验证记录、回滚步骤、发布后检查项
+    - 预览部署成功且首页与四个路由在预览环境可用（记录为证）
+    - 生产未变更：未由 agent 修改生产 Pages 与域名，KV 两个数据键未被改写
+    - 需要人工执行的步骤以清单形式列出，作为交接项
+    - >-
+      切换包把文档里的 Pages 口径命令（wrangler pages deploy / pages secret put）改为 Worker 口径（wrangler deploy / wrangler secret
+      put），并注明 Pages 项目保留至人工确认 —— 复核发现 F5
+    - >-
+      处理 dev 遮蔽：仓库根 index.html 会让 astro dev 的 / 返回旧站页面（Vite 静态中间件先于 Astro
+      路由）；切换时移除或归档旧入口（index.html/js/css/functions），并确认 astro dev 与 wrangler dev 都渲染新站
+    - >-
+      同步文档与代码，无陈旧口径残留：AGENTS.md（vendor 退役、build.js 单入口=静态断言+astro check+astro build+产物扫描、CI 步骤清单、'success message'
+      描述）、README.md（js/vendor 与 vendor:build 已删除、npm run build 新口径）、DEPLOYMENT.md（Pages→Worker 命令口径，F-5）全部更新
+    - >-
+      提交策略与 repo 侧「生产未改」读数（复核 P3/P4）：按逻辑提交本次迁移并决定 docs/、.graph/、生成类型的入库策略（给出可切换/可回滚的提交点）；交接清单里补 repo
+      侧可核读数（main/astro-migration/HEAD 同 SHA、git diff main -- 读数），凭据类（Pages 项目、域名、KV 两键）单列为人工步骤
+attempts: 0
+max_attempts: 3
+created_at: '2026-10-12T11:08:15.474Z'
+updated_at: '2026-10-12T16:27:41.625Z'
+checkpoints:
+  - id: cp1
+    label: 切换包成文
+    status: passed
+    verifier: auto
+  - id: cp2
+    label: 预览部署与验证记录
+    status: skipped
+    verifier: auto
+  - id: cp3
+    label: 人工步骤清单待用户确认
+    status: pending
+    verifier: human
+assigned_to: exec-cutover
+execution_report:
+  summary: ''
+  started_at: '2026-10-12T16:01:14.228Z'

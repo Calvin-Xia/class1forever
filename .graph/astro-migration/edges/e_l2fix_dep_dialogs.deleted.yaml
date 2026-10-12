@@ -1,0 +1,4 @@
+id: e_l2fix_dep_dialogs
+source: l2_island_contract_fix
+target: l2_dialogs
+type: depends_on

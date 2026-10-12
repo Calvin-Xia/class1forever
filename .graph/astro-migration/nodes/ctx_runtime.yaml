@@ -1,0 +1,27 @@
+id: ctx_runtime
+type: context
+label: 运行时与 API 面
+level: 1
+status: pending
+attempts: 0
+max_attempts: 3
+created_at: '2026-10-12T11:07:19.199Z'
+updated_at: '2026-10-12T11:08:38.138Z'
+boundary: 负责 Astro/Workers 运行时、四个 API 路由、KV 绑定与本地测试/CI 通路；不负责浏览器端组件与视觉（经契约边由 ctx_ui 消费）
+contracts:
+  - to: ctx_ui
+    contract:
+      produces: 四个 API 路由契约与响应类型
+      consumed_by:
+        - artifact: 服务端路由模块与其类型
+          used_as: 岛屿取数与鉴权状态
+      validation:
+        criteria: 请求与响应字段、状态码与冻结清单逐条一致
+  - to: ctx_delivery
+    contract:
+      produces: 可构建的 Worker 产物与本地测试通路
+      consumed_by:
+        - artifact: 构建产物与测试脚本
+          used_as: 门禁与验收的执行面
+      validation:
+        criteria: 构建退出码 0 且断言全绿

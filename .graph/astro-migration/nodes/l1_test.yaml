@@ -1,0 +1,122 @@
+id: l1_test
+type: task
+label: 本地测试通路与 CI 门禁骨架
+level: 1
+context: ctx_runtime
+status: passed
+plan:
+  description: >-
+    重建无 Cloudflare 凭据也能测的通路并搭好 CI：以 wrangler 本地运行时（或 workers 测试池）承担原来本地假 API 服务器的角色，提供本地 KV 与演示口令，使全新克隆一条命令即可跑起带 /api/*
+    的站点；为四个路由各建成功态与失败态断言；CI 工作流在本分支跑通新构建与断言。范围：tests/、scripts/、.github/workflows/ 与 package.json 脚本；不改产品代码行为。
+expected_outcome:
+  definition_of_done:
+    - 一条 npm 脚本即可在无 Cloudflare 凭据环境起本地站，首页返回 200 且公开数据路由返回可解析 JSON；该用法写入 README 或 DEPLOYMENT 文档
+    - 四个 API 路由各有至少一条成功态与一条失败态断言且全部通过
+    - CI 工作流在分支上跑绿（含构建与断言步骤）；仓库内不再有指向旧本地假 API 脚本的 npm 脚本或文档指引
+    - CI 的 Node 版本满足新依赖 engines（astro 6 要求 >=22.12），workflow 不再用 node 20 —— 复核发现 F4
+attempts: 0
+max_attempts: 3
+created_at: '2026-10-12T11:08:11.390Z'
+updated_at: '2026-10-12T12:19:48.711Z'
+checkpoints:
+  - id: cp1
+    label: 本地运行通路可跑（含 KV 与演示口令）
+    status: passed
+    verifier: auto
+  - id: cp2
+    label: 四路由成功态与失败态断言齐备
+    status: passed
+    verifier: auto
+  - id: cp3
+    label: CI 在分支上跑绿，旧假 API 脚本指引清除
+    status: passed
+    verifier: auto
+  - id: cp4
+    label: 复核修复：本地通路并发健壮性与 checkOrigin 行为结论化
+    status: passed
+    verifier: auto
+assigned_to: exec-backend
+execution_report:
+  summary: >-
+    复核修复轮完成（N1 并发健壮性 + N2 结论化），断言从「17 用例 / 15 pass / 2 todo」提升为 **19 用例 / 19 pass / 0 fail / 0 todo（EXIT=0，连跑 3
+    次一致）**。【N1】根因是我用 `spawnSync` 写本地 KV，并发负载下撞上 Windows libuv 的 `UV_HANDLE_CLOSING` 断言；已改为异步 `spawn` + 60s 超时 + 3 次重试 +
+    失败时带 wrangler 输出的清晰报错，并把 `putLocalKvKey`/`prepareLocalRuntime` 异步化；同时给 state 目录加锁（写入抢 `.prepare.lock`、`wrangler dev`
+    全程持有 `server.lock`，锁存 pid、陈旧锁可抢占、被占用时抛「本地 KV 目录已被另一个进程占用 …（pid N，server.lock）」），测试默认改用独立目录
+    `.wrangler/local/state-test`，`resetLocalState` 对 Windows EPERM 做重试；并发限制写进脚本头注释与 README/DEPLOYMENT（并发用
+    `--state-dir`）。实测：并发占用探针 exit 1 + 清晰报错、无 libuv 断言、无 EPERM；遗留的 dev server/workerd 进程已按命令行精确清理，8788/8890/8891
+    无监听、无残留锁文件与探针目录。【N2】两条 todo 全部删除并改为实断言且通过：带同源 Origin 的裸 POST logout → 200 + `Max-Age=0` 清 Cookie；带 JSON Content-Type
+    的匿名 POST → 200；不带 Origin 的 POST → 403 `Cross-site POST form submissions are forbidden`（注释写明是有意安全行为、不下发 Cookie）；带同源
+    Origin、无 body 的 details POST → 400 `invalid_request_body`（契约在带 Origin 时成立）。【第 ④ 点风险结论】依据 Astro 6.4.8 源码
+    `astro/dist/core/app/middlewares.js`：非 GET/HEAD/OPTIONS 且**无 Content-Type**时必须 `Origin === url.origin` 才放行，表单类
+    Content-Type 同理，JSON 不检查；真浏览器实测（Playwright/Chromium 155，同源页面执行旧前端那两行调用）logout → 200
+    `{"authenticated":false}`、details → 200，说明浏览器对同源 POST 确实自动带 Origin（由规则反推可证），因此**旧前端不会在线上 403，不是生产回归**；会被 403 的只有不发
+    Origin 的 curl/脚本，这是有意的 CSRF 防护，故保留 checkOrigin，仅在 README/DEPLOYMENT 写明联调要手动加 `-H "Origin: <站点源>"`。
+  started_at: '2026-10-12T11:47:53.641Z'
+  artifacts:
+    - scripts/local-runtime.mjs
+    - tests/api-contract.test.mjs
+    - .github/workflows/ci.yml
+    - README.md
+    - DEPLOYMENT.md
+    - package.json
+  blockers:
+    - >-
+      F-2（迁移前既有，需另一条 lanes 处理）：`node scripts/build-vendor.mjs` 的产出与已提交的 js/vendor/echarts.min.js 差 13 字节（esbuild 的 IIFE
+      输出多一句 `"use strict";`）。核对：生成器 scripts/build-vendor.mjs 与 main 逐字一致，echarts 6.1.0 / esbuild 0.28.2 也与 main 的
+      lockfile 一致 → main 的 CI vendor 同步步骤本身就是红的。本节点不得改 js/**，故按派单把 CI 里这条降级为非阻塞提示（只打印、不改产物），并在 workflow 注释里写明由
+      ADR-0002/l3_gates 退役该产物，或由具备 js/** 边界的节点重新生成。
+    - >-
+      F-3（超出本节点边界，需主控派单）：仓库里仍有两处指向已删除的 `npm run dev:mock` 的文档指引——AGENTS.md（第 24/32/33/78 行，还写着旧 Pages + PUBLIC_DATA_FILE
+      模型）与 docs/migration-parity.md（第 234 行 smoke 第 1 项、第 317 行限流备注）。两者都在本节点「不得改」清单里（AGENTS.md、docs/**），未改；建议改成 `npm run
+      dev:local` 并同步 14 项 smoke 清单第 1 项。
+    - >-
+      契约文档的小修订（非缺陷，建议派给 docs/l1_spec 通道）：docs/migration-parity.md §1.2/§1.4 只写了路由层错误（400 invalid_request_body / 恒
+      200），没有记录 Astro `security.checkOrigin` 这层安全中间件的语义（无 Content-Type 且 Origin 不匹配 → 403）。本节点已把真实语义固化进测试注释与
+      README/DEPLOYMENT，但冻结契约原文仍是旧口径，建议补一句以免下游按 §1 验收时误判。
+  notes: >-
+    本轮为复核修复轮（N1 并发健壮性 + N2 结论化），边界内只动
+    tests/**、scripts/**、.github/workflows/**、package.json、README.md、DEPLOYMENT.md（未新增依赖，package-lock.json 无变化）。
+
+    【N1 已修】① 崩溃根因：`putLocalKvKey` 用的是 `spawnSync`，在并发负载下撞上 Windows libuv 的 `UV_HANDLE_CLOSING` 断言把进程带走；且当时我的 dev:local
+    还占着同一份本地 KV 目录。修法：(a) 改用异步 `spawn` + 60s 超时 + 3 次重试（失败给带 wrangler 输出的清晰报错）；(b) 异步化 `putLocalKvKey` /
+    `prepareLocalRuntime`（调用方已 await）；(c) 引入 state 目录锁：写入时抢 `.prepare.lock`、`wrangler dev` 整个生命周期持有 `server.lock`，锁里存
+    pid，进程没了按陈旧锁处理；被占用时抛「本地 KV 目录已被另一个进程占用：…（pid N，server.lock）」；(d) 测试默认改用独立目录 `.wrangler/local/state-test`（新增导出
+    LOCAL_TEST_STATE_DIR），与 `dev:local` 的 `.wrangler/local/state` 分开，从根上避免两个写者；(e) `resetLocalState` 保留锁文件并对 Windows 的
+    EPERM（刚停掉的 workerd 还扣着 SQLite 目录）做 5 次重试，仍失败给清晰报错；(f) `startLocalServer` 处理 spawn error，不再静默等 120s。② 并发限制已写进脚本头注释 +
+    README「本地开发」+ DEPLOYMENT §4.2：同一 state 目录只允许一个写者，并发请用 `--state-dir`。③ 实测：`npm run test:api` 连跑 3 次均 `tests 19 / pass
+    19 / fail 0 / todo 0 / EXIT=0`（当时 l1_api 复核者正开着 6 个 harness 进程占 8791–8796，属真实并发场景）；并发占用探针：server 持有目录时另一个进程
+    `--seed-only --reset --state-dir 同目录` → exit 1、输出「本地 KV 目录已被另一个进程占用」，`no_uv_or_EPERM=true`。④
+    进程清理：确有我的残留——`bg_start`/`bg_kill` 在 Windows 上杀 wrapper 时留下 `node scripts/local-runtime.mjs --port 8908` 与其
+    workerd（另有更早 8788 的一套），已用 PowerShell 按命令行精确清理（只杀匹配 local-runtime/8908 的进程，未动其它 agent 的 4321/4393/8892）；复核后确认
+    8788/8890/8891 无监听、无 state-test/state-empty 残留进程、`.wrangler/local` 下无残留锁文件；探针目录 state-browser / state-test-lockprobe
+    已删除。
+
+    【N2 已结论化】两条 todo 全部删掉，改为 4 条实断言（全部通过）：① `带同源 Origin 头的匿名 POST /api/auth/logout（无 Content-Type）→ 200 + Max-Age=0 清理
+    Cookie`；② `带 JSON Content-Type 的匿名 POST → 200`（checkOrigin 对非表单 Content-Type 不适用）；③ `不带 Origin 头的 POST → 403
+    Cross-site POST form submissions are forbidden`（注释写明这是有意的安全行为，且不得下发 Cookie）；④ `带同源 Origin、无 body 的 POST
+    /api/auth/details → 400 invalid_request_body`（契约 §1.2 在带 Origin 时成立），另有 `不带 Origin 的 details POST → 403`。
+
+    【第 ④ 点结论（主控需要知道的风险判断）】旧前端 `js/map.js:851` 的 `fetchJson` 只设 `credentials:'same-origin'`，logout 调用（js/map.js:740）是
+    `fetchJson('/api/auth/logout', { method: 'POST' })`，确实不带 Content-Type。依据 Astro 6.4.8 源码
+    `node_modules/astro/dist/core/app/middlewares.js`（`createOriginCheckMiddleware`）：非 GET/HEAD/OPTIONS 请求，若**没有**
+    Content-Type，则要求 `request.headers.get('origin') === url.origin`，否则 403；若有 Content-Type
+    且是表单类（application/x-www-form-urlencoded、multipart/form-data、text/plain）同样要求同源；JSON 这类非表单 Content-Type
+    不检查。关键问题是浏览器会不会带 Origin —— 我做了真浏览器实测（Playwright/Chromium 155，页面
+    http://127.0.0.1:8908，就是同源页面里执行旧前端那两行调用）：`fetch('/api/auth/logout', { method: 'POST' })` → **200
+    `{"authenticated":false}`**，`fetch('/api/auth/details', {method:'POST', headers:{'Content-Type':'application/json;
+    charset=utf-8'}, body:…})` → **200 `{"authenticated":true}`**，`GET /api/map/public` → 200，且 `Set-Cookie` 在 JS
+    里读不到（null，HttpOnly 生效）。由源码规则反推：那个裸 POST 被放行，只可能是浏览器确实带上了 `Origin: http://127.0.0.1:8908`（Fetch 规范对非 GET/HEAD 请求附加
+    Origin；现代浏览器对同源 POST 同样发送）。**结论：不是生产回归**——浏览器用户（含旧前端那份代码）会正常 200、登出会清会话；会被 403 的只有不发 Origin 的非浏览器调用方（curl、Node
+    脚本、我们的测试），这正是 checkOrigin 想挡的跨站表单提交，属有意的安全改进。因此不要把 F-1 当缺陷修，也不要关掉 checkOrigin；只需（已做）在 README/DEPLOYMENT 写明：浏览器自动带
+    Origin，curl/脚本联调要手动加 `-H "Origin: <站点源>"`。
+
+    【复跑输出汇总】`npm run test:api` ×3 → 19/19/0/0 EXIT=0；`npm run build` → `[build] Complete!`；`npm run astro:check` → 24
+    files / 0 errors；syntax 循环（47 个 js/mjs + functions + build.js）通过；`npm ci --dry-run` EXIT=0；vendor 步骤按非阻塞提示分支运行并 `git
+    checkout --` 还原（js/ 保持零改动）。未写 verdict、未流转 passed，停在 report。
+  verification:
+    verdict: passed
+    checked_at: '2026-10-12T12:19:48.256Z'
+    note: >-
+      机械核对：checkpoint 4/4 passed；独立复跑 node --test tests/api-contract.test.mjs（带文档化的 TEMP 规避）19 用例 19 passed 0 failed 0
+      todo EXIT=0；CI node 版本已升 24；dev:mock 已从 package.json 移除；F-2（vendor 同步在 main 本来就红）已复现并转 l3_gates 退役
+  completed_at: '2026-10-12T12:19:48.711Z'

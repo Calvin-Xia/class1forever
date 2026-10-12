@@ -1,0 +1,97 @@
+id: graph_1791803113889_ligcy0
+label: Astro+Workers 迁移
+entry:
+  description: >-
+    现站是静态 HTML5 + Cloudflare Pages Functions + KV，线上由 Pages 绑定 main 自动部署；需要在不削弱公开数据、口令详情、地图交互、可达性与视觉身份的前提下，把它迁移为 Astro 6
+    SSR（@astrojs/cloudflare）+ ECharts + TypeScript/React 岛屿的新站，部署面改为 Cloudflare Workers Assets，KV 绑定 CLASS_MAP_DATA
+    与两个数据键沿用。
+  defined_by: human
+  level: 0
+exit:
+  description: >-
+    分支 astro-migration 上存在可构建、可本地运行、可预览部署的新站：四个 API 路由行为逐字段等价，等价性清单逐条复跑通过，构建与静态安全门禁全绿，切换包与人工作业清单交付；生产域名切换与 Pages
+    下线由人工执行。
+  acceptance_criteria:
+    - npm run build 退出码 0，且其中包含类型检查、四项静态安全断言与对比度同值断言；注入违规（例如页面引用学生明细数据文件）时构建失败
+    - '四个 API 路由在新站可用，响应字段、状态码、Vary: Cookie 与口令限流阈值与旧站逐条对照一致，对照记录留档'
+    - 14 项人工 smoke 在新站逐条复跑通过并有证据，其中分享图范围与日期、触摸长按下钻、弹窗 inert 与焦点归还、480px 无横向滚动均在案
+    - wrangler 预览部署成功且首页与四个路由可用；生产 Pages 与域名未被 agent 修改，KV 两个数据键未被改写
+    - 图中全部 task 节点为 passed，图校验 0 error，交叉复核签署在案
+  defined_by: human
+  level: 0
+nodes:
+  - file: nodes/ctx_runtime.yaml
+  - file: nodes/ctx_ui.yaml
+  - file: nodes/ctx_delivery.yaml
+  - file: nodes/adr_0001.yaml
+  - file: nodes/adr_0002.yaml
+  - file: nodes/adr_0003.yaml
+  - file: nodes/l1_spec.yaml
+  - file: nodes/l1_scaffold.yaml
+  - file: nodes/l1_api.yaml
+  - file: nodes/l1_test.yaml
+  - file: nodes/l1_shell.yaml
+  - file: nodes/l2_visual.yaml
+  - file: nodes/l2_motion.yaml
+  - file: nodes/l2_map.yaml
+  - file: nodes/l2_dialogs.yaml
+  - file: nodes/l2_share.yaml
+  - file: nodes/l3_gates.yaml
+  - file: nodes/l3_parity.yaml
+  - file: nodes/l3_verify.yaml
+  - file: nodes/l4_cutover.yaml
+  - file: nodes/l2_contract_rev.yaml
+  - file: nodes/adr_0004.yaml
+  - file: nodes/l2_island_contract_fix.yaml
+  - file: nodes/l3_typecheck_fix.yaml
+edges:
+  - file: edges/e001.yaml
+  - file: edges/e003.yaml
+  - file: edges/e004.yaml
+  - file: edges/e005.yaml
+  - file: edges/e006.yaml
+  - file: edges/e007.yaml
+  - file: edges/e008.yaml
+  - file: edges/e009.yaml
+  - file: edges/e010.yaml
+  - file: edges/e011.yaml
+  - file: edges/e012.yaml
+  - file: edges/e013.yaml
+  - file: edges/e014.yaml
+  - file: edges/e015.yaml
+  - file: edges/e016.yaml
+  - file: edges/e017.yaml
+  - file: edges/e018.yaml
+  - file: edges/d_0001.yaml
+  - file: edges/d_0002.yaml
+  - file: edges/d_0003.yaml
+  - file: edges/d_0004.yaml
+  - file: edges/d_0005.yaml
+  - file: edges/e019.yaml
+  - file: edges/e002.yaml
+  - file: edges/e020.yaml
+  - file: edges/e021.yaml
+  - file: edges/e_adr0004_ctx_ui.yaml
+  - file: edges/e_adr0004_ctx_delivery.yaml
+  - file: edges/e_l2fix_dep_dialogs.yaml
+  - file: edges/e_l2fix_dep_map.yaml
+  - file: edges/e_l3gates_dep_l2fix.yaml
+  - file: edges/e_l3tc_dep_motion.yaml
+  - file: edges/e_l3tc_dep_share.yaml
+  - file: edges/e_l3tc_before_gates.yaml
+version: 1.0.0
+class: standard
+root_context:
+  repo: class1forever.github.io
+  branch: astro-migration
+  stack: Astro 6 + @astrojs/cloudflare(SSR) + ECharts 6 + TypeScript/React islands
+  deploy: Cloudflare Workers Assets (main=@astrojs/cloudflare/entrypoints/server, assets=ASSETS -> ./dist)
+  kv: 'CLASS_MAP_DATA: students:raw:v1 / students:public:v1'
+  secrets: DETAILS_PASSPHRASE / DETAILS_SESSION_SECRET (runtime env only)
+  orchestration: herdr 独立 tab 的 pi 会话；不使用 subagent 工具
+  wait_policy: 等待子 agent 用前台 for 循环轮询状态再 sleep，不挂后台等待
+  model_policy: pi + opencode-go/deepseek-v4.1-flash:high
+review:
+  status: unreviewed
+  by: cli
+  at: '2026-10-12T14:36:18.559Z'

@@ -1,0 +1,14 @@
+id: adr_0003
+type: adr
+label: geo 生成文件零改动，只替换注册与加载层
+level: 1
+status: proposed
+attempts: 0
+max_attempts: 0
+created_at: '2026-10-12T11:07:22.496Z'
+updated_at: '2026-10-12T11:07:22.496Z'
+decision: js/china.js 与 js/province/*.js 保持字节不变，新站在加载层提供等价注册接口，把这些文件按需加载；不改写为 JSON/ESM 导出。
+background: 这些几何文件由外部流程生成并预先投影，仓库纪律禁止手工编辑；Astro 下它们既可作静态脚本加载，也可作副作用模块导入。
+considered_options: 改写为 JSON 或 ESM 导出（加载语义更标准，代价是改动生成文件并破坏零手工改动纪律）; 保持原文件、加载层提供注册接口（零改动，代价是需要 shim 并保持加载顺序纪律）
+why: 生成文件是上游产物，改它们等于引入重生成成本与漂移风险；shim 成本局限在一个模块内且可被测试覆盖。
+consequences: 加载层必须保证注册接口在数据模块执行前就绪，否则数据模块静默失效。

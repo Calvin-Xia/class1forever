@@ -1,0 +1,76 @@
+id: l3_parity
+type: task
+label: 等价性验收：旧清单在新站复跑
+level: 3
+context: ctx_delivery
+status: passed
+plan:
+  description: >-
+    以 l1_spec 冻结的清单为准在新站逐条复跑：14 项人工 smoke、可达性清单、安全清单与视觉清单；每条记录可观察证据，不通过项回到对应实现节点修复后复跑。范围：验证与记录（写入执行报告与 docs/
+    验收记录）；不在本节点改实现。
+expected_outcome:
+  definition_of_done:
+    - 14 项 smoke 逐条有证据（截图路径、网络或 DOM 记录、命令输出），不通过项为零或已回环修复并复跑
+    - 安全清单逐条核对：网络与源码中无完整学生数据、无跨源与内联脚本
+    - 31 省数据与中文地名在新站渲染与旧站一致（对照记录为证）
+    - 在真实浏览器里验证口令登录与登出（同源 POST 带 Origin）不被 Astro 6 security.checkOrigin 拦成 403 —— l1_test 复核发现 F-1，不能只靠 curl 断言
+    - 人为 smoke 必须走 Worker 渲染路径（npm run dev:local / wrangler dev / 预览部署），不得用 astro dev —— 根 index.html 会遮蔽 /
+attempts: 0
+max_attempts: 3
+created_at: '2026-10-12T11:08:14.649Z'
+updated_at: '2026-10-12T15:28:54.644Z'
+checkpoints:
+  - id: cp1
+    label: smoke 1-7：公开数据、口令、详情、钻取、图例、缩放、分享
+    status: passed
+    verifier: auto
+  - id: cp2
+    label: smoke 8-14：窄视口、键盘、地区一览、焦点、动效
+    status: passed
+    verifier: auto
+  - id: cp3
+    label: 安全与视觉清单
+    status: passed
+    verifier: auto
+assigned_to: exec-parity
+execution_report:
+  summary: >-
+    l3_parity 等价性验收完成：以 docs/migration-parity.md 冻结清单为准，在 Worker 渲染路径（npm run dev:local = wrangler dev × astro build，未用
+    astro dev）逐条复跑 14 项人工 smoke、可达性 A1–A15、安全 S1–S8、视觉 V3.1–V3.3，并另起 git archive HEAD 的旧站存档对照。结论：14 smoke 全通过（smoke 13
+    台湾子项按「与旧站一致」判定，见 F-P1）、A1–A15 全通过、S1–S8 全通过、V3.1–V3.3 全通过（37 条对比度/调色板断言达标）；DoD#3 新站与旧站同喂一份 31 省夹具，31 个省级视野的
+    mapId+色带满量程+每个城市数据点逐字段完全一致（mismatched=0），「市」后缀城市名不匹配 GeoJSON 的已知现象两边同样不上色（非回归），正对照省份正常上色；DoD#4 真实 Chromium 同源 POST
+    /api/auth/details 与 /api/auth/logout（无 Content-Type）均带 Origin 且 200 非 403，curl 无反证无 Origin → 403（有意的跨站表单防护）已在
+    docs/parity-acceptance-l3.md 记录。全程只读验证、未改任何实现文件、未新增依赖。
+  started_at: '2026-10-12T14:58:40.051Z'
+  artifacts:
+    - docs/parity-acceptance-l3.md
+    - docs/parity-touch-compare.md
+    - .wrangler/parity/evidence/parity-smoke-1-7.md
+    - .wrangler/parity/evidence/parity-smoke-8-14.md
+    - .wrangler/parity/evidence/parity-security-visual.md
+    - .wrangler/parity/evidence/parity-31-provinces.md
+    - .wrangler/parity/evidence/parity-31-provinces-snapshot.json
+    - .wrangler/parity/evidence/parity-auth-browser.md
+    - .wrangler/parity/evidence/smoke14-npm-build.log
+    - .wrangler/parity/evidence/smoke14-data-upload-dryrun.log
+    - .wrangler/parity/evidence/parity-touch-new.txt
+    - .wrangler/parity/evidence/parity-touch-old.txt
+    - .wrangler/parity/evidence/shots/smoke1-national.png
+    - .wrangler/parity/evidence/shots/smoke8-legend-480.png
+    - .wrangler/parity/evidence/shots/a14-bottom-strip-480.png
+    - .wrangler/parity/evidence/shots/share-national.png
+  blockers: []
+  notes: >-
+    发现 F-P1（非迁移回归，留裁决方）：触摸设备轻点不可下钻地区（台湾）时面板先打开（渲染台湾公开卡）再被同一次触摸合成的 click 落在刚盖上的 #bs-overlay 关闭（open-then-close）。用同一
+    Playwright touchscreen.tap 打新站(:8912)与旧站存档(:8913)得到完全相同的时序 → 等价性基线既有行为，不是新站回归；但与 AGENTS.md smoke 13
+    的文字期望不符，是否单独开票修基线由主控/裁决方决定（本节点只验证不改实现，证据 docs/parity-touch-compare.md）。其他观察：错误口令产生一条浏览器对失败 fetch 的常规 401 console
+    记录（非 pageerror/CSP）；色带图例长度不随实时 resize 重建、下一次 view change 才更新（与 AGENTS.md 记录一致、旧站同源）。本节点未写 verdict、未流转 passed。
+  verification:
+    verdict: passed
+    checked_at: '2026-10-12T15:28:54.270Z'
+    note: >-
+      主控核验：docs/parity-acceptance-l3.md(15KB)+parity-touch-compare.md+31省snapshot(207KB,new/old)+smoke截图 均存在；人为smoke全程走
+      Worker 渲染路径(dev:local 8912/8914)，未用 astro dev。结论：14 smoke + 可达性A1-A15 + 安全S1-S8 + 视觉V3.1-3.3 全通过；DoD#3 新站与 git
+      archive 旧站同夹具31省逐字段 mismatched=0（「市」后缀不匹配为两边一致的既有现象，非回归）；DoD#4 真实 Chromium 同源POST带Origin
+      200非403，无Origin→403属有意防护。不通过项=0。发现 F-P1(触摸打台湾面板开又即关，新站与旧站时序逐字一致)=迁移等价性基线既有行为，非本迁移回归，作为可选 backlog 呈报人类，不在本迁移修。
+  completed_at: '2026-10-12T15:28:54.645Z'

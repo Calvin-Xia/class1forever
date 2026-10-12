@@ -1,0 +1,108 @@
+id: l1_scaffold
+type: task
+label: Astro SSR 工程与 Worker/Assets 配置就位
+level: 1
+context: ctx_runtime
+status: passed
+plan:
+  description: >-
+    在分支 astro-migration 上建立 Astro 工程与 Workers 部署面：Astro 6 + @astrojs/cloudflare 适配器、output 为 server、TypeScript 与 React
+    集成；wrangler.jsonc 由 Pages 形态改为 Worker 形态（main 指向适配器统一入口 @astrojs/cloudflare/entrypoints/server、assets 绑定 ASSETS 指向
+    ./dist、kv_namespaces 沿用绑定名 CLASS_MAP_DATA 与迁移前一致的 id/preview_id、vars 保留 DETAILS_HINT、补 compatibility_date 与
+    nodejs_compat 等 flag）。旧站文件保留供对照，不删旧入口。范围：astro.config.mjs、tsconfig、package.json、wrangler.jsonc、src/ 骨架；不改 functions/
+    现实现与 js/ 资产。
+expected_outcome:
+  definition_of_done:
+    - >-
+      astro.config.mjs 使用 @astrojs/cloudflare 且 output 为 server；wrangler.jsonc 为 Worker 形态（main 为
+      @astrojs/cloudflare/entrypoints/server、assets.binding 为 ASSETS、assets.directory 为 ./dist）
+    - kv_namespaces 的 binding 仍为 CLASS_MAP_DATA 且 id 与 preview_id 与迁移前一致（git diff main -- wrangler.jsonc 只含形态字段变化）
+    - npm run build 成功并产出 dist（含 worker 入口与静态资产）；npx wrangler deploy --dry-run 成功退出
+attempts: 0
+max_attempts: 3
+created_at: '2026-10-12T11:08:10.564Z'
+updated_at: '2026-10-12T11:44:58.219Z'
+checkpoints:
+  - id: cp1
+    label: 依赖、tsconfig 与 astro 配置就位
+    status: passed
+    verifier: auto
+  - id: cp2
+    label: wrangler 转 Worker 形态且 KV 与 vars 等价
+    status: passed
+    verifier: auto
+  - id: cp3
+    label: build 与 deploy dry-run 双通过
+    status: passed
+    verifier: auto
+  - id: cp4
+    label: 复核修复：cloudflare:workers 类型通路就位 + 脚本语义去重
+    status: passed
+    verifier: auto
+assigned_to: exec-backend
+execution_report:
+  summary: >-
+    复核修复轮完成（F1 必修 + F2/F6 顺手）。Astro 6 SSR 骨架与 Worker/Assets 部署面已就位且类型通路打通：【F1】新增并提交根级 worker-configuration.d.ts（wrangler
+    types 生成，含 declare module 'cloudflare:workers' 与 CLASS_MAP_DATA: KVNamespace；经比对确认不含任何密钥值），tsconfig.include
+    已覆盖它，类型刷新沿用既有 cf:types 脚本并在 package.json `"//"` 注释键与 astro.config.mjs 头注释点明「改 wrangler 绑定后需重跑」；实测 import { env }
+    from 'cloudflare:workers' 的类型探针 → astro check Result 0 errors（含探针 6 files，删探针后 5 files 仍 0/0/0），ts(2307)
+    消失。【F2】订正报告措辞：compatibility_date(2026-03-06) 是 main 已有、本次未改，本次新增仅 main / assets / compatibility_flags，删除
+    pages_build_output_dir；已用两份 JSON 逐字段比对确认 KV 与 vars 逐字等价。【F6】preview 改为 `npm run build && wrangler
+    dev`（先构建再预览），cf:dev 保持 `wrangler dev`（Worker 形态等价旧 wrangler pages dev），二者不再重复；三条 dev 路径差异（astro dev 本地绑定/本地
+    KV；wrangler dev 因 remote:true 连远端 KV 需凭据；preview 先构建）写入两处注释。复验：npm run build 成功产出
+    dist/{client,server/entry.mjs}，wrangler deploy --dry-run 成功且 CLASS_MAP_DATA id 未变，旧站文件零改动。仍停在 report，未写
+    verdict/passed。
+  started_at: '2026-10-12T11:19:29.162Z'
+  artifacts:
+    - astro.config.mjs
+    - wrangler.jsonc
+    - tsconfig.json
+    - package.json
+    - package-lock.json
+    - .gitignore
+    - src/pages/index.astro
+    - src/env.d.ts
+    - worker-configuration.d.ts
+  blockers:
+    - >-
+      环境限制（非代码缺陷，与上轮相同）：本机沙箱禁止子进程向系统临时目录写文件/绑套接字，@astrojs/cloudflare 13 的 vite 插件在 build / astro check / wrangler types
+      时会启动 workerd（miniflare），其 tmpPath = os.tmpdir()/miniflare-<hex>，报 `CreateDirectory: #5 拒绝访问`（先
+      miniflare-email-store，后 miniflare-CacheObject）。规避：把 TEMP/TMP 指向工作区内目录（如 .wrangler/probe-tmp）后，npm run build /
+      astro check / npx wrangler types / wrangler deploy --dry-run 全部通过；未把该沙箱细节写进 package.json。
+  notes: >-
+    本轮为复核修复轮（PASS-with-findings 后的 F1/F2/F6），边界内改动仅 package.json / tsconfig.json / astro.config.mjs 注释 / 新增
+    worker-configuration.d.ts：
+
+    【F1 已修】① 新增并提交根级 `worker-configuration.d.ts`（`wrangler types` 生成，624,821 字节 / 16,256 行；含 `declare module
+    'cloudflare:workers'` 与 `CLASS_MAP_DATA: KVNamespace`、`ASSETS: Fetcher`、`DETAILS_*: string`；已用脚本比对
+    .dev.vars，确认文件内**不含任何密钥值**，只有变量名与类型）。② tsconfig.json 的 include 已覆盖 `worker-configuration.d.ts`，并加注释说明改绑定后需重跑。③
+    类型刷新脚本沿用仓库既有的 `cf:types`（= `wrangler types`），未再新增一个完全相同的 `types` 脚本——这正是 F6 指出的「同一命令的复制」问题；已在 package.json 顶层 `"//"`
+    注释键与 astro.config.mjs 头注释里点明「改动 wrangler.jsonc 绑定后请重跑 npm run cf:types」。④ 实测（本轮新增临时探针 src/lib/__typeprobe.ts，含
+    `import { env } from 'cloudflare:workers'` + `env.CLASS_MAP_DATA`，验证后已删除）：修复前该 import 触发 ts(2307)；修复后
+    `TEMP=<workspace>/.wrangler/probe-tmp npx astro check` → `Result (6 files): 0 errors / 0 warnings / 0 hints`（6
+    个文件＝含探针）；删除探针后终态 `npx astro check` → `Result (5 files): 0 errors / 0 warnings / 0 hints`。
+
+    【F2 已修】原报告「新增 compatibility_date(2026-03-06)」措辞漂移已订正：`compatibility_date` 是 main 已有字段、本次**未改动**；本次新增的只有
+    `main`、`assets`、`compatibility_flags` 三项，另有 `pages_build_output_dir` 被删除。核对方式：`node -e` 读工作区与 `git show
+    main:wrangler.jsonc` 两份 JSON，比较 name/compatibility_date/vars/kv_namespaces/preview env 全部逐字相等（kv identical: true）。
+
+    【F6 已修】`preview` 不再是 `cf:dev` 的复制：`preview` = `npm run build && wrangler dev`（先构建再用 Worker 运行时预览产物），`cf:dev` =
+    `wrangler dev`（Worker 形态等价于旧 `wrangler pages dev .`，需已有 dist）；`dev` = `astro dev`。三条 dev 路径的语义差异（本地模拟绑定/本地 KV vs
+    `remote: true` → 远端 KV 需 CF 凭据 vs 先构建再预览）写在 package.json 顶层 `"//"` 注释键与 astro.config.mjs 头注释里，两处内容一致；已用 `node -e
+    "require('./package.json')"` 确认 `"//"` 键存在且 scripts 解析正常。
+
+    【复验输出】`TEMP=<workspace>/.wrangler/probe-tmp npm run build` → `[build] Server built in 7.69s` + `[build]
+    Complete!`，产物 dist/{client/{_astro,_headers},
+    server/{chunks,entry.mjs,virtual_astro_middleware.mjs,wrangler.json}}；`npx wrangler deploy --dry-run --outdir
+    .wrangler-dryrun` 退出成功，bindings 仍为 `env.CLASS_MAP_DATA
+    (e6c9c4ff9bc84aa4979184515e713ecb)`、`env.ASSETS`、`env.IMAGES`、`env.SESSION`、`env.DETAILS_HINT`；`git status --short`
+    仅新增 worker-configuration.d.ts 与既有的
+    .gitignore/package.json/package-lock.json/wrangler.jsonc/astro.config.mjs/tsconfig.json/src/（+ 上一节点的未跟踪
+    docs/），functions/ js/ css/ index.html build.js scripts/ tests/ 仍零改动。未写 verdict、未流转 passed，停在 report。
+  verification:
+    verdict: passed
+    checked_at: '2026-10-12T11:44:57.575Z'
+    note: >-
+      机械核对：checkpoint 4/4 passed；构建（TEMP 规避）exit 0 且 dist/server/entry.mjs 就位；wrangler deploy --dry-run exit 0 且
+      CLASS_MAP_DATA id 未变；F1 修复端到端验证（临时探针页 import {env} from 'cloudflare:workers' + astro check = 0 errors）
+  completed_at: '2026-10-12T11:44:58.220Z'

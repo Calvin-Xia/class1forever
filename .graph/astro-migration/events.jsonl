@@ -1,0 +1,377 @@
+{"ts":"2026-10-12T11:07:19.194Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-07-19-185z-wdrneo message=\"auto: structural amend (add-node ctx_runtime) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:07:19.205Z","actor":"cli","kind":"node_created","node":"ctx_runtime","to":"pending"}
+{"ts":"2026-10-12T11:07:19.209Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=ctx_runtime; auto_snapshot=2026-10-12t11-07-19-185z-wdrneo"}
+{"ts":"2026-10-12T11:07:19.582Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-07-19-570z-alagtf message=\"auto: structural amend (add-node ctx_ui) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:07:19.597Z","actor":"cli","kind":"node_created","node":"ctx_ui","to":"pending"}
+{"ts":"2026-10-12T11:07:19.601Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=ctx_ui; auto_snapshot=2026-10-12t11-07-19-570z-alagtf"}
+{"ts":"2026-10-12T11:07:19.956Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-07-19-938z-uey1td message=\"auto: structural amend (add-node ctx_delivery) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:07:19.966Z","actor":"cli","kind":"node_created","node":"ctx_delivery","to":"pending"}
+{"ts":"2026-10-12T11:07:19.970Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=ctx_delivery; auto_snapshot=2026-10-12t11-07-19-938z-uey1td"}
+{"ts":"2026-10-12T11:07:20.317Z","actor":"cli","kind":"node_content_updated","node":"ctx_runtime","detail":"fields: boundary"}
+{"ts":"2026-10-12T11:07:20.659Z","actor":"cli","kind":"node_content_updated","node":"ctx_ui","detail":"fields: boundary"}
+{"ts":"2026-10-12T11:07:21.031Z","actor":"cli","kind":"node_content_updated","node":"ctx_delivery","detail":"fields: boundary"}
+{"ts":"2026-10-12T11:07:21.737Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-07-21-722z-rd7z1f message=\"auto: structural amend (add-node adr_0001) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:07:21.747Z","actor":"cli","kind":"adr_created","node":"adr_0001","to":"proposed","detail":"采用 Astro SSR 全站挂 Cloudflare Worker"}
+{"ts":"2026-10-12T11:07:21.751Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=adr_0001; auto_snapshot=2026-10-12t11-07-21-722z-rd7z1f"}
+{"ts":"2026-10-12T11:07:22.126Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-07-22-105z-l6qjfc message=\"auto: structural amend (add-node adr_0002) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:07:22.137Z","actor":"cli","kind":"adr_created","node":"adr_0002","to":"proposed","detail":"ECharts 直接作为打包依赖，退役自建 vendor 产物"}
+{"ts":"2026-10-12T11:07:22.140Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=adr_0002; auto_snapshot=2026-10-12t11-07-22-105z-l6qjfc"}
+{"ts":"2026-10-12T11:07:22.523Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-07-22-500z-aqdzye message=\"auto: structural amend (add-node adr_0003) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:07:22.534Z","actor":"cli","kind":"adr_created","node":"adr_0003","to":"proposed","detail":"geo 生成文件零改动，只替换注册与加载层"}
+{"ts":"2026-10-12T11:07:22.537Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=adr_0003; auto_snapshot=2026-10-12t11-07-22-500z-aqdzye"}
+{"ts":"2026-10-12T11:08:10.132Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-10-108z-bwbgid message=\"auto: structural amend (add-node l1_spec) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:10.145Z","actor":"cli","kind":"node_created","node":"l1_spec","to":"pending"}
+{"ts":"2026-10-12T11:08:10.149Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=l1_spec; auto_snapshot=2026-10-12t11-08-10-108z-bwbgid"}
+{"ts":"2026-10-12T11:08:10.560Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-10-532z-tzg659 message=\"auto: structural amend (add-node l1_scaffold) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:10.572Z","actor":"cli","kind":"node_created","node":"l1_scaffold","to":"pending"}
+{"ts":"2026-10-12T11:08:10.576Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=l1_scaffold; auto_snapshot=2026-10-12t11-08-10-532z-tzg659"}
+{"ts":"2026-10-12T11:08:10.957Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-10-929z-bhjsim message=\"auto: structural amend (add-node l1_api) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:10.969Z","actor":"cli","kind":"node_created","node":"l1_api","to":"pending"}
+{"ts":"2026-10-12T11:08:10.973Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=l1_api; auto_snapshot=2026-10-12t11-08-10-929z-bhjsim"}
+{"ts":"2026-10-12T11:08:11.386Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-11-351z-l8k6i0 message=\"auto: structural amend (add-node l1_test) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:11.397Z","actor":"cli","kind":"node_created","node":"l1_test","to":"pending"}
+{"ts":"2026-10-12T11:08:11.401Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=l1_test; auto_snapshot=2026-10-12t11-08-11-351z-l8k6i0"}
+{"ts":"2026-10-12T11:08:11.791Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-11-760z-z4ecty message=\"auto: structural amend (add-node l1_shell) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:11.803Z","actor":"cli","kind":"node_created","node":"l1_shell","to":"pending"}
+{"ts":"2026-10-12T11:08:11.807Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=l1_shell; auto_snapshot=2026-10-12t11-08-11-760z-z4ecty"}
+{"ts":"2026-10-12T11:08:12.181Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-12-150z-vg6wzl message=\"auto: structural amend (add-node l2_visual) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:12.194Z","actor":"cli","kind":"node_created","node":"l2_visual","to":"pending"}
+{"ts":"2026-10-12T11:08:12.197Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=l2_visual; auto_snapshot=2026-10-12t11-08-12-150z-vg6wzl"}
+{"ts":"2026-10-12T11:08:12.574Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-12-538z-utwujy message=\"auto: structural amend (add-node l2_motion) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:12.586Z","actor":"cli","kind":"node_created","node":"l2_motion","to":"pending"}
+{"ts":"2026-10-12T11:08:12.590Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=l2_motion; auto_snapshot=2026-10-12t11-08-12-538z-utwujy"}
+{"ts":"2026-10-12T11:08:12.982Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-12-945z-i8h2ol message=\"auto: structural amend (add-node l2_map) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:12.994Z","actor":"cli","kind":"node_created","node":"l2_map","to":"pending"}
+{"ts":"2026-10-12T11:08:12.998Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=l2_map; auto_snapshot=2026-10-12t11-08-12-945z-i8h2ol"}
+{"ts":"2026-10-12T11:08:13.380Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-13-339z-3b1ho4 message=\"auto: structural amend (add-node l2_dialogs) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:13.394Z","actor":"cli","kind":"node_created","node":"l2_dialogs","to":"pending"}
+{"ts":"2026-10-12T11:08:13.398Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=l2_dialogs; auto_snapshot=2026-10-12t11-08-13-339z-3b1ho4"}
+{"ts":"2026-10-12T11:08:13.784Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-13-744z-5ww6qx message=\"auto: structural amend (add-node l2_share) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:13.798Z","actor":"cli","kind":"node_created","node":"l2_share","to":"pending"}
+{"ts":"2026-10-12T11:08:13.802Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=l2_share; auto_snapshot=2026-10-12t11-08-13-744z-5ww6qx"}
+{"ts":"2026-10-12T11:08:14.224Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-14-177z-tjoeii message=\"auto: structural amend (add-node l3_gates) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:14.239Z","actor":"cli","kind":"node_created","node":"l3_gates","to":"pending"}
+{"ts":"2026-10-12T11:08:14.243Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=l3_gates; auto_snapshot=2026-10-12t11-08-14-177z-tjoeii"}
+{"ts":"2026-10-12T11:08:14.644Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-14-601z-n4qqhp message=\"auto: structural amend (add-node l3_parity) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:14.658Z","actor":"cli","kind":"node_created","node":"l3_parity","to":"pending"}
+{"ts":"2026-10-12T11:08:14.662Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=l3_parity; auto_snapshot=2026-10-12t11-08-14-601z-n4qqhp"}
+{"ts":"2026-10-12T11:08:15.045Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-15-001z-91eudt message=\"auto: structural amend (add-node l3_verify) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:15.059Z","actor":"cli","kind":"node_created","node":"l3_verify","to":"pending"}
+{"ts":"2026-10-12T11:08:15.063Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=l3_verify; auto_snapshot=2026-10-12t11-08-15-001z-91eudt"}
+{"ts":"2026-10-12T11:08:15.470Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-15-421z-t2uw96 message=\"auto: structural amend (add-node l4_cutover) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:15.484Z","actor":"cli","kind":"node_created","node":"l4_cutover","to":"pending"}
+{"ts":"2026-10-12T11:08:15.488Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=l4_cutover; auto_snapshot=2026-10-12t11-08-15-421z-t2uw96"}
+{"ts":"2026-10-12T11:08:37.070Z","actor":"cli","kind":"node_content_updated","node":"ctx_delivery","detail":"fields: contracts"}
+{"ts":"2026-10-12T11:08:37.425Z","actor":"cli","kind":"node_content_updated","node":"ctx_delivery","detail":"fields: contracts"}
+{"ts":"2026-10-12T11:08:37.797Z","actor":"cli","kind":"node_content_updated","node":"ctx_runtime","detail":"fields: contracts"}
+{"ts":"2026-10-12T11:08:38.144Z","actor":"cli","kind":"node_content_updated","node":"ctx_runtime","detail":"fields: contracts"}
+{"ts":"2026-10-12T11:08:38.494Z","actor":"cli","kind":"node_content_updated","node":"ctx_ui","detail":"fields: contracts"}
+{"ts":"2026-10-12T11:08:38.922Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-38-877z-l8ux41 message=\"auto: structural amend (add-edge e001) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:38.935Z","actor":"cli","kind":"edge_created","edge":"e001","detail":"l1_spec -[depends_on]-> l1_scaffold"}
+{"ts":"2026-10-12T11:08:38.939Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e001; auto_snapshot=2026-10-12t11-08-38-877z-l8ux41"}
+{"ts":"2026-10-12T11:08:39.429Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-39-381z-81kdfg message=\"auto: structural amend (add-edge e002) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:39.442Z","actor":"cli","kind":"edge_created","edge":"e002","detail":"l1_spec -[depends_on]-> l1_shell"}
+{"ts":"2026-10-12T11:08:39.446Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e002; auto_snapshot=2026-10-12t11-08-39-381z-81kdfg"}
+{"ts":"2026-10-12T11:08:39.868Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-39-820z-btutle message=\"auto: structural amend (add-edge e003) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:39.881Z","actor":"cli","kind":"edge_created","edge":"e003","detail":"l1_scaffold -[depends_on]-> l1_api"}
+{"ts":"2026-10-12T11:08:39.885Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e003; auto_snapshot=2026-10-12t11-08-39-820z-btutle"}
+{"ts":"2026-10-12T11:08:40.301Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-40-251z-5d5adh message=\"auto: structural amend (add-edge e004) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:40.314Z","actor":"cli","kind":"edge_created","edge":"e004","detail":"l1_scaffold -[depends_on]-> l1_test"}
+{"ts":"2026-10-12T11:08:40.318Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e004; auto_snapshot=2026-10-12t11-08-40-251z-5d5adh"}
+{"ts":"2026-10-12T11:08:40.742Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-40-694z-w1i0jt message=\"auto: structural amend (add-edge e005) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:40.754Z","actor":"cli","kind":"edge_created","edge":"e005","detail":"l1_shell -[depends_on]-> l2_visual"}
+{"ts":"2026-10-12T11:08:40.758Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e005; auto_snapshot=2026-10-12t11-08-40-694z-w1i0jt"}
+{"ts":"2026-10-12T11:08:41.150Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-41-099z-k7w8j6 message=\"auto: structural amend (add-edge e006) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:41.162Z","actor":"cli","kind":"edge_created","edge":"e006","detail":"l1_shell -[depends_on]-> l2_motion"}
+{"ts":"2026-10-12T11:08:41.166Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e006; auto_snapshot=2026-10-12t11-08-41-099z-k7w8j6"}
+{"ts":"2026-10-12T11:08:41.600Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-41-544z-llmuuj message=\"auto: structural amend (add-edge e007) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:41.613Z","actor":"cli","kind":"edge_created","edge":"e007","detail":"l2_visual -[depends_on]-> l2_map"}
+{"ts":"2026-10-12T11:08:41.616Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e007; auto_snapshot=2026-10-12t11-08-41-544z-llmuuj"}
+{"ts":"2026-10-12T11:08:42.021Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-41-961z-lfv003 message=\"auto: structural amend (add-edge e008) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:42.035Z","actor":"cli","kind":"edge_created","edge":"e008","detail":"l1_api -[depends_on]-> l2_map"}
+{"ts":"2026-10-12T11:08:42.038Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e008; auto_snapshot=2026-10-12t11-08-41-961z-lfv003"}
+{"ts":"2026-10-12T11:08:42.474Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-42-415z-qqus0g message=\"auto: structural amend (add-edge e009) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:42.487Z","actor":"cli","kind":"edge_created","edge":"e009","detail":"l2_visual -[depends_on]-> l2_dialogs"}
+{"ts":"2026-10-12T11:08:42.491Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e009; auto_snapshot=2026-10-12t11-08-42-415z-qqus0g"}
+{"ts":"2026-10-12T11:08:42.886Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-42-828z-fy9c86 message=\"auto: structural amend (add-edge e010) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:42.898Z","actor":"cli","kind":"edge_created","edge":"e010","detail":"l2_map -[depends_on]-> l2_dialogs"}
+{"ts":"2026-10-12T11:08:42.901Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e010; auto_snapshot=2026-10-12t11-08-42-828z-fy9c86"}
+{"ts":"2026-10-12T11:08:43.351Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-43-281z-7izbq8 message=\"auto: structural amend (add-edge e011) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:43.364Z","actor":"cli","kind":"edge_created","edge":"e011","detail":"l2_map -[depends_on]-> l2_share"}
+{"ts":"2026-10-12T11:08:43.368Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e011; auto_snapshot=2026-10-12t11-08-43-281z-7izbq8"}
+{"ts":"2026-10-12T11:08:43.793Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-43-734z-l2n29w message=\"auto: structural amend (add-edge e012) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:43.807Z","actor":"cli","kind":"edge_created","edge":"e012","detail":"l1_test -[depends_on]-> l3_gates"}
+{"ts":"2026-10-12T11:08:43.810Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e012; auto_snapshot=2026-10-12t11-08-43-734z-l2n29w"}
+{"ts":"2026-10-12T11:08:44.264Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-44-193z-ht7zzm message=\"auto: structural amend (add-edge e013) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:44.280Z","actor":"cli","kind":"edge_created","edge":"e013","detail":"l2_dialogs -[depends_on]-> l3_gates"}
+{"ts":"2026-10-12T11:08:44.284Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e013; auto_snapshot=2026-10-12t11-08-44-193z-ht7zzm"}
+{"ts":"2026-10-12T11:08:44.721Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-44-649z-0m49ru message=\"auto: structural amend (add-edge e014) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:44.735Z","actor":"cli","kind":"edge_created","edge":"e014","detail":"l2_share -[depends_on]-> l3_gates"}
+{"ts":"2026-10-12T11:08:44.739Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e014; auto_snapshot=2026-10-12t11-08-44-649z-0m49ru"}
+{"ts":"2026-10-12T11:08:45.183Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-45-119z-v1fx5r message=\"auto: structural amend (add-edge e015) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:45.196Z","actor":"cli","kind":"edge_created","edge":"e015","detail":"l2_motion -[depends_on]-> l3_gates"}
+{"ts":"2026-10-12T11:08:45.199Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e015; auto_snapshot=2026-10-12t11-08-45-119z-v1fx5r"}
+{"ts":"2026-10-12T11:08:45.610Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-45-542z-9dilzr message=\"auto: structural amend (add-edge e016) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:45.624Z","actor":"cli","kind":"edge_created","edge":"e016","detail":"l3_gates -[depends_on]-> l3_parity"}
+{"ts":"2026-10-12T11:08:45.628Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e016; auto_snapshot=2026-10-12t11-08-45-542z-9dilzr"}
+{"ts":"2026-10-12T11:08:46.057Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-45-988z-6ha43r message=\"auto: structural amend (add-edge e017) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:46.079Z","actor":"cli","kind":"edge_created","edge":"e017","detail":"l3_parity -[depends_on]-> l3_verify"}
+{"ts":"2026-10-12T11:08:46.083Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e017; auto_snapshot=2026-10-12t11-08-45-988z-6ha43r"}
+{"ts":"2026-10-12T11:08:46.560Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-46-482z-ss8cau message=\"auto: structural amend (add-edge e018) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:46.574Z","actor":"cli","kind":"edge_created","edge":"e018","detail":"l3_verify -[depends_on]-> l4_cutover"}
+{"ts":"2026-10-12T11:08:46.578Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e018; auto_snapshot=2026-10-12t11-08-46-482z-ss8cau"}
+{"ts":"2026-10-12T11:08:47.014Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-46-941z-0d80q1 message=\"auto: structural amend (add-edge d_0001) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:47.028Z","actor":"cli","kind":"edge_created","edge":"d_0001","detail":"adr_0001 -[decides]-> l1_scaffold"}
+{"ts":"2026-10-12T11:08:47.032Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=d_0001; auto_snapshot=2026-10-12t11-08-46-941z-0d80q1"}
+{"ts":"2026-10-12T11:08:47.497Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-47-429z-ami9qw message=\"auto: structural amend (add-edge d_0002) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:47.510Z","actor":"cli","kind":"edge_created","edge":"d_0002","detail":"adr_0001 -[decides]-> ctx_runtime"}
+{"ts":"2026-10-12T11:08:47.514Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=d_0002; auto_snapshot=2026-10-12t11-08-47-429z-ami9qw"}
+{"ts":"2026-10-12T11:08:47.953Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-47-884z-yxia4l message=\"auto: structural amend (add-edge d_0003) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:47.967Z","actor":"cli","kind":"edge_created","edge":"d_0003","detail":"adr_0002 -[decides]-> l2_map"}
+{"ts":"2026-10-12T11:08:47.971Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=d_0003; auto_snapshot=2026-10-12t11-08-47-884z-yxia4l"}
+{"ts":"2026-10-12T11:08:48.444Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-48-370z-wq9lhg message=\"auto: structural amend (add-edge d_0004) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:48.459Z","actor":"cli","kind":"edge_created","edge":"d_0004","detail":"adr_0002 -[decides]-> l3_gates"}
+{"ts":"2026-10-12T11:08:48.463Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=d_0004; auto_snapshot=2026-10-12t11-08-48-370z-wq9lhg"}
+{"ts":"2026-10-12T11:08:48.919Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-08-48-844z-tfjxk0 message=\"auto: structural amend (add-edge d_0005) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:08:48.933Z","actor":"cli","kind":"edge_created","edge":"d_0005","detail":"adr_0003 -[decides]-> l2_map"}
+{"ts":"2026-10-12T11:08:48.936Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=d_0005; auto_snapshot=2026-10-12t11-08-48-844z-tfjxk0"}
+{"ts":"2026-10-12T11:11:26.840Z","actor":"user","kind":"design_approved","detail":"by=user, status=approved"}
+{"ts":"2026-10-12T11:11:27.336Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-11-27-240z-u5ppyj message=\"设计定稿：20 节点/23 边，validate+doctor 双 0 error，用户批准\" docs_exported=8"}
+{"ts":"2026-10-12T11:14:09.059Z","actor":"pi-mcp-graph-mcp","kind":"node_status","node":"l1_spec","from":"pending","to":"ready"}
+{"ts":"2026-10-12T11:14:11.728Z","actor":"exec-backend","kind":"node_status","node":"l1_spec","from":"ready","to":"running","detail":"claim by exec-backend"}
+{"ts":"2026-10-12T11:15:22.308Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l1_spec","from":"pending","to":"passed","detail":"checkpoint=cp1"}
+{"ts":"2026-10-12T11:15:54.588Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l1_spec","from":"pending","to":"passed","detail":"checkpoint=cp2"}
+{"ts":"2026-10-12T11:16:37.210Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l1_spec","from":"pending","to":"passed","detail":"checkpoint=cp3"}
+{"ts":"2026-10-12T11:16:42.664Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l1_spec"}
+{"ts":"2026-10-12T11:17:44.962Z","actor":"cli","kind":"verdict","node":"l1_spec","detail":"verdict=passed"}
+{"ts":"2026-10-12T11:17:45.379Z","actor":"cli","kind":"node_status","node":"l1_spec","from":"running","to":"passed"}
+{"ts":"2026-10-12T11:18:13.992Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-18-13-894z-xd48i3 message=\"auto: structural amend (remove-edge e002) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:18:14.014Z","actor":"cli","kind":"edge_deleted","edge":"e002"}
+{"ts":"2026-10-12T11:18:14.017Z","actor":"cli","kind":"graph_amended","detail":"action=remove-edge target=e002; auto_snapshot=2026-10-12t11-18-13-894z-xd48i3"}
+{"ts":"2026-10-12T11:18:14.517Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-18-14-416z-90hpyw message=\"auto: structural amend (add-edge e019) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:18:14.535Z","actor":"cli","kind":"edge_created","edge":"e019","detail":"l1_scaffold -[depends_on]-> l1_shell"}
+{"ts":"2026-10-12T11:18:14.539Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e019; auto_snapshot=2026-10-12t11-18-14-416z-90hpyw"}
+{"ts":"2026-10-12T11:18:31.101Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-18-31-023z-8jjpu6 message=\"auto: structural amend (add-edge e002) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T11:18:31.119Z","actor":"cli","kind":"edge_created","edge":"e002","detail":"l1_spec -[depends_on]-> l1_shell"}
+{"ts":"2026-10-12T11:18:31.124Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e002; auto_snapshot=2026-10-12t11-18-31-023z-8jjpu6"}
+{"ts":"2026-10-12T11:18:54.134Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t11-18-54-039z-epzbvg message=\"amend: l1_shell 增补 l1_scaffold 前置（Astro 工程先于页面骨架）\" docs_exported=8"}
+{"ts":"2026-10-12T11:19:23.683Z","actor":"pi-mcp-graph-mcp","kind":"node_status","node":"l1_scaffold","from":"pending","to":"ready"}
+{"ts":"2026-10-12T11:19:29.184Z","actor":"exec-backend","kind":"node_status","node":"l1_scaffold","from":"ready","to":"running","detail":"claim by exec-backend"}
+{"ts":"2026-10-12T11:22:08.806Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l1_scaffold","from":"pending","to":"passed","detail":"checkpoint=cp1"}
+{"ts":"2026-10-12T11:22:37.362Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l1_scaffold","from":"pending","to":"passed","detail":"checkpoint=cp2"}
+{"ts":"2026-10-12T11:26:56.113Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l1_scaffold","from":"pending","to":"passed","detail":"checkpoint=cp3"}
+{"ts":"2026-10-12T11:27:07.790Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l1_scaffold"}
+{"ts":"2026-10-12T11:40:56.196Z","actor":"cli","kind":"node_content_updated","node":"l1_test","detail":"fields: expected_outcome"}
+{"ts":"2026-10-12T11:40:56.971Z","actor":"cli","kind":"node_content_updated","node":"l3_gates","detail":"fields: expected_outcome"}
+{"ts":"2026-10-12T11:40:57.636Z","actor":"cli","kind":"node_content_updated","node":"l3_gates","detail":"fields: expected_outcome"}
+{"ts":"2026-10-12T11:40:58.273Z","actor":"cli","kind":"node_content_updated","node":"l4_cutover","detail":"fields: expected_outcome"}
+{"ts":"2026-10-12T11:43:36.213Z","actor":"pi-mcp-graph-mcp","kind":"node_content_updated","node":"l1_scaffold","detail":"fields: checkpoints"}
+{"ts":"2026-10-12T11:43:39.685Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l1_scaffold","from":"pending","to":"passed","detail":"checkpoint=cp4"}
+{"ts":"2026-10-12T11:43:51.552Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l1_scaffold"}
+{"ts":"2026-10-12T11:44:57.598Z","actor":"cli","kind":"verdict","node":"l1_scaffold","detail":"verdict=passed"}
+{"ts":"2026-10-12T11:44:58.238Z","actor":"cli","kind":"node_status","node":"l1_scaffold","from":"running","to":"passed"}
+{"ts":"2026-10-12T11:46:10.202Z","actor":"pi-mcp-graph-mcp","kind":"node_status","node":"l1_shell","from":"pending","to":"ready"}
+{"ts":"2026-10-12T11:46:12.820Z","actor":"exec-shell","kind":"node_status","node":"l1_shell","from":"ready","to":"running","detail":"claim by exec-shell"}
+{"ts":"2026-10-12T11:46:29.627Z","actor":"cli","kind":"node_status","node":"l1_api","from":"pending","to":"ready"}
+{"ts":"2026-10-12T11:46:29.987Z","actor":"cli","kind":"node_status","node":"l1_api","from":"ready","to":"running","detail":"claim by exec-api"}
+{"ts":"2026-10-12T11:47:37.685Z","actor":"pi-mcp-graph-mcp","kind":"node_status","node":"l1_test","from":"pending","to":"ready"}
+{"ts":"2026-10-12T11:47:53.662Z","actor":"exec-backend","kind":"node_status","node":"l1_test","from":"ready","to":"running","detail":"claim by exec-backend"}
+{"ts":"2026-10-12T11:59:31.457Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l1_shell","from":"pending","to":"passed","detail":"checkpoint=cp1"}
+{"ts":"2026-10-12T12:01:00.810Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l1_test","from":"pending","to":"passed","detail":"checkpoint=cp1"}
+{"ts":"2026-10-12T12:01:08.131Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l1_test","from":"pending","to":"passed","detail":"checkpoint=cp2"}
+{"ts":"2026-10-12T12:05:07.837Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l1_test","from":"pending","to":"passed","detail":"checkpoint=cp3"}
+{"ts":"2026-10-12T12:05:35.581Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l1_shell","from":"pending","to":"passed","detail":"checkpoint=cp2"}
+{"ts":"2026-10-12T12:05:35.605Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l1_shell","from":"pending","to":"passed","detail":"checkpoint=cp3"}
+{"ts":"2026-10-12T12:05:38.451Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l1_test"}
+{"ts":"2026-10-12T12:08:40.798Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l1_shell"}
+{"ts":"2026-10-12T12:09:01.608Z","actor":"cli","kind":"node_content_updated","node":"l3_parity","detail":"fields: expected_outcome"}
+{"ts":"2026-10-12T12:16:30.458Z","actor":"pi-mcp-graph-mcp","kind":"node_content_updated","node":"l1_test","detail":"fields: checkpoints"}
+{"ts":"2026-10-12T12:16:35.380Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l1_test","from":"pending","to":"passed","detail":"checkpoint=cp4"}
+{"ts":"2026-10-12T12:16:55.023Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l1_test"}
+{"ts":"2026-10-12T12:18:13.639Z","actor":"cli","kind":"node_content_updated","node":"l1_shell","detail":"fields: expected_outcome"}
+{"ts":"2026-10-12T12:18:14.193Z","actor":"cli","kind":"node_content_updated","node":"l1_api","detail":"fields: expected_outcome"}
+{"ts":"2026-10-12T12:18:14.598Z","actor":"cli","kind":"node_content_updated","node":"l3_gates","detail":"fields: expected_outcome"}
+{"ts":"2026-10-12T12:18:15.029Z","actor":"cli","kind":"node_content_updated","node":"l4_cutover","detail":"fields: expected_outcome"}
+{"ts":"2026-10-12T12:18:15.406Z","actor":"cli","kind":"node_content_updated","node":"l3_parity","detail":"fields: expected_outcome"}
+{"ts":"2026-10-12T12:18:25.625Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l1_api","from":"pending","to":"passed","detail":"checkpoint=cp1"}
+{"ts":"2026-10-12T12:18:25.641Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l1_api","from":"pending","to":"passed","detail":"checkpoint=cp2"}
+{"ts":"2026-10-12T12:18:25.650Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l1_api","from":"pending","to":"passed","detail":"checkpoint=cp3"}
+{"ts":"2026-10-12T12:18:43.570Z","actor":"cli","kind":"verdict","node":"l1_shell","detail":"verdict=passed"}
+{"ts":"2026-10-12T12:18:44.012Z","actor":"cli","kind":"node_status","node":"l1_shell","from":"running","to":"passed"}
+{"ts":"2026-10-12T12:19:06.783Z","actor":"cli","kind":"node_content_updated","node":"l3_gates","detail":"fields: expected_outcome"}
+{"ts":"2026-10-12T12:19:07.408Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t12-19-07-276z-i05i15 message=\"auto: structural amend (add-node l2_contract_rev) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T12:19:07.431Z","actor":"cli","kind":"node_created","node":"l2_contract_rev","to":"pending"}
+{"ts":"2026-10-12T12:19:07.436Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=l2_contract_rev; auto_snapshot=2026-10-12t12-19-07-276z-i05i15"}
+{"ts":"2026-10-12T12:19:08.050Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t12-19-07-942z-1cp3yq message=\"auto: structural amend (add-edge e020) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T12:19:08.073Z","actor":"cli","kind":"edge_created","edge":"e020","detail":"l1_test -[depends_on]-> l2_contract_rev"}
+{"ts":"2026-10-12T12:19:08.078Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e020; auto_snapshot=2026-10-12t12-19-07-942z-1cp3yq"}
+{"ts":"2026-10-12T12:19:08.664Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t12-19-08-568z-lpk3yw message=\"auto: structural amend (add-edge e021) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T12:19:08.686Z","actor":"cli","kind":"edge_created","edge":"e021","detail":"l2_contract_rev -[depends_on]-> l3_parity"}
+{"ts":"2026-10-12T12:19:08.691Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e021; auto_snapshot=2026-10-12t12-19-08-568z-lpk3yw"}
+{"ts":"2026-10-12T12:19:09.391Z","actor":"cli","kind":"node_content_updated","node":"l2_contract_rev","detail":"fields: expected_outcome"}
+{"ts":"2026-10-12T12:19:10.772Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t12-19-10-649z-pd62fd message=\"amend: 新增 l2_contract_rev（契约/文档对齐），l3_parity 增该前置\" docs_exported=8"}
+{"ts":"2026-10-12T12:19:17.610Z","actor":"pi-mcp-graph-mcp","kind":"node_content_updated","node":"l1_api","detail":"fields: checkpoints"}
+{"ts":"2026-10-12T12:19:47.592Z","actor":"cli","kind":"node_content_updated","node":"l2_contract_rev","detail":"fields: checkpoints"}
+{"ts":"2026-10-12T12:19:48.269Z","actor":"cli","kind":"verdict","node":"l1_test","detail":"verdict=passed"}
+{"ts":"2026-10-12T12:19:48.719Z","actor":"cli","kind":"node_status","node":"l1_test","from":"running","to":"passed"}
+{"ts":"2026-10-12T12:20:37.912Z","actor":"pi-mcp-graph-mcp","kind":"node_status","node":"l2_visual","from":"pending","to":"ready"}
+{"ts":"2026-10-12T12:20:39.002Z","actor":"pi-mcp-graph-mcp","kind":"node_status","node":"l2_contract_rev","from":"pending","to":"ready"}
+{"ts":"2026-10-12T12:20:42.400Z","actor":"exec-shell","kind":"node_status","node":"l2_visual","from":"ready","to":"running","detail":"claim by exec-shell"}
+{"ts":"2026-10-12T12:20:44.722Z","actor":"exec-backend","kind":"node_status","node":"l2_contract_rev","from":"ready","to":"running","detail":"claim by exec-backend"}
+{"ts":"2026-10-12T12:21:34.833Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l2_contract_rev","from":"pending","to":"passed","detail":"checkpoint=cp1"}
+{"ts":"2026-10-12T12:23:00.536Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l2_contract_rev","from":"pending","to":"passed","detail":"checkpoint=cp2"}
+{"ts":"2026-10-12T12:23:09.079Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l1_api","from":"pending","to":"passed","detail":"checkpoint=cp4"}
+{"ts":"2026-10-12T12:23:09.106Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l1_api"}
+{"ts":"2026-10-12T12:24:16.426Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l2_contract_rev","from":"pending","to":"passed","detail":"checkpoint=cp3"}
+{"ts":"2026-10-12T12:24:36.011Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l2_contract_rev"}
+{"ts":"2026-10-12T12:26:33.697Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l2_visual","from":"pending","to":"passed","detail":"checkpoint=cp1"}
+{"ts":"2026-10-12T12:26:33.743Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l2_visual","from":"pending","to":"passed","detail":"checkpoint=cp2"}
+{"ts":"2026-10-12T12:28:53.158Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l2_visual"}
+{"ts":"2026-10-12T12:31:22.452Z","actor":"cli","kind":"node_content_updated","node":"l3_gates","detail":"fields: expected_outcome"}
+{"ts":"2026-10-12T12:31:22.857Z","actor":"cli","kind":"verdict","node":"l1_api","detail":"verdict=passed"}
+{"ts":"2026-10-12T12:31:23.243Z","actor":"cli","kind":"node_status","node":"l1_api","from":"running","to":"passed"}
+{"ts":"2026-10-12T12:31:23.622Z","actor":"cli","kind":"verdict","node":"l2_contract_rev","detail":"verdict=passed"}
+{"ts":"2026-10-12T12:31:24.054Z","actor":"cli","kind":"node_status","node":"l2_contract_rev","from":"running","to":"passed"}
+{"ts":"2026-10-12T12:31:24.407Z","actor":"cli","kind":"verdict","node":"l2_visual","detail":"verdict=passed"}
+{"ts":"2026-10-12T12:31:24.783Z","actor":"cli","kind":"node_status","node":"l2_visual","from":"running","to":"passed"}
+{"ts":"2026-10-12T12:32:33.608Z","actor":"pi-mcp-graph-mcp","kind":"node_status","node":"l2_motion","from":"pending","to":"ready"}
+{"ts":"2026-10-12T12:32:41.625Z","actor":"exec-motion","kind":"node_status","node":"l2_motion","from":"ready","to":"running","detail":"claim by exec-motion"}
+{"ts":"2026-10-12T12:33:21.658Z","actor":"cli","kind":"node_status","node":"l2_map","from":"pending","to":"ready"}
+{"ts":"2026-10-12T12:33:21.971Z","actor":"cli","kind":"node_status","node":"l2_map","from":"ready","to":"running","detail":"claim by exec-api"}
+{"ts":"2026-10-12T12:47:59.239Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l2_motion","from":"pending","to":"passed","detail":"checkpoint=cp1"}
+{"ts":"2026-10-12T12:48:04.165Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l2_motion","from":"pending","to":"passed","detail":"checkpoint=cp2"}
+{"ts":"2026-10-12T12:49:16.150Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l2_motion"}
+{"ts":"2026-10-12T12:53:51.238Z","actor":"cli","kind":"verdict","node":"l2_motion","detail":"verdict=passed"}
+{"ts":"2026-10-12T12:53:51.605Z","actor":"cli","kind":"node_status","node":"l2_motion","from":"running","to":"passed"}
+{"ts":"2026-10-12T13:08:49.626Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l2_map","from":"pending","to":"passed","detail":"checkpoint=cp1"}
+{"ts":"2026-10-12T13:08:49.642Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l2_map","from":"pending","to":"passed","detail":"checkpoint=cp2"}
+{"ts":"2026-10-12T13:08:49.655Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l2_map","from":"pending","to":"passed","detail":"checkpoint=cp3"}
+{"ts":"2026-10-12T13:11:22.065Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l2_map"}
+{"ts":"2026-10-12T13:17:48.029Z","actor":"cli","kind":"verdict","node":"l2_map","detail":"verdict=passed"}
+{"ts":"2026-10-12T13:17:48.419Z","actor":"cli","kind":"node_status","node":"l2_map","from":"running","to":"passed"}
+{"ts":"2026-10-12T13:18:50.092Z","actor":"pi-mcp-graph-mcp","kind":"node_status","node":"l2_dialogs","from":"pending","to":"ready"}
+{"ts":"2026-10-12T13:18:58.265Z","actor":"exec-shell","kind":"node_status","node":"l2_dialogs","from":"ready","to":"running","detail":"claim by exec-shell"}
+{"ts":"2026-10-12T13:19:01.663Z","actor":"pi-mcp-graph-mcp","kind":"node_status","node":"l2_share","from":"pending","to":"ready"}
+{"ts":"2026-10-12T13:19:06.676Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t13-19-06-563z-o1qi32 message=\"auto: structural amend (add-node adr_0004) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T13:19:06.702Z","actor":"cli","kind":"adr_created","node":"adr_0004","to":"proposed","detail":"岛屿水合走外链脚本 + createRoot，禁用 client:*，不放宽 script-src 'self'"}
+{"ts":"2026-10-12T13:19:06.706Z","actor":"cli","kind":"graph_amended","detail":"action=add-node target=adr_0004; auto_snapshot=2026-10-12t13-19-06-563z-o1qi32"}
+{"ts":"2026-10-12T13:19:09.304Z","actor":"exec-backend","kind":"node_status","node":"l2_share","from":"ready","to":"running","detail":"claim by exec-backend"}
+{"ts":"2026-10-12T13:19:12.746Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t13-19-12-649z-7vbvhj message=\"auto: structural amend (add-edge e_adr0004_ctx_ui) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T13:19:12.769Z","actor":"cli","kind":"edge_created","edge":"e_adr0004_ctx_ui","detail":"adr_0004 -[decides]-> ctx_ui"}
+{"ts":"2026-10-12T13:19:12.773Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e_adr0004_ctx_ui; auto_snapshot=2026-10-12t13-19-12-649z-7vbvhj"}
+{"ts":"2026-10-12T13:19:13.309Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t13-19-13-206z-00ydw2 message=\"auto: structural amend (add-edge e_adr0004_ctx_delivery) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T13:19:13.332Z","actor":"cli","kind":"edge_created","edge":"e_adr0004_ctx_delivery","detail":"adr_0004 -[decides]-> ctx_delivery"}
+{"ts":"2026-10-12T13:19:13.337Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e_adr0004_ctx_delivery; auto_snapshot=2026-10-12t13-19-13-206z-00ydw2"}
+{"ts":"2026-10-12T13:19:30.377Z","actor":"cli","kind":"node_content_updated","node":"l3_gates","detail":"fields: expected_outcome"}
+{"ts":"2026-10-12T13:19:42.989Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t13-19-42-690z-tjsm5j message=\"amend: adr_0004 岛屿水合走外链脚本+createRoot(禁用client:*、保持script-src 'self')；decides→ctx_ui/ctx_delivery；l3_gates 增岛屿水合 DoD。触发自 l2_map/l2_motion 实测 CSP 内联脚本拦截\" docs_exported=9"}
+{"ts":"2026-10-12T13:36:11.431Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l2_share","from":"pending","to":"passed","detail":"checkpoint=cp1"}
+{"ts":"2026-10-12T13:36:17.968Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l2_share","from":"pending","to":"passed","detail":"checkpoint=cp2"}
+{"ts":"2026-10-12T13:36:24.863Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l2_share","from":"pending","to":"passed","detail":"checkpoint=cp3"}
+{"ts":"2026-10-12T13:37:28.474Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l2_share"}
+{"ts":"2026-10-12T13:44:31.064Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l2_dialogs","from":"pending","to":"passed","detail":"checkpoint=cp1"}
+{"ts":"2026-10-12T13:44:45.866Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l2_dialogs","from":"pending","to":"passed","detail":"checkpoint=cp2"}
+{"ts":"2026-10-12T13:44:45.924Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l2_dialogs","from":"pending","to":"passed","detail":"checkpoint=cp3"}
+{"ts":"2026-10-12T13:45:04.212Z","actor":"cli","kind":"verdict","node":"l2_share","detail":"verdict=passed"}
+{"ts":"2026-10-12T13:45:04.584Z","actor":"cli","kind":"node_status","node":"l2_share","from":"running","to":"passed"}
+{"ts":"2026-10-12T13:46:53.783Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l2_dialogs"}
+{"ts":"2026-10-12T13:48:12.547Z","actor":"pi-mcp-graph-mcp","kind":"snapshot_created","detail":"snapshot=2026-10-12t13-48-12-431z-vcfv8p message=\"auto: structural amend (add-node l2_island_contract_fix) by pi-mcp-graph-mcp\" docs_export=skipped"}
+{"ts":"2026-10-12T13:48:12.566Z","actor":"pi-mcp-graph-mcp","kind":"node_created","node":"l2_island_contract_fix","to":"pending"}
+{"ts":"2026-10-12T13:48:12.570Z","actor":"pi-mcp-graph-mcp","kind":"graph_amended","detail":"action=add-node target=l2_island_contract_fix; auto_snapshot=2026-10-12t13-48-12-431z-vcfv8p"}
+{"ts":"2026-10-12T13:48:21.994Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t13-48-21-896z-6thhql message=\"auto: structural amend (add-edge e_l2fix_dep_dialogs) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T13:48:22.014Z","actor":"cli","kind":"edge_created","edge":"e_l2fix_dep_dialogs","detail":"l2_island_contract_fix -[depends_on]-> l2_dialogs"}
+{"ts":"2026-10-12T13:48:22.019Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e_l2fix_dep_dialogs; auto_snapshot=2026-10-12t13-48-21-896z-6thhql"}
+{"ts":"2026-10-12T13:48:22.534Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t13-48-22-425z-wy1bm3 message=\"auto: structural amend (add-edge e_l2fix_dep_map) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T13:48:22.554Z","actor":"cli","kind":"edge_created","edge":"e_l2fix_dep_map","detail":"l2_island_contract_fix -[depends_on]-> l2_map"}
+{"ts":"2026-10-12T13:48:22.558Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e_l2fix_dep_map; auto_snapshot=2026-10-12t13-48-22-425z-wy1bm3"}
+{"ts":"2026-10-12T13:48:23.068Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t13-48-22-958z-ck8fi2 message=\"auto: structural amend (add-edge e_l3gates_dep_l2fix) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T13:48:23.090Z","actor":"cli","kind":"edge_created","edge":"e_l3gates_dep_l2fix","detail":"l3_gates -[depends_on]-> l2_island_contract_fix"}
+{"ts":"2026-10-12T13:48:23.094Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e_l3gates_dep_l2fix; auto_snapshot=2026-10-12t13-48-22-958z-ck8fi2"}
+{"ts":"2026-10-12T13:49:48.054Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t13-49-47-942z-9tz185 message=\"auto: structural amend (remove-edge e_l2fix_dep_dialogs) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T13:49:48.069Z","actor":"cli","kind":"node_content_updated","node":"l2_island_contract_fix","detail":"fields: plan"}
+{"ts":"2026-10-12T13:49:48.113Z","actor":"cli","kind":"edge_deleted","edge":"e_l2fix_dep_dialogs"}
+{"ts":"2026-10-12T13:49:48.116Z","actor":"cli","kind":"graph_amended","detail":"action=remove-edge target=e_l2fix_dep_dialogs; auto_snapshot=2026-10-12t13-49-47-942z-9tz185"}
+{"ts":"2026-10-12T13:49:48.627Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t13-49-48-490z-xsnayn message=\"auto: structural amend (remove-edge e_l2fix_dep_map) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T13:49:48.709Z","actor":"cli","kind":"edge_deleted","edge":"e_l2fix_dep_map"}
+{"ts":"2026-10-12T13:49:48.712Z","actor":"cli","kind":"graph_amended","detail":"action=remove-edge target=e_l2fix_dep_map; auto_snapshot=2026-10-12t13-49-48-490z-xsnayn"}
+{"ts":"2026-10-12T13:49:49.246Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t13-49-49-133z-rumv8t message=\"auto: structural amend (remove-edge e_l3gates_dep_l2fix) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T13:49:49.343Z","actor":"cli","kind":"edge_deleted","edge":"e_l3gates_dep_l2fix"}
+{"ts":"2026-10-12T13:49:49.358Z","actor":"cli","kind":"graph_amended","detail":"action=remove-edge target=e_l3gates_dep_l2fix; auto_snapshot=2026-10-12t13-49-49-133z-rumv8t"}
+{"ts":"2026-10-12T13:49:49.923Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t13-49-49-807z-wpzcui message=\"auto: structural amend (add-edge e_l2fix_dep_dialogs) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T13:49:49.947Z","actor":"cli","kind":"edge_created","edge":"e_l2fix_dep_dialogs","detail":"l2_dialogs -[depends_on]-> l2_island_contract_fix"}
+{"ts":"2026-10-12T13:49:49.951Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e_l2fix_dep_dialogs; auto_snapshot=2026-10-12t13-49-49-807z-wpzcui"}
+{"ts":"2026-10-12T13:49:50.414Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t13-49-50-310z-7wuhmg message=\"auto: structural amend (add-edge e_l2fix_dep_map) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T13:49:50.480Z","actor":"cli","kind":"edge_created","edge":"e_l2fix_dep_map","detail":"l2_map -[depends_on]-> l2_island_contract_fix"}
+{"ts":"2026-10-12T13:49:50.485Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e_l2fix_dep_map; auto_snapshot=2026-10-12t13-49-50-310z-7wuhmg"}
+{"ts":"2026-10-12T13:49:51.034Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t13-49-50-935z-kk3vxs message=\"auto: structural amend (add-edge e_l3gates_dep_l2fix) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T13:49:51.056Z","actor":"cli","kind":"edge_created","edge":"e_l3gates_dep_l2fix","detail":"l2_island_contract_fix -[depends_on]-> l3_gates"}
+{"ts":"2026-10-12T13:49:51.061Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e_l3gates_dep_l2fix; auto_snapshot=2026-10-12t13-49-50-935z-kk3vxs"}
+{"ts":"2026-10-12T13:50:06.574Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t13-50-06-421z-5cj2m8 message=\"amend: 新增 l2_island_contract_fix（详情模式下钻回归 + MAP_EVENT_NAMES 补齐 map:escape/detail-mode-change）；边 l2_map/l2_dialogs→fix→l3_gates。触发自 l2_dialogs 上报 blocker①③\" docs_exported=9"}
+{"ts":"2026-10-12T13:50:15.656Z","actor":"cli","kind":"verdict","node":"l2_dialogs","detail":"verdict=passed"}
+{"ts":"2026-10-12T13:50:16.021Z","actor":"cli","kind":"node_status","node":"l2_dialogs","from":"running","to":"passed"}
+{"ts":"2026-10-12T13:50:53.350Z","actor":"cli","kind":"node_status","node":"l2_island_contract_fix","from":"pending","to":"ready"}
+{"ts":"2026-10-12T13:50:53.669Z","actor":"cli","kind":"node_status","node":"l2_island_contract_fix","from":"ready","to":"running","detail":"claim by exec-api"}
+{"ts":"2026-10-12T13:56:42.078Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l2_island_contract_fix","from":"pending","to":"passed","detail":"checkpoint=cp1"}
+{"ts":"2026-10-12T14:00:08.003Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l2_island_contract_fix","from":"pending","to":"passed","detail":"checkpoint=cp2"}
+{"ts":"2026-10-12T14:00:37.069Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l2_island_contract_fix"}
+{"ts":"2026-10-12T14:04:15.041Z","actor":"cli","kind":"verdict","node":"l2_island_contract_fix","detail":"verdict=passed"}
+{"ts":"2026-10-12T14:04:15.409Z","actor":"cli","kind":"node_status","node":"l2_island_contract_fix","from":"running","to":"passed"}
+{"ts":"2026-10-12T14:09:14.565Z","actor":"cli","kind":"node_status","node":"l3_gates","from":"pending","to":"ready"}
+{"ts":"2026-10-12T14:09:15.035Z","actor":"cli","kind":"node_status","node":"l3_gates","from":"ready","to":"running","detail":"claim by exec-backend"}
+{"ts":"2026-10-12T14:33:28.870Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l3_gates","from":"pending","to":"passed","detail":"checkpoint=cp1"}
+{"ts":"2026-10-12T14:33:34.138Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l3_gates","from":"pending","to":"passed","detail":"checkpoint=cp2"}
+{"ts":"2026-10-12T14:33:39.786Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l3_gates","from":"pending","to":"failed","detail":"checkpoint=cp3"}
+{"ts":"2026-10-12T14:34:11.110Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l3_gates"}
+{"ts":"2026-10-12T14:36:01.863Z","actor":"pi-mcp-graph-mcp","kind":"snapshot_created","detail":"snapshot=2026-10-12t14-36-01-748z-uxoxri message=\"auto: structural amend (add-node l3_typecheck_fix) by pi-mcp-graph-mcp\" docs_export=skipped"}
+{"ts":"2026-10-12T14:36:01.883Z","actor":"pi-mcp-graph-mcp","kind":"node_created","node":"l3_typecheck_fix","to":"pending"}
+{"ts":"2026-10-12T14:36:01.887Z","actor":"pi-mcp-graph-mcp","kind":"graph_amended","detail":"action=add-node target=l3_typecheck_fix; auto_snapshot=2026-10-12t14-36-01-748z-uxoxri"}
+{"ts":"2026-10-12T14:36:17.450Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t14-36-17-353z-s8jy50 message=\"auto: structural amend (add-edge e_l3tc_dep_motion) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T14:36:17.469Z","actor":"cli","kind":"edge_created","edge":"e_l3tc_dep_motion","detail":"l2_motion -[depends_on]-> l3_typecheck_fix"}
+{"ts":"2026-10-12T14:36:17.473Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e_l3tc_dep_motion; auto_snapshot=2026-10-12t14-36-17-353z-s8jy50"}
+{"ts":"2026-10-12T14:36:17.981Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t14-36-17-878z-fg2rnv message=\"auto: structural amend (add-edge e_l3tc_dep_share) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T14:36:18.003Z","actor":"cli","kind":"edge_created","edge":"e_l3tc_dep_share","detail":"l2_share -[depends_on]-> l3_typecheck_fix"}
+{"ts":"2026-10-12T14:36:18.007Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e_l3tc_dep_share; auto_snapshot=2026-10-12t14-36-17-878z-fg2rnv"}
+{"ts":"2026-10-12T14:36:18.529Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t14-36-18-421z-cg4p1q message=\"auto: structural amend (add-edge e_l3tc_before_gates) by cli\" docs_export=skipped"}
+{"ts":"2026-10-12T14:36:18.551Z","actor":"cli","kind":"edge_created","edge":"e_l3tc_before_gates","detail":"l3_typecheck_fix -[depends_on]-> l3_gates"}
+{"ts":"2026-10-12T14:36:18.555Z","actor":"cli","kind":"graph_amended","detail":"action=add-edge target=e_l3tc_before_gates; auto_snapshot=2026-10-12t14-36-18-421z-cg4p1q"}
+{"ts":"2026-10-12T14:36:18.937Z","actor":"cli","kind":"node_content_updated","node":"l4_cutover","detail":"fields: expected_outcome"}
+{"ts":"2026-10-12T14:36:52.342Z","actor":"cli","kind":"snapshot_created","detail":"snapshot=2026-10-12t14-36-52-220z-3yhyd9 message=\"amend: 新增 l3_typecheck_fix（清 motion.ts/share-card.ts 10条类型错误，l3_gates 门禁红因）；边 l2_motion/l2_share→l3_typecheck_fix→l3_gates；l4_cutover 增文档同步 DoD\" docs_exported=9"}
+{"ts":"2026-10-12T14:38:08.038Z","actor":"cli","kind":"node_status","node":"l3_typecheck_fix","from":"pending","to":"ready"}
+{"ts":"2026-10-12T14:38:13.685Z","actor":"cli","kind":"node_status","node":"l3_typecheck_fix","from":"ready","to":"running","detail":"claim by exec-typefix"}
+{"ts":"2026-10-12T14:41:00.483Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l3_typecheck_fix","from":"pending","to":"passed","detail":"checkpoint=cp1"}
+{"ts":"2026-10-12T14:51:14.117Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l3_typecheck_fix","from":"pending","to":"passed","detail":"checkpoint=cp2"}
+{"ts":"2026-10-12T14:51:52.835Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l3_typecheck_fix"}
+{"ts":"2026-10-12T14:53:27.544Z","actor":"cli","kind":"verdict","node":"l3_typecheck_fix","detail":"verdict=passed"}
+{"ts":"2026-10-12T14:53:27.897Z","actor":"cli","kind":"node_status","node":"l3_typecheck_fix","from":"running","to":"passed"}
+{"ts":"2026-10-12T14:54:54.128Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l3_gates","from":"failed","to":"pending","detail":"checkpoint=cp3"}
+{"ts":"2026-10-12T14:55:00.139Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l3_gates","from":"pending","to":"passed","detail":"checkpoint=cp3"}
+{"ts":"2026-10-12T14:55:26.965Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l3_gates"}
+{"ts":"2026-10-12T14:57:52.043Z","actor":"cli","kind":"verdict","node":"l3_gates","detail":"verdict=passed"}
+{"ts":"2026-10-12T14:57:52.370Z","actor":"cli","kind":"node_status","node":"l3_gates","from":"running","to":"passed"}
+{"ts":"2026-10-12T14:58:39.602Z","actor":"cli","kind":"node_status","node":"l3_parity","from":"pending","to":"ready"}
+{"ts":"2026-10-12T14:58:40.064Z","actor":"cli","kind":"node_status","node":"l3_parity","from":"ready","to":"running","detail":"claim by exec-parity"}
+{"ts":"2026-10-12T15:07:37.593Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l3_parity","from":"pending","to":"passed","detail":"checkpoint=cp1"}
+{"ts":"2026-10-12T15:16:15.280Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l3_parity","from":"pending","to":"passed","detail":"checkpoint=cp2"}
+{"ts":"2026-10-12T15:18:03.409Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l3_parity","from":"pending","to":"passed","detail":"checkpoint=cp3"}
+{"ts":"2026-10-12T15:27:50.183Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l3_parity"}
+{"ts":"2026-10-12T15:28:54.310Z","actor":"cli","kind":"verdict","node":"l3_parity","detail":"verdict=passed"}
+{"ts":"2026-10-12T15:28:54.652Z","actor":"cli","kind":"node_status","node":"l3_parity","from":"running","to":"passed"}
+{"ts":"2026-10-12T15:29:28.013Z","actor":"cli","kind":"node_content_updated","node":"l3_verify","detail":"fields: expected_outcome"}
+{"ts":"2026-10-12T15:31:39.699Z","actor":"pi-mcp-graph-mcp","kind":"node_status","node":"l3_verify","from":"pending","to":"ready"}
+{"ts":"2026-10-12T15:31:44.470Z","actor":"exec-verify","kind":"node_status","node":"l3_verify","from":"ready","to":"running","detail":"claim by exec-verify"}
+{"ts":"2026-10-12T15:32:12.949Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l3_verify","from":"pending","to":"passed","detail":"checkpoint=cp1"}
+{"ts":"2026-10-12T15:35:20.408Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l3_verify","from":"pending","to":"passed","detail":"checkpoint=cp2"}
+{"ts":"2026-10-12T15:37:12.864Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l3_verify"}
+{"ts":"2026-10-12T15:45:23.090Z","actor":"cli","kind":"node_content_updated","node":"l4_cutover","detail":"fields: expected_outcome"}
+{"ts":"2026-10-12T15:47:31.395Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l3_verify"}
+{"ts":"2026-10-12T15:51:51.585Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l3_gates","from":"passed","to":"pending","detail":"checkpoint=cp3"}
+{"ts":"2026-10-12T15:51:59.008Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l3_gates","from":"pending","to":"passed","detail":"checkpoint=cp3"}
+{"ts":"2026-10-12T15:52:24.139Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l3_gates"}
+{"ts":"2026-10-12T15:55:48.648Z","actor":"cli","kind":"verdict","node":"l3_gates","detail":"verdict=passed"}
+{"ts":"2026-10-12T15:57:24.610Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l3_verify"}
+{"ts":"2026-10-12T15:57:37.239Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l3_verify","from":"pending","to":"passed","detail":"checkpoint=cp3"}
+{"ts":"2026-10-12T15:59:17.189Z","actor":"cli","kind":"verdict","node":"l3_verify","detail":"verdict=passed"}
+{"ts":"2026-10-12T15:59:17.609Z","actor":"cli","kind":"node_status","node":"l3_verify","from":"running","to":"passed"}
+{"ts":"2026-10-12T16:01:13.849Z","actor":"cli","kind":"node_status","node":"l4_cutover","from":"pending","to":"ready"}
+{"ts":"2026-10-12T16:01:14.237Z","actor":"cli","kind":"node_status","node":"l4_cutover","from":"ready","to":"running","detail":"claim by exec-cutover"}
+{"ts":"2026-10-12T16:27:33.754Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l4_cutover","from":"pending","to":"passed","detail":"checkpoint=cp1"}
+{"ts":"2026-10-12T16:27:41.632Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l4_cutover","from":"pending","to":"skipped","detail":"checkpoint=cp2"}

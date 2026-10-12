@@ -1,0 +1,181 @@
+id: l3_gates
+type: task
+label: 构建与静态安全门禁收口
+level: 3
+context: ctx_delivery
+status: passed
+plan:
+  description: >-
+    收口新站构建与静态安全门禁，等价覆盖旧门禁：类型检查、静态安全检查（不引用学生明细数据文件、无跨源与内联脚本、省份白名单与 js/province 数量一致、script-src 无
+    unsafe-inline）、对比度与调色板同值断言；自建 ECharts 产物的角色按 ADR 结论交代（退役则移除其 CI 步骤并说明）。范围：构建与检查脚本、CI 工作流、package.json 脚本；不改产品行为。
+expected_outcome:
+  definition_of_done:
+    - 一条 npm 构建命令串起类型检查、四项静态安全断言与对比度同值断言，退出码 0
+    - 反例验证：故意让页面引用学生明细数据文件时构建失败（反例记录为证）
+    - 省份白名单与 js/province 目录数量不一致时构建失败；CI 在分支上跑绿
+    - 构建产物与部署面不得泄露密钥：dist/ 中不得出现 .dev.vars（或断言其不可被请求），产物扫描无密钥字面量 —— 复核发现 F3
+    - 构建门禁复核 CI 的 Node 版本与依赖 engines 匹配（F4 的守门口）
+    - 断言 Worker 文档响应与静态资源的响应头集合一致（CSP / nosniff / referrer / x-frame-options / permissions-policy 逐条），缺失即构建或检查失败
+    - >-
+      按 ADR-0002 退役自建 ECharts vendor 产物与其 CI 同步步骤（复核证据 F-2：main 上该步骤本来就红，build-vendor 产出与已提交文件差 1 行 13 字节）——并撤销 l1_test
+      期间的非阻塞降级
+    - >-
+      把 public/_headers 与 src/lib/security-headers.ts 两处同源声明钉在一起断言（防漂移）；并更新 build.js 里「地图数据仍由 Pages Functions
+      提供」的陈旧提示文案为 Worker/Workers Assets 口径 —— 复核发现
+    - >-
+      渲染页在 script-src 'self' 下岛屿真实水合（ADR-0004）：断言 Worker 渲染的 HTML 中所有 <script> 均带 src（存在性检查：无内联脚本体）、CSP 不含
+      unsafe-inline；并以真实浏览器证明地图岛探针（window 上由 createRoot 挂载的标记）已定义——反例：出现内联脚本即门禁失败
+attempts: 0
+max_attempts: 3
+created_at: '2026-10-12T11:08:14.228Z'
+updated_at: '2026-10-12T15:55:48.639Z'
+checkpoints:
+  - id: cp1
+    label: 类型检查与四项静态断言迁移
+    status: passed
+    verifier: auto
+  - id: cp2
+    label: 反例验证与白名单断言
+    status: passed
+    verifier: auto
+  - id: cp3
+    label: CI 绿
+    status: passed
+    verifier: auto
+assigned_to: exec-backend
+execution_report:
+  summary: >-
+    **复核 P1 已修复（生成类型的新树风险），门禁复跑全绿。** 选型：建法① —— **提交** `worker-configuration.d.ts`（依据 Cloudflare Workers 官方 TypeScript
+    文档，经 context7 核对：「we recommend you commit your generated types file for use in CI」，并可用官方 `wrangler types --check` 在
+    CI 防漂移）。动作：`git add worker-configuration.d.ts`（本就不在 `.gitignore`；`git ls-files --cached --others --exclude-standard`
+    里可见），保留「改绑定后重跑 `npm run cf:types`」提醒，新增脚本 `cf:types:check`；`build.js` 静态段新增 **门禁 A2** 三条拦截（① 文件缺失 → 给可操作提示；② 被
+    `.gitignore` 规则匹配 → 失败；③ `wrangler types --check` 过期 → 失败），`npm run build` 内部先跑 `--check` 再 `astro check`，CI
+    因此无需新增步骤；`docs/build-gates.md` 新增「生成类型为什么是门禁的一部分」小节 + A2 行。**反例（`.wrangler/probe-tmp/p1-regression-rig.mjs` →
+    `p1-regression-out.json`）**：① 删文件 → `--static-only` exit 1（提示跑 `cf:types` 并提交），同状态 `npx astro check` exit
+    1、`ts(2307) Cannot find module 'cloudflare:workers'` 命中 3 次（三个 API 路由，二重锁复现）；② 写进 `.gitignore` → exit 1；③
+    `wrangler.jsonc` 加 var 不重生成 → `--check` exit 1；三者均按 sha256 逐字节还原，还原后门禁 exit 0。**最新读数**：`npm run build` exit 0（`▶
+    wrangler types --check` up to date → `astro check` Result (48 files) 0 error / 0 warning / 0 hints → `astro build` 0
+    → `.dev.vars` 复制件已移除 → 静态断言 **15 组**含对比度/调色板 37 项、产物扫描无泄漏）；`npm run check:runtime` exit 0（9 组：3 脚本全外链、5
+    条安全头两处逐字一致、`/.dev.vars` `/js/data.js` `/js/vendor/echarts.min.js` 全 404）；`npm run test:api` exit 0（19/19 pass）、`npm
+    ci --dry-run` 0、语法检查 0；CI 五步本地复现全绿；`find dist -name ".dev.vars*"` 空；`git diff main -- js/ css/ index.html DESIGN.md`
+    唯一差异是 `js/vendor/echarts.min.js` 的 20 行删除。cp1/cp2/cp3 全 passed（cp3 已 passed→pending→passed），累计 **22
+    个注入反例**全部命中预期断言并逐字节还原。**请 l4_cutover 的提交策略务必包含 `worker-configuration.d.ts`。**
+  started_at: '2026-10-12T14:09:15.024Z'
+  artifacts:
+    - build.js
+    - scripts/check-runtime.mjs
+    - .github/workflows/ci.yml
+    - package.json
+    - src/scripts/share-boot.ts
+    - docs/build-gates.md
+    - worker-configuration.d.ts
+  blockers:
+    - >-
+      （已修复，复核 P1）生成类型 `worker-configuration.d.ts` 的新树风险已按官方建法关闭：选 **建法①（提交生成类型）** —— 该文件本来就没被 `.gitignore`，本次 `git add`
+      纳入索引（`git ls-files` 可查），并在门禁里新增三项拦截 + 三个反例（见 notes 证据⑥）。**最终提交时必须包含它**（l4_cutover 的提交策略请带上；判据：`git ls-files
+      --cached --others --exclude-standard` 里能看到它，且 `wrangler types --check` 退出 0）。
+    - >-
+      （已消除，留档）类型阻塞：astro check 的 10 条错误已由新节点 **l3_typecheck_fix（exec-typefix，passed）** 清零（motion.ts 两处
+      `querySelectorAll<HTMLElement>` + 移除多余 `as EventListener`；share-card.ts bytes 声明为
+      `Uint8Array<ArrayBuffer>`）。复跑：`astro check` = Result (48 files) / 0 error / 0 warning / 0 hints。
+    - >-
+      （已转派，留档）文档漂移：`AGENTS.md`（第 25/33/36/42/51/102/104 行）、`README.md`（第 35/38/50/55/76/104/105 行）、`DEPLOYMENT.md`（第
+      28/189/275/292 行）仍在讲已删除的 `js/vendor/echarts.min.js` / `npm run vendor:build` 与旧版门禁描述。主控已把「文档与代码同步」追加进 l4_cutover 的
+      DoD。
+    - >-
+      （follow-up，不阻塞，未获授权故未做）① `esbuild` devDependency 在 vendor 生成器删除后已无人使用；移除它必须同时改 `package-lock.json` 并跑真 `npm ci`
+      验证，超出本节点 DoD。② `scripts/vendor/echarts-entry.mjs`（736B）保留作「按需注册模块集」参考，因为 `src/lib/echarts.ts` 第 4
+      行注释以它为准、该文件在边界外；要彻底清空 `scripts/vendor/` 请顺带授权改那一行注释。③ 远端 CI 未触发（无凭据、不允许 push），以本地五步复现代替（现在全绿）。④ 未跑破坏性的真 `npm
+      ci`，改用 `npm ci --dry-run` 验证锁文件同步（exit 0）。
+  notes: >-
+    == 状态 ==\n复核 P1（生成类型 `worker-configuration.d.ts` 的新树风险）已修复：cp1/cp2/cp3 全 passed，9 条 DoD 全部落地并有可复跑证据；本轮为收尾后的 P1
+    修复复核。\n\n== P1 修法（选型 + 依据 + 新增门禁）==\n- **选型：建法①（提交生成类型）**。依据 Cloudflare Workers 官方 TypeScript 文档（经 context7
+    核对，`developers.cloudflare.com/workers/languages/typescript`）：“We recommend you **commit** your generated types file
+    for use in CI… Alternatively, if you commit your generated types file and want to verify it stays up-to-date in CI,
+    you can use the `--check` flag”，官方示例即 `npx wrangler types --check` → `npm run build` → `npm test`；建法②（ignore + CI
+    生成）需要额外步骤且 CI 与本地脚本都得多一次生成，故选 ① 并额外用官方 `--check` 防漂移。\n- **动作**：`git add worker-configuration.d.ts`（它本就不在
+    `.gitignore` 里；`git ls-files --cached worker-configuration.d.ts` 可查、`git ls-files --cached --others
+    --exclude-standard` 里也有它）；`tsconfig.json` 里“改了 wrangler.jsonc 的绑定后重跑 `npm run cf:types`”的提醒保留；新增 npm 脚本
+    `cf:types:check` = `wrangler types --check`。\n- **新增门禁 A2（build.js 静态段，三条拦截）**：① 文件不存在 → 失败并给可操作提示（`npm run
+    cf:types` + 提交），不拦的话到 astro check 只会看到难懂的 ts(2307)；② 被 `.gitignore` 规则匹配（`git check-ignore -q --no-index`）→
+    失败（生成类型必须提交，别当纯生成物忽略掉）；③ `wrangler types --check`（官方，退出码 1 = 过期）→ 失败并提示重跑生成。约 1.3s，`--static-only` 里也跑。\n- **CI
+    无需加步骤**：`npm run build` 已包含该 `--check`（保持“一条命令”的 DoD）；`ci.yml` 的步骤注释里写明了这一条。文档 `docs/build-gates.md`
+    新增「生成类型为什么是门禁的一部分」小节与 A2 行，并注明官方依据与的反例。\n\n== 证据⑥：P1 的三个反例（脚本 `.wrangler/probe-tmp/p1-regression-rig.mjs`，读数
+    `p1-regression-out.json`）==\n1. **新树缺文件**：删掉 `worker-configuration.d.ts` → `node build.js --static-only` **exit
+    1**：`❌ 缺少 worker-configuration.d.ts：它是 npm run cf:types（wrangler types）的产物，官方建议提交进仓库，否则 CI 的新树里没有绑定类型（astro check 会报
+    ts(2307)）。跑一次 npm run cf:types 并提交生成结果。`；同一状态下 `npx astro check` **exit 1**，`ts(2307) Cannot find module
+    'cloudflare:workers'` 命中 **3 次**（对应三个 `src/pages/api/**` 路由）—— 这就是复核说的二重锁，已复现。\n2. **被 .gitignore 吞掉**：把该文件写进
+    `.gitignore` → `node build.js --static-only` **exit 1**：`❌ worker-configuration.d.ts 被 .gitignore
+    的规则匹配了：生成类型必须提交进仓库（官方建议），不要把它当生成物忽略掉 ——一旦它没被跟踪，CI 的新树就会缺绑定类型（astro check 报 ts(2307)）。`\n3. **与 wrangler.jsonc 漂移**：给
+    `wrangler.jsonc` 加一个 `vars` 项但不重跑生成 → `node build.js --static-only` **exit 1**：`❌ wrangler types --check 退出码
+    1：worker-configuration.d.ts 与 wrangler.jsonc 不一致。改了绑定、兼容性日期或 compatibility_flags 之后，必须重跑 npm run cf:types
+    并提交生成结果。`\n三个用例结束后均按 sha256 逐字节还原（`.gitignore`、`wrangler.jsonc`、生成类型文件），还原后 `node build.js --static-only` **exit
+    0**。新树口径读数：`freshTreeFileSet = { included: true, inIndex: true, ignoredBy: '(未被 ignore)' }`。\n\n== 收尾复跑读数（P1 修复后，日志
+    `.wrangler/probe-tmp/final2-*.log`）==\n- `npm run build` → **exit 0**：新增阶段 `▶ wrangler types --check（生成类型是否与
+    wrangler.jsonc 一致）` → up to date；`▶ astro check` → `Result (48 files): 0 errors / 0 warnings / 0 hints`；`▶ astro
+    build` → exit 0；`⚠️ dist/server/.dev.vars … 已就地移除`；`✅ 构建与静态安全门禁通过：静态断言 15 组（含对比度/调色板 37 项）、astro check 与 astro build
+    退出码 0、产物扫描无泄漏`（`--static-only` 为 11 组：原 9 组 + A2「生成类型在位且未被 ignore」+「wrangler types --check 通过」）。\n- `npm run
+    check:runtime` → **exit 0**：`GET / → 200 text/html（10455 字节）`、`HEAD /favicon.svg → 200`、`HEAD /.dev.vars →
+    404`、`HEAD /js/data.js → 404`、`HEAD /js/vendor/echarts.min.js → 404`、9 组断言（脚本全外链 3 个、安全头两处一致、越权路径不可达）。\n- `npm run
+    test:api` → **exit 0**（`tests 19 / pass 19 / fail 0 / todo 0 / suites 4`）；CI 语法检查循环 → **exit 0**；`npm ci --dry-run`
+    → **exit 0**。\n- `find dist -name ".dev.vars*"` → 空；`git diff main -- js/ css/ index.html DESIGN.md` → 只有
+    `js/vendor/echarts.min.js | 20 deletions`（与主控核对一致）。\n- CI 五步本地复现：`npm ci --dry-run` 0 / `npm run build` 0 /
+    `check:runtime` 0 / `test:api` 0 / 语法 0 —— 五步全绿。\n\n== DoD 逐条（全部 ✅）==\n1) 一条命令串起类型检查 + 四项静态断言 + 对比度同值断言，退出码 0：✅ `npm
+    run build` = `node build.js`（内部 spawn `wrangler types --check` / `astro check` / `astro build`，统一汇总退出码），实测 exit 0；另留
+    `--static-only` / `--artifacts-only` 两个诊断开关。\n2) 反例：页面引用学生明细数据即失败：✅ 注入 `import probeStudents from
+    '../../js/data.js'` 到 `src/pages/index.astro` → exit 1 报「引用了 js/data.js：完整学生名单不能回到静态资源里」；另加客户端面 `students:raw:v1` /
+    `DETAILS_*` 变量名两条同类反例。\n3) 白名单不一致即失败；CI 绿：✅ 断言为「`AVAILABLE_PROVINCE_FILES` ↔ `js/province/*.js` 双向逐名一致 + 懒加载 glob
+    未被改 + 31 个生成文件外形」；反例（删掉 `zhejiang`）→ exit 1 报「缺少: zhejiang」；CI 五步本地全绿。\n4) 产物不得含密钥（F-3）：✅ 并**真抓到源头**：`astro build`
+    会由 wrangler 把根 `.dev.vars` 拷进 outdir（`dist/server/.dev.vars`，即构建日志里的 `Using secrets defined in
+    .dev.vars`）。门禁只认这一种可预期复制件并在扫描前就地移除（打印可见 ⚠️），其它 `dist/**/.dev.vars*` 一律失败；另扫 `dist/**` 无密钥类取值（只比对
+    `*_PASSPHRASE|_SECRET|_TOKEN|_KEY` 的取值，`DETAILS_HINT` 是公开提示语故不误报）、服务端产物无硬编码密钥字面量、`dist/client/**` 无
+    `students:raw:v1` / `js/data.js` / `DETAILS_*` 名字。运行时另证 `/.dev.vars` → 404。\n5) Node 版本门禁：✅ `package.json` 新增
+    `engines.node = ">=22.12.0"`；build.js 用自写的极简 semver 判定，用本机 `v24.12.0` 与 CI `node-version: 24` 比对 `package.json` /
+    `astro@6.4.8`（`>=22.12.0`）/ `wrangler@4.149.0`（`>=22.0.0`）/ `@astrojs/react@4.4.2`（`18.20.8 || ^20.3.0 ||
+    >=22.0.0`）共 4 条 engines；读不懂的 range 直接失败。反例：engines 抬到 `>=99` → 报本机不满足；CI 降到 20 → 报 CI 不满足。\n6) 文档响应 vs 静态资产响应头逐条一致：✅
+    静态层（`public/_headers` ↔ `src/lib/security-headers.ts` 逐条 + CSP 逐字）+ 运行时层（真实响应比对：`/` 与 `/favicon.svg` 的 CSP / nosniff
+    / referrer / x-frame-options / permissions-policy **5 条逐字相同**）。\n7) 按 ADR-0002 退役 vendor 链：✅ 删除
+    `js/vendor/echarts.min.js` 与 `scripts/build-vendor.mjs`；`package.json` 去掉 `vendor:build`；CI 删掉整条 vendor
+    同步步骤（含非阻塞降级注释）；断言「文件不存在 / 无该脚本 / CI 无 `build-vendor` 字样 / 源码与产物都没有地方**加载**该路径 / `echarts` 依赖在位」。ADR-0002 仍是
+    **proposed**，**accept 待人类**。\n8) 防漂移 + 陈旧文案：✅ 两处声明钉在一起；`build.js` 成功文案已改写为 Worker + Workers Assets（ASSETS 绑定 /
+    `dist/client`）+ KV 两个键 + Vite 打包 npm ECharts；反例（TS 处 `Referrer-Policy` 改成 `no-referrer`）→ exit 1 报「取值不一致」。\n9)
+    ADR-0004 水合断言：✅ 三处守：① 源码层 `.astro` 里 `<script is:inline>` 且无 `src` 即失败（反例通过）；② 运行时层渲染页 3 个 `<script>` 全部带 src、0
+    个内联主体，CSP `script-src 'self'` 无 `unsafe-inline`；③ 真 Chromium 打开首页：`window.__mapProbe.read()` → `{booted: true,
+    activeMapId: 'cn/china', zoom: 1.25, aspectScale: 1, scaleLimit: {min:1.25,max:8}, whitelistCount: 31,
+    viewPointCount: 35, geoRegistryInstalled: true}`，3 个 script 全外链 `/_astro/*.js`，`#share-btn` / `#interaction-note` /
+    `#bottom-sheet` / `#auth-overlay` 都在，**控制台 0 报错 0 警告（无 CSP 违规）**。\n\n== 证据①：反例验证 19 个（全部 exit 1
+    且命中预期断言，之后逐字节还原）==\n静态 14 个（`.wrangler/probe-tmp/negative-tests.mjs` → `negative-out.json`）：页面 import
+    js/data.js、客户端模块提 `students:raw:v1`、客户端模块提 `DETAILS_SESSION_SECRET`、白名单少 `zhejiang`、`<script is:inline>`、两处 CSP 加
+    `unsafe-inline`、TS 处 `Referrer-Policy` 漂移、放回 vendor 产物、放回 vendor 生成器、组件重新 `<script
+    src="/js/vendor/echarts.min.js">`、engines `>=99`、CI node 20、重新引入 Highcharts、`--color-text-muted` 调浅（报 2.88:1 <
+    4.5:1）。\n产物 5 个（`negative-dist-tests.mjs` → `negative-dist-out.json`）：客户端 chunk 塞 `students:raw:v1` /
+    `DETAILS_SESSION_SECRET` / vendor 加载路径、`dist/server/entry.mjs` 写死 `DETAILS_PASSPHRASE =
+    '…'`、`dist/client/.dev.vars`。\n加上 P1 的 3 个反例，本节点累计 **22 个注入反例**，全部 exit 1 且命中的是预期那条断言，逐字节还原后门禁复跑 exit 0。（第一轮的
+    `<script src="/js/vendor/...">` 用例曾漏判，暴露 build.js 的 vendor 正则没跨引号，已修好并复跑通过。）\n\n== 证据②：CI 本地逐步复现 ==\n`npm ci
+    --dry-run` 0 → `npm run build` 0 → `npm run check:runtime` 0 → `npm run test:api` 0（19/19 pass）→ 语法检查
+    0。日志：`.wrangler/probe-tmp/ci-*.log`、`final-*.log`、`final2-*.log`。\n\n== 证据③：类型阻塞的隔离与交接（历史，已由 l3_typecheck_fix
+    消除）==\n脚本 `.wrangler/probe-tmp/diagnostic-isolate-blocker.mjs`、补丁 `diagnostic-patch.diff`、日志 `diagnostic-*.log`。当时用
+    6 行临时补丁证明「修掉这 10 条 → `npm run build` 与 `check:runtime` 全绿」，按 sha256（`81a01420307f17a6` /
+    `1b4d4835177dafa3`）逐字节还原后红的就是 `astro check`；该补丁作为修复节点参考并落地。\n\n== 证据④：其它事实 ==\n- `js/china.js` / `js/province/**` /
+    `js/palette.js` / `css/**` / `DESIGN.md` 与 main **零 diff**；`git diff main -- js/ css/ index.html DESIGN.md` 唯一差异是
+    `js/vendor/echarts.min.js` 的 20 行删除。\n- `src/**` 里没有任何 `client:*` 指令（只有 3 处注释解释为什么不用它）。\n- `dist/client/_headers`
+    的真相：适配器会往前面插一段 `/_astro/*` 的 `Cache-Control: public, max-age=31536000, immutable`，故断言是「public 内容原样包含 +
+    额外内容只能是这一段」（第一版断言太严，实测后修正）。\n- `dist/server/.dev.vars` 只在 `astro build` 时出现，`wrangler dev`（dev:local /
+    check:runtime）跑完不会重现；`dev:local` / `test:api` 用自派生配置显式注入演示口令，不依赖它。\n- 环境：所有 build/测试都带 `TEMP`/`TMP` =
+    `.wrangler/probe-tmp`；`npm run dev:local` 必须从 bash（MSYS 路径转换）启动，cmd 里设 Windows 风格 TEMP 会让 workerd 报
+    `CreateDirectory: miniflare-email-store 拒绝访问`。探针服务/浏览器会话已全部停掉（只剩 l2 的 graph 预览 8934）。\n- 边界自查：改动面 =
+    `build.js`、`scripts/check-runtime.mjs`（新）、`.github/workflows/ci.yml`、`package.json`、`src/scripts/share-boot.ts`（一行 +
+    一行注释）、`docs/build-gates.md`（新）、`worker-configuration.d.ts`（纳入索引以落实建法①），加删除 `js/vendor/echarts.min.js` 与
+    `scripts/build-vendor.mjs`；没碰
+    `js/*.js`、`css/**`、`index.html`、`src/pages/api/**`、`src/lib/**`、`src/components/**`、`src/middleware.ts`、`tests/api-contract.test.mjs`、`.dev.vars`（sha256
+    未变）、`.graph/**`（只经 CLI）。未写 verdict、未流转 passed。
+  verification:
+    verdict: passed
+    checked_at: '2026-10-12T15:55:48.632Z'
+    note: >-
+      主控复核后更新凭据(含 reviewer P1 修复)：worker-configuration.d.ts 已 git add 入索引(git ls-files --cached 可见)、未被 .gitignore
+      匹配；build.js 新增 A2 生成类型门禁(缺文件/被ignore/wrangler types --check 漂移 三拦) + package.json cf:types/cf:types:check；CI 走 npm
+      run build。主控复跑：npm run build EXIT=0(静态断言 15 组，含类型检查/对比度37/产物扫描)、check:runtime EXIT=0(9组，3脚本全外链+头一致+越权路径404)、astro
+      check 0 error。cp1/cp2/cp3 全 passed(cp3 经 passed→pending→passed 重验 P1)。9 条 DoD 全绿；22 注入反例。**遗留转交**：最终提交必须包含
+      worker-configuration.d.ts（l4_cutover 提交策略）；文档漂移转 l4_cutover；F-1/P2(台湾smoke13)呈人类裁定。
+  completed_at: '2026-10-12T14:57:52.361Z'
