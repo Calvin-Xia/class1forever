@@ -46,12 +46,14 @@ Forked from [lvris/map](https://github.com/lvris/map)
 - `js/map.js`: 地图渲染、公开数据、详情查看交互、分享图。
 - `js/palette.js`: 地图与分享图共用的调色板与 canvas 字体。
 - `js/motion.js`: L2 动效层（光标墨晕、磁吸、聚光），无第三方依赖。
+- `favicon.svg`: 站点图标 —— 用 `js/china.js` 生成的国境线剪影，**不要手改**，跑 `npm run favicon:build` 重新生成。
 - `js/vendor/echarts.min.js`: 按需构建的 ECharts。
 - `css/main.css`: 页面样式、地图控件、悬浮卡片、移动端样式。
 - `functions/`: Cloudflare Pages Functions 接口。
 - `shared/data-model.mjs`: 数据规范化、公开聚合统计生成逻辑。
 - `scripts/upload-kv-data.mjs`: 将本地数据写入 Cloudflare KV。
 - `scripts/build-vendor.mjs`: 重新生成 ECharts 按需构建产物。
+- `scripts/build-favicon.mjs`: 从 `js/china.js` 重新生成 `favicon.svg`（共享边两两抵消，34 个省轮廓塌缩成一条国境线）。
 - `scripts/check-contrast.js`: 关键配色的对比度断言，以及 CSS 与 `js/palette.js` 的同值校验。
 - `tests/dev-server.mjs`: 本地前端调试服务器，用假数据顶替 Pages Functions。
 - `DESIGN.md`: 视觉设计规范（纸本图志），改样式前先读它。
@@ -80,6 +82,9 @@ Forked from [lvris/map](https://github.com/lvris/map)
 
 - `npm run vendor:build`
   重新生成 `js/vendor/echarts.min.js`。只在升级 ECharts 时执行。
+
+- `npm run favicon:build`
+  重新生成 `favicon.svg`。改了 `js/china.js` 之后要跑一次；产物提交进仓库，CI 会校验它与数据同步。
 
 - `npm run data:upload -- --dry-run`
   检查当前数据源是否能正确生成 KV 需要的两份数据。

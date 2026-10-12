@@ -13,12 +13,14 @@ Static classmate-distribution map ("蹭饭地图"). The page shows public provin
 - `js/motion.js`: the L2 motion layer — cursor glow, button magnet, card spotlight. No dependencies, rAF-throttled, and registers no listeners at all under `prefers-reduced-motion: reduce` or a coarse pointer.
 - `js/vendor/echarts.min.js`: tree-shaken ECharts build (map/geo/tooltip/visualMap/labelLayout/canvas). Regenerate with `npm run vendor:build`; the committed artifact is what ships.
 - `css/main.css`: layout, theme, map controls, tooltip, bottom-sheet, and auth-modal styles.
+- `favicon.svg`: the site icon — a China silhouette on paper stock, generated from `js/china.js` by `scripts/build-favicon.mjs`. Never hand-edit it; run `npm run favicon:build`. CI re-runs the generator and fails on a diff.
 - `js/data.js`: local-only input for the upload script; gitignored, never loaded by the page.
 - `js/data.template.js`: data shape template (`name/school/city/province`).
 - `functions/`: Pages Functions routes — `api/map/public`, `api/map/details`, `api/auth/details`, `api/auth/logout`.
 - `shared/data-model.mjs`: normalization, province aliases, aggregate build, region filter/sort (used by Functions and the upload script).
 - `scripts/upload-kv-data.mjs`: builds `students:raw:v1` / `students:public:v1` and uploads them to `CLASS_MAP_DATA` KV; sources from `js/data.js` or the `STUDENTS_DATA` env var.
 - `scripts/build-vendor.mjs`: rebuilds `js/vendor/echarts.min.js` from `node_modules/echarts`.
+- `scripts/build-favicon.mjs`: rebuilds `favicon.svg` from `js/china.js`. It projects every province ring, cancels shared borders in pairs (so the 34 province outlines collapse into one national silhouette without any polygon union), then chains the surviving edges into closed loops and decimates them.
 - `scripts/check-contrast.js`: contrast and palette-sync assertions; `build.js` requires it directly, so `npm run build` stays the single entry point.
 - `tests/dev-server.mjs`: local mock of the Pages Functions API plus a static server, used for frontend smoke tests without Cloudflare credentials.
 - `build.js`: static safety checks (see Testing Guidelines).
@@ -31,6 +33,7 @@ Static classmate-distribution map ("蹭饭地图"). The page shows public provin
 - `npm run dev:mock`: local mock of `/api/*` on http://127.0.0.1:8788 (passphrase `demo`). Preferred for frontend work; pass `PUBLIC_DATA_FILE=<path>` to drive it with a real `students:public:v1` export.
 - `npm run cf:dev`: local Cloudflare Pages dev server (serves the real `/api/*` and reads the remote KV). In non-interactive shells it needs `CLOUDFLARE_API_TOKEN` (or `wrangler login` once interactively); the remote KV binding can fail to start in restricted sandboxes, in which case use `npm run dev:mock` for frontend checks.
 - `npm run vendor:build`: regenerate the committed ECharts bundle after upgrading `echarts`.
+- `npm run favicon:build`: regenerate `favicon.svg` after `js/china.js` changes. The artifact is committed; CI verifies it matches the generator output.
 - `npm run data:upload -- --dry-run`: validate the data source can build both KV datasets.
 - `npm run data:upload` / `npm run data:upload:preview`: upload to production / preview KV.
 - `git log --oneline -n 10`: inspect recent commit style before committing.
@@ -44,6 +47,7 @@ Static classmate-distribution map ("蹭饭地图"). The page shows public provin
 - `:root` declares `color-scheme: light`. Without it a system dark mode repaints native scrollbars and form controls dark and they fight the paper surfaces.
 - Interactive elements get `touch-action: manipulation` from the generic `button, a, input` rule. Deliberately not applied to `#map`, which needs native pan and pinch.
 - `.spotlight` must never declare `position`. It sits after `.share-btn` in the cascade, so `position: relative` there silently overrides that button's `position: absolute` and drops it into the document flow, pushing the map down by 40px. Elements that need positioning declare it themselves.
+- Icons share one 24×24 grid and take size, stroke, caps and colour from the `.icon` / `.icon--xs|sm|md|lg` classes. `stroke-width` is computed per size so the **rendered** stroke is a constant 1.5px (one shared number would render 1.13px at 16px and 1.7px at 24px). Never put `stroke-*` presentation attributes on the paths inside an icon — they outrank that CSS — and never introduce a size outside the four tokens. Icons are always inline SVG: no emoji, no icon font, no text glyph standing in for an icon.
 - Province map filenames stay lowercase pinyin (example: `zhejiang.js`).
 - No linter/formatter; keep changes minimal and consistent with nearby code.
 
@@ -65,7 +69,7 @@ Static classmate-distribution map ("蹭饭地图"). The page shows public provin
 - Keep the page same-origin only: no CDN `<script>` tags and no inline `<script>` blocks, so `_headers` can keep `script-src 'self'`. `build.js` enforces both.
 
 ## Testing Guidelines
-No automated framework; CI (`.github/workflows/ci.yml`) runs `npm run build` plus `node --check` over all app files on push/PR. `build.js` checks required files, that `index.html` does not load `js/data.js`, that no script is cross-origin or inline, that no Highcharts reference remains, that the province whitelist matches `js/province/`, that `script-src` has no `unsafe-inline`, and (via `scripts/check-contrast.js`) that key text/background pairs meet WCAG AA and that the CSS tokens match `js/palette.js`.
+No automated framework; CI (`.github/workflows/ci.yml`) runs `npm run build` plus `node --check` over all app files on push/PR, and re-runs `scripts/build-vendor.mjs` / `scripts/build-favicon.mjs` with `git diff --exit-code` to catch artifacts that drifted from their generators. `build.js` checks required files, that `index.html` does not load `js/data.js`, that no script is cross-origin or inline, that no Highcharts reference remains, that the province whitelist matches `js/province/`, that `script-src` has no `unsafe-inline`, and (via `scripts/check-contrast.js`) that key text/background pairs meet WCAG AA and that the CSS tokens match `js/palette.js`.
 
 Manual smoke tests:
 1. `npm run dev:mock`, open the page, verify map render + the colour-band legend (public aggregates only).

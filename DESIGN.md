@@ -329,6 +329,54 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
 
 状态**不能只靠颜色**：斜杠是给色觉障碍用户的第二个信号（`color-not-only`）。
 
+### 4.13 图标系统 `.icon`
+
+全部图标画在同一个 **24×24 网格**上，内容留在 3.2–20.8 之间。尺寸、线宽、端点、颜色只由
+`css/main.css` 的「图标系统」一节决定，**组件里不再各写一个 px 值**。
+
+**尺寸只有四档**：
+
+| 档位 | 尺寸 | 用在哪 |
+|------|------|--------|
+| `--icon-xs` | 14px | 折叠指示箭头 |
+| `--icon-sm` | 16px | 工具栏芯片、缩放三键、两处关闭按钮 |
+| `--icon-md` | 20px | 分享按钮、口令显隐 |
+| `--icon-lg` | 24px | 加载失败面板 |
+
+**线宽按网格反算**，让"渲染后"的视觉线宽恒定在 `--icon-stroke`（1.5px）：
+
+```css
+.icon     { stroke-width: calc(var(--icon-stroke) * 24 / 16); }  /* 16px 显示 */
+.icon--xs { stroke-width: calc(var(--icon-stroke) * 24 / 14); }
+.icon--md { stroke-width: calc(var(--icon-stroke) * 24 / 20); }
+.icon--lg { stroke-width: calc(var(--icon-stroke) * 24 / 24); }
+```
+
+为什么不是"24 网格里都写同一个数"：同一个 `1.7` 在 16px 下只有 1.13px、在 24px 下却有
+1.7px，并排就是一粗一细。实测四档的实际渲染值**全部是 1.50px**。
+
+**图标清单与语义**（语义取自用途，不是取自图形长什么样）：
+
+| 图形 | 语义 | 用在哪 |
+|------|------|--------|
+| 向下箭头入托盘 | 导出 / 保存（**不是**社交分享） | 分享按钮 |
+| 左箭头 | 返回上层 | 「返回全国」 |
+| 加 / 减号 | 缩放 | 缩放控件 |
+| 四角括号 | 回到铺满视图 | 重置视图 |
+| 右尖角（展开时转 90°） | 可展开 | 地区一览 |
+| 叉号 | 关闭 | 面板头、口令弹窗 |
+| 眼睛 + 斜杠 | 口令显隐 | 口令输入框 |
+| 三角感叹号 | 加载失败 | 错误面板 |
+
+**护栏**：
+
+- 路径上**不写任何 `stroke-*` 表现属性**，否则会盖过 `.icon` 的 CSS。
+- 图标一律是**内联 SVG**：不用 emoji、不用字体图标、不用文本字符当图标
+  （原先 `#auth-close` 用的是文字「×」、返回按钮用的是「←」，两处都已换掉）。
+- 装饰性图标 `aria-hidden="true"`；图标按钮的**可访问名写在按钮上**，不写在图标里。
+- 同一页同一层级只用一种描边风格：本页全部是描边图标，没有填充图标。
+- 新增图标时：24 网格 → 内容留在 3.2–20.8 → 只写 `d`/`points` → 挑一个尺寸档。
+
 ---
 
 ## 5. Layout Principles
@@ -533,5 +581,6 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
 | `check-contrast.js` 37 条断言 | 全部色值已按 WCAG 2.2 AA 核算通过（含「弱化墨/次级墨 × 衬纸」两对） |
 | 11 对 CSS ↔ palette 同值 | §2 与 `js/palette.js` `tokens` 一一对应 |
 | `_headers` CSP | 字体走 `fonts.googleapis.com`/`fonts.gstatic.com`（已在 `style-src`/`font-src` 白名单）；纸纹用 `data:`（在 `img-src` 白名单） |
+| `favicon.svg` 由几何数据生成 | 不画通用定位针：`scripts/build-favicon.mjs` 从 `js/china.js` 提取国境线剪影（共享边两两抵消，内部省界自动消失），`npm run favicon:build` 重新生成；CI 会校验产物与数据同步。纸面 `#f7f4ec` + 墨绿 `#1f5245`，349 → 3588 字节 |
 | `js/map.js` 不可 `import` | 画布色与字体仍从 `window.CMapPalette` 读 |
 | 几何数据不可手改 | 本规范不触碰 `js/china.js` 与 `js/province/*.js` |
