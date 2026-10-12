@@ -5,6 +5,9 @@
    ========================================================================== */
 
 :root {
+    /* 声明为浅色，避免系统深色模式下原生滚动条/表单控件跟着变深，和纸面打架。 */
+    color-scheme: light;
+
     /* —— 纸面 —— */
     --color-bg-primary: #f7f4ec;
     --color-bg-secondary: #eae5d8;
@@ -16,7 +19,9 @@
     /* —— 墨 —— */
     --color-text-primary: #17241f;
     --color-text-secondary: #4c5852;
-    --color-text-muted: #5f6a63;
+    /* 弱化墨同时要在纸面 (#f7f4ec, 5.44:1) 和衬纸 (#eae5d8, 4.75:1) 上过 AA。
+       地图版权与比例尺刻度正坐在衬纸上，原来的 #5f6a63 只有 4.48:1。 */
+    --color-text-muted: #5b6660;
 
     /* —— 主色：苔墨绿 —— */
     --color-accent-primary: #4f7f63;
@@ -120,7 +125,9 @@ body {
     letter-spacing: 0.02em;
     color: var(--color-text-primary);
     background-color: var(--color-bg-primary);
+    /* dvh 跟随移动端地址栏收放，vh 会在工具栏收起时量出过高的页面。 */
     min-height: 100vh;
+    min-height: 100dvh;
     overflow-x: hidden;
 }
 
@@ -142,6 +149,14 @@ body {
 :where(button, a, input, [tabindex]):focus-visible {
     outline: 2px solid var(--color-accent-primary);
     outline-offset: 2px;
+}
+
+/* 去掉移动端 300ms 点击延迟。
+   刻意不覆盖 #map：地图需要保留原生拖拽与双指缩放。 */
+button,
+a,
+input {
+    touch-action: manipulation;
 }
 
 /* ==========================================================================
@@ -191,6 +206,7 @@ body {
 .page-wrapper {
     position: relative;
     min-height: 100vh;
+    min-height: 100dvh;
 }
 
 .page {
@@ -228,12 +244,6 @@ body {
     letter-spacing: 0.24em;
     color: var(--color-text-muted);
     margin-bottom: var(--space-3);
-    animation: eyebrow-settle 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@keyframes eyebrow-settle {
-    from { opacity: 0; letter-spacing: 0.44em; }
-    to   { opacity: 1; letter-spacing: 0.24em; }
 }
 
 .page__title {
@@ -270,7 +280,6 @@ body {
     font-size: clamp(0.95rem, 2.2vw, 1.0625rem);
     line-height: 1.8;
     color: var(--color-text-secondary);
-    animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.45s both;
 }
 
 @keyframes rise-in {
@@ -283,7 +292,6 @@ body {
     position: relative;
     padding: var(--space-4) 0 0;
     border-top: 1px solid var(--color-hairline);
-    animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.6s both;
 }
 
 .plate__meta dl {
@@ -300,7 +308,7 @@ body {
 
 .plate__meta dt {
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     letter-spacing: 0.18em;
     color: var(--color-text-muted);
 }
@@ -313,8 +321,10 @@ body {
 }
 
 .plate__seal {
-    width: 54px;
-    height: 54px;
+    /* 用 em 而不是 px：放大系统字号时印章要跟着长大，
+       否则"蹭饭"两个字会顶出方框。 */
+    width: 3.2em;
+    height: 3.2em;
     margin-top: var(--space-5);
     display: grid;
     place-items: center;
@@ -327,13 +337,6 @@ body {
     letter-spacing: 0.08em;
     border-radius: var(--radius-xs);
     box-shadow: inset 0 0 0 2px var(--color-seal-ring);
-    animation: seal-stamp 0.6s cubic-bezier(0.34, 1.4, 0.64, 1) 0.9s both;
-}
-
-@keyframes seal-stamp {
-    0%   { opacity: 0; transform: rotate(-3.5deg) scale(1.6); }
-    55%  { opacity: 1; transform: rotate(-3.5deg) scale(0.94); }
-    100% { opacity: 1; transform: rotate(-3.5deg) scale(1); }
 }
 
 /* ==========================================================================
@@ -556,6 +559,11 @@ button.chip:active {
     color: var(--color-bg-card);
 }
 
+.map-zoom__btn:active {
+    background: var(--color-accent-strong-hover);
+    color: var(--color-bg-card);
+}
+
 .map-zoom__btn:focus-visible {
     outline: 2px solid var(--color-accent-primary);
     outline-offset: -2px;
@@ -582,6 +590,11 @@ button.chip:active {
 .share-btn:hover {
     background: var(--color-accent-strong);
     border-color: var(--color-accent-strong);
+}
+
+.share-btn:active {
+    background: var(--color-accent-strong-hover);
+    border-color: var(--color-accent-strong-hover);
 }
 
 .share-btn:focus-visible {
@@ -614,7 +627,7 @@ button.chip:active {
     bottom: 12px;
     z-index: 10;
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     letter-spacing: 0.06em;
     color: var(--color-text-muted);
     text-decoration: none;
@@ -652,7 +665,7 @@ button.chip:active {
 
 .map-scale__label {
     font-family: var(--font-mono);
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     letter-spacing: 0.1em;
     color: var(--color-text-muted);
 }
@@ -763,9 +776,9 @@ button.chip:active {
 
 .series {
     font-family: var(--font-mono);
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     font-weight: 500;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.16em;
     color: var(--color-accent-secondary);
 }
 
@@ -862,8 +875,8 @@ button.chip:active {
 
 .roster__city {
     font-family: var(--font-mono);
-    font-size: 0.7rem;
-    letter-spacing: 0.18em;
+    font-size: 0.75rem;
+    letter-spacing: 0.16em;
     color: var(--color-accent-secondary);
 }
 
@@ -889,9 +902,9 @@ button.chip:active {
 
 .roster__index {
     flex: 0 0 auto;
-    min-width: 1.7em;
+    min-width: 1.9em;
     font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     color: var(--color-on-ink-muted);
 }
 
@@ -911,6 +924,174 @@ button.chip:active {
 }
 
 /* ==========================================================================
+   地区一览：图表的键盘与读屏替代路径
+   ========================================================================== */
+
+.region-ledger {
+    max-width: 1180px;
+    margin: var(--space-6) auto 0;
+    border-top: 1px solid var(--color-hairline);
+}
+
+.region-ledger__summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-4) 0;
+    cursor: pointer;
+    list-style: none;
+}
+
+/* 自绘箭头，先把浏览器默认的三角收掉 */
+.region-ledger__summary::-webkit-details-marker {
+    display: none;
+}
+
+.region-ledger__summary:focus-visible {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+}
+
+.region-ledger__title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--color-text-primary);
+}
+
+.region-ledger__chevron {
+    width: 0;
+    height: 0;
+    border-left: 5px solid var(--color-text-muted);
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    transition: transform var(--transition-fast);
+}
+
+.region-ledger[open] .region-ledger__chevron {
+    transform: rotate(90deg);
+}
+
+.region-ledger__controls {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-3);
+}
+
+.region-ledger__note {
+    flex: 1 1 auto;
+    max-width: 62ch;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--color-text-secondary);
+}
+
+.region-ledger__sort {
+    flex: 0 0 auto;
+    cursor: pointer;
+}
+
+/* 刻意不给表头 position: sticky。
+   粘性表头会在滚动时压住 Tab 进入的行内按钮，而底部面板本身又是 fixed，
+   两者叠加会让焦点被遮住（WCAG 2.2 2.4.11）。 */
+.region-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    font-size: 0.9rem;
+}
+
+.region-table thead th {
+    padding: 10px 14px;
+    text-align: left;
+    background: var(--color-bg-sunken);
+    border-bottom: 1px solid var(--color-border);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    color: var(--color-text-secondary);
+}
+
+.region-table td,
+.region-table tbody th {
+    padding: 8px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.region-table tbody tr:last-child td,
+.region-table tbody tr:last-child th {
+    border-bottom: 0;
+}
+
+.region-table__name {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    overflow-wrap: anywhere;
+}
+
+.region-table__num {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-secondary);
+}
+
+.region-table__action {
+    width: 1%;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.region-table__btn {
+    min-height: 36px;
+    padding: 0 14px;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-primary);
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.region-table__btn:hover {
+    background: var(--color-accent-strong);
+    border-color: var(--color-accent-strong);
+    color: var(--color-bg-card);
+}
+
+.region-table__btn:active {
+    background: var(--color-accent-strong-hover);
+    border-color: var(--color-accent-strong-hover);
+    color: var(--color-bg-card);
+}
+
+.region-table__btn:focus-visible {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 2px;
+}
+
+.region-table__row:hover {
+    background: var(--color-bg-sunken);
+}
+
+.region-table__empty {
+    padding: 16px 14px;
+    color: var(--color-text-secondary);
+}
+
+/* ==========================================================================
    页脚批注条
    ========================================================================== */
 
@@ -920,7 +1101,6 @@ button.chip:active {
     max-width: 1180px;
     margin: var(--space-5) auto 0;
     padding: 0 var(--space-2);
-    animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.7s both;
 }
 
 .note-container {
@@ -1011,12 +1191,64 @@ button.chip:active {
     }
 }
 
-.bs-drag-indicator {
-    width: 34px;
-    height: 2px;
-    margin: 12px auto 8px;
-    background: var(--color-border-strong);
-    border-radius: var(--radius-xs);
+/* 面板头：显式标题 + 关闭按钮。
+   原来这里只有一条 2px 横杠，暗示"可以下滑关闭"，但代码里从来没有拖拽处理 ——
+   那是个假提示，触屏用户只能靠点遮罩退出。 */
+.bs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-5);
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.bs-header__title {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    color: var(--color-text-muted);
+}
+
+.bs-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin: -4px -8px -4px 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.bs-close[hidden] {
+    display: none;
+}
+
+.bs-close svg {
+    width: 18px;
+    height: 18px;
+}
+
+.bs-close:hover {
+    background: var(--color-bg-sunken);
+    color: var(--color-text-primary);
+}
+
+.bs-close:active {
+    background: var(--color-border-light);
+    color: var(--color-text-primary);
+}
+
+.bs-close:focus-visible {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 2px;
 }
 
 .bs-content {
@@ -1159,6 +1391,11 @@ button.chip:active {
     color: var(--color-text-primary);
 }
 
+.auth-modal__close:active {
+    background: var(--color-border-light);
+    color: var(--color-text-primary);
+}
+
 .auth-modal__close:focus-visible {
     outline: 2px solid var(--color-accent-primary);
     outline-offset: 2px;
@@ -1216,6 +1453,65 @@ button.chip:active {
 
 .auth-modal__input::placeholder {
     color: var(--color-text-muted);
+}
+
+/* 显隐开关贴在输入框右侧。口令是姓名拼音，打错了看不出来，
+   没有这个开关就只能整段删掉重输。 */
+.auth-modal__field {
+    position: relative;
+}
+
+.auth-modal__input {
+    padding-right: 52px;
+}
+
+.auth-modal__toggle {
+    position: absolute;
+    top: 50%;
+    right: 4px;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: var(--radius-xs);
+    background: transparent;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.auth-modal__toggle svg {
+    width: 18px;
+    height: 18px;
+}
+
+.auth-modal__toggle-slash {
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+
+.auth-modal__toggle[data-revealed="true"] {
+    color: var(--color-accent-strong);
+}
+
+.auth-modal__toggle[data-revealed="true"] .auth-modal__toggle-slash {
+    opacity: 1;
+}
+
+.auth-modal__toggle:hover {
+    background: var(--color-bg-sunken);
+}
+
+.auth-modal__toggle:active {
+    background: var(--color-border-light);
+}
+
+.auth-modal__toggle:focus-visible {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 2px;
 }
 
 .auth-modal__input:focus {
@@ -1535,6 +1831,25 @@ button.chip:active {
     .note-container {
         padding: var(--space-3) var(--space-4);
     }
+
+    .region-table__btn {
+        min-height: 44px;
+    }
+
+    .region-ledger__controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-2);
+    }
+
+    .region-ledger__sort {
+        align-self: flex-start;
+    }
+
+    .auth-modal__toggle {
+        width: 44px;
+        height: 44px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1553,8 +1868,6 @@ button.chip:active {
     }
 
     .plate__seal {
-        width: 46px;
-        height: 46px;
         font-size: 0.92rem;
     }
 
@@ -1593,6 +1906,32 @@ button.chip:active {
 
     .auth-overlay {
         padding: var(--space-3);
+    }
+
+    .region-table thead th,
+    .region-table td,
+    .region-table tbody th {
+        padding: 8px;
+    }
+
+    .region-table__btn {
+        padding: 0 10px;
+    }
+}
+
+/* 横屏手机：68vh 会被 min-height 顶到 320px，占掉 85% 视口高度。
+   矮视口下把地图压下来，让页头和页脚也能露出一点。 */
+@media (max-height: 520px) and (orientation: landscape) {
+    .page {
+        padding-top: var(--space-5);
+    }
+
+    .page__header {
+        margin-bottom: var(--space-5);
+    }
+
+    #map {
+        height: clamp(220px, 52vh, 420px);
     }
 }
 

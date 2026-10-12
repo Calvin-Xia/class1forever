@@ -89,12 +89,18 @@ const AppState = {
     detailModeEnabled: false,
     detailsHint: '',
     pendingPoint: null,
+    /** 当前视图的数据点，供地区一览表格复用，避免重复读 GeoJSON */
+    viewPoints: [],
+    /** 地区一览的排序状态：'value'（人数）或 'name'（地区名），dir 为 1 / -1 */
+    regionSortKey: 'value',
+    regionSortDir: -1,
     /** 避免纠偏时自己触发自己 */
     clampingRoam: false
 };
 
 const ui = {
     loading: document.getElementById('map-loading'),
+    map: document.getElementById('map'),
     error: document.getElementById('cdn-error'),
     errorTitle: document.getElementById('cdn-error-title'),
     errorMessage: document.getElementById('cdn-error-message'),
@@ -111,7 +117,14 @@ const ui = {
     authInput: document.getElementById('auth-passphrase'),
     authFeedback: document.getElementById('auth-feedback'),
     authSubmit: document.getElementById('auth-submit'),
-    authHint: document.getElementById('auth-hint')
+    authHint: document.getElementById('auth-hint'),
+    authToggle: document.getElementById('auth-toggle'),
+    bsClose: document.getElementById('bs-close'),
+    regionBody: document.getElementById('region-table-body'),
+    regionSortButton: document.getElementById('region-sort-btn'),
+    regionNote: document.getElementById('region-ledger-note'),
+    regionNameHeader: document.getElementById('region-th-name'),
+    regionCountHeader: document.getElementById('region-th-count')
 };
 
 function escapeHtml(value) {
@@ -127,17 +140,25 @@ function hideMapLoading() {
     if (ui.loading) {
         ui.loading.style.display = 'none';
     }
+    // 地图容器是 role="img"，里面的加载文案对读屏不可见，
+    // 所以忙碌状态得挂在容器自身上。
+    if (ui.map) {
+        ui.map.setAttribute('aria-busy', 'false');
+    }
 }
 
 function showProvinceLoading(provinceName) {
-    if (!ui.loading) {
-        return;
+    if (ui.loading) {
+        const text = ui.loading.querySelector('.map-loading__text');
+        if (text && provinceName) {
+            text.textContent = '正在加载 ' + provinceName + ' 地图...';
+        }
+        ui.loading.style.display = 'flex';
     }
-    const text = ui.loading.querySelector('.map-loading__text');
-    if (text && provinceName) {
-        text.textContent = '正在加载 ' + provinceName + ' 地图...';
+
+    if (ui.map) {
+        ui.map.setAttribute('aria-busy', 'true');
     }
-    ui.loading.style.display = 'flex';
 }
 
 function normalizeRegionToken(value) {
@@ -384,6 +405,7 @@ const BottomSheet = (function() {
         content: document.getElementById('bs-content'),
         primaryButton: document.getElementById('bs-primary-btn'),
         drilldownButton: document.getElementById('bs-drilldown-btn'),
+        closeButton: document.getElementById('bs-close'),
         pageWrapper: document.querySelector('.page-wrapper'),
         map: document.getElementById('map')
     };
@@ -396,7 +418,22 @@ const BottomSheet = (function() {
         return Boolean(elements.sheet && elements.sheet.classList.contains('active'));
     }
 
+    /**
+     * 面板收起时，里面的按钮即使 currentPoint 还在也必须一起藏起来。
+     *
+     * 面板是靠 bottom 位移收起的，DOM 上一直存在；只把 class 去掉的话，
+     * 这两个按钮仍然可聚焦，Tab 会停到屏幕外的隐藏控件上（焦点凭空消失）。
+     */
     function updateButtons() {
+        if (!isActive()) {
+            elements.closeButton.hidden = true;
+            elements.primaryButton.hidden = true;
+            elements.drilldownButton.hidden = true;
+            return;
+        }
+
+        elements.closeButton.hidden = false;
+
         if (!currentPoint) {
             elements.primaryButton.hidden = true;
             elements.drilldownButton.hidden = true;
@@ -451,6 +488,8 @@ const BottomSheet = (function() {
         elements.sheet.classList.remove('active');
         elements.overlay.classList.remove('active');
         currentMode = 'public';
+        // 收起后立刻把按钮移出焦点序列，不能等到下次打开才处理。
+        updateButtons();
 
         if (scope) {
             FocusScope.close(scope);
@@ -462,24 +501,24 @@ const BottomSheet = (function() {
         currentPoint = point;
         currentMode = 'public';
         elements.content.innerHTML = renderPublicCard(point, options);
-        updateButtons();
         open();
+        updateButtons();
     }
 
     function showLoading(point) {
         currentPoint = point;
         currentMode = 'loading';
         elements.content.innerHTML = renderLoadingCard(point);
-        updateButtons();
         open();
+        updateButtons();
     }
 
     function showDetail(point, payload) {
         currentPoint = point;
         currentMode = 'detail';
         elements.content.innerHTML = renderDetailCard(payload);
-        updateButtons();
         open();
+        updateButtons();
     }
 
     function hideSensitive() {
@@ -519,12 +558,19 @@ const BottomSheet = (function() {
 
     function init() {
         elements.overlay.addEventListener('click', close);
+        elements.closeButton.addEventListener('click', function() {
+            close();
+        });
         elements.primaryButton.addEventListener('click', function() {
             handlePrimaryClick().catch(function(error) {
                 console.error('Bottom sheet primary action failed:', error);
             });
         });
         elements.drilldownButton.addEventListener('click', handleDrilldownClick);
+
+        // 初始状态面板是收起的：先把三个按钮标成 hidden，
+        // 否则它们会作为"屏幕外的幽灵控件"出现在 Tab 序列里。
+        updateButtons();
     }
 
     return {
@@ -548,6 +594,44 @@ function setAuthFeedback(message, variant) {
     } else {
         ui.authFeedback.removeAttribute('data-variant');
     }
+
+    // 出错时把反馈接进输入框的描述并标 aria-invalid；没出错就不接，
+    // 否则 live region 和 aria-describedby 会把同一句话播报两遍。
+    if (ui.authInput) {
+        if (variant === 'error') {
+            ui.authInput.setAttribute('aria-invalid', 'true');
+            ui.authInput.setAttribute('aria-describedby', 'auth-hint auth-feedback');
+        } else {
+            ui.authInput.removeAttribute('aria-invalid');
+            ui.authInput.setAttribute('aria-describedby', 'auth-hint');
+        }
+    }
+}
+
+/**
+ * 口令显隐。口令是姓名拼音，打错了看不出来，
+ * 没有这个开关就只能整段删掉重输。
+ */
+function setPassphraseVisibility(revealed) {
+    if (!ui.authInput || !ui.authToggle) {
+        return;
+    }
+
+    ui.authInput.type = revealed ? 'text' : 'password';
+    ui.authToggle.setAttribute('aria-pressed', String(revealed));
+    ui.authToggle.setAttribute('aria-label', revealed ? '隐藏口令' : '显示口令');
+    ui.authToggle.dataset.revealed = revealed ? 'true' : 'false';
+
+    // 部分浏览器在改 type 时会把焦点丢掉，这里补回来并把光标放到末尾。
+    if (document.activeElement === ui.authInput || revealed === false) {
+        const end = ui.authInput.value.length;
+        ui.authInput.focus();
+        try {
+            ui.authInput.setSelectionRange(end, end);
+        } catch (_error) {
+            // 某些输入类型不支持选区，忽略即可。
+        }
+    }
 }
 
 let authScope = null;
@@ -558,6 +642,7 @@ function openAuthModal(message) {
         ? `口令提示：${AppState.detailsHint}`
         : '如忘记口令，请联系老师或同学。';
     setAuthFeedback(message || '', null);
+    setPassphraseVisibility(false);
 
     if (AppState.chart) {
         AppState.chart.dispatchAction({ type: 'hideTip' });
@@ -1173,10 +1258,22 @@ function buildMapSeries(mapId, regionName, points, showLabels) {
     };
 }
 
+/**
+ * ECharts 画在 canvas 上，css/main.css 里那个 prefers-reduced-motion 块管不到它。
+ * 地图的着色与下钻动画得单独读一次媒体查询，否则"降低动效"只降了一半。
+ */
+function chartAnimationEnabled() {
+    return !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
 function buildChartOption() {
+    const animate = chartAnimationEnabled();
+
     return {
         backgroundColor: 'transparent',
-        animationDuration: 320,
+        animation: animate,
+        animationDuration: animate ? 320 : 0,
+        animationDurationUpdate: animate ? 320 : 0,
         tooltip: {
             show: !isTouchDevice,
             trigger: 'item',
@@ -1218,6 +1315,7 @@ function updateMapChrome() {
 function applyMapView(view) {
     AppState.activeProvince = view.province || null;
     AppState.activeMapId = view.mapId;
+    AppState.viewPoints = view.points;
     AppState.regionIndex = createRegionIndex(view.points);
 
     AppState.chart.setOption({
@@ -1226,6 +1324,9 @@ function applyMapView(view) {
     });
 
     updateMapChrome();
+    // 视野换了就把当前地区写进播报。下钻以前漏了这一步，
+    // 结果是徽标已经变成安徽、读屏听到的还是"当前查看全国"。
+    updateInteractionNote();
     updateDetailsButton();
 }
 
@@ -1233,6 +1334,7 @@ function refreshCurrentViewData() {
     const provinceName = getActiveProvinceName();
     const points = provinceName ? buildProvincePoints(provinceName) : buildNationalPoints();
 
+    AppState.viewPoints = points;
     AppState.regionIndex = createRegionIndex(points);
 
     AppState.chart.setOption({
@@ -1242,6 +1344,8 @@ function refreshCurrentViewData() {
         }],
         visualMap: buildVisualMapOption(points)
     });
+
+    updateDetailsButton();
 }
 
 function initChart() {
@@ -1450,7 +1554,6 @@ function drillUpToCountry() {
         points: buildNationalPoints(),
         showLabels: false
     });
-    updateInteractionNote();
 }
 
 function handleRegionClick(params) {
@@ -1459,6 +1562,18 @@ function handleRegionClick(params) {
     }
 
     const point = resolveRegionPoint(params.name);
+    if (!point) {
+        return;
+    }
+
+    activateRegion(point);
+}
+
+/**
+ * 打开一个地区的唯一入口：地图点击与地区一览表格都走这里，
+ * 两条路径的行为必须完全一致（否则键盘用户拿到的结果和鼠标不一样）。
+ */
+function activateRegion(point) {
     if (!point) {
         return;
     }
@@ -1483,24 +1598,26 @@ function handleRegionClick(params) {
 }
 
 function updateDetailsButton() {
-    if (!ui.detailsButton) {
-        return;
+    if (ui.detailsButton) {
+        if (!AppState.detailModeAvailable) {
+            ui.detailsButton.hidden = true;
+        } else {
+            ui.detailsButton.hidden = false;
+            ui.detailsButton.dataset.active = AppState.detailModeEnabled ? 'true' : 'false';
+            // 这是一个切换按钮，得把选中状态暴露出去，否则读屏只知道标签变了。
+            ui.detailsButton.setAttribute('aria-pressed', String(AppState.detailModeEnabled));
+            ui.detailsButton.textContent = AppState.detailModeEnabled ? '退出查看' : '同学信息';
+            ui.detailsButton.setAttribute(
+                'aria-label',
+                AppState.detailAccess
+                    ? (AppState.detailModeEnabled ? '退出查看' : '开启查看')
+                    : '输入口令后开启查看'
+            );
+        }
     }
 
-    if (!AppState.detailModeAvailable) {
-        ui.detailsButton.hidden = true;
-        return;
-    }
-
-    ui.detailsButton.hidden = false;
-    ui.detailsButton.dataset.active = AppState.detailModeEnabled ? 'true' : 'false';
-    ui.detailsButton.textContent = AppState.detailModeEnabled ? '退出查看' : '同学信息';
-    ui.detailsButton.setAttribute(
-        'aria-label',
-        AppState.detailAccess
-            ? (AppState.detailModeEnabled ? '退出查看' : '开启查看')
-            : '输入口令后开启查看'
-    );
+    // 地区一览里按钮的动作措辞跟着详情模式走，所以在这条公共路径上一起刷新。
+    renderRegionTable();
 }
 
 function updateInteractionNote() {
@@ -1514,7 +1631,11 @@ function updateInteractionNote() {
     }
 
     const stats = AppState.publicData.stats || {};
-    const prefix = `当前共覆盖 ${Number(stats.provinces || 0)} 个省级区域、${Number(stats.cities || 0)} 座城市，共 ${Number(stats.total || 0)} 位同学。`;
+    // 下钻与返回只改地图和徽标，而徽标不是 live region。
+    // 把当前地区并进这条播报，读屏才知道视野已经换了。
+    const activeProvince = getActiveProvinceName();
+    const scope = activeProvince ? `当前查看 ${activeProvince}。` : '当前查看全国。';
+    const prefix = `${scope}共覆盖 ${Number(stats.provinces || 0)} 个省级区域、${Number(stats.cities || 0)} 座城市，共 ${Number(stats.total || 0)} 位同学。`;
 
     if (!AppState.detailModeAvailable) {
         ui.note.textContent = `${prefix} 现在先看看各地人数。`;
@@ -1532,6 +1653,132 @@ function updateInteractionNote() {
     }
 
     ui.note.textContent = `${prefix} 已确认口令，点击“同学信息”即可查看各地区的同学信息。`;
+}
+
+/* ------------------------------------------------------------------ *
+ * 地区一览：图表的键盘与读屏替代路径
+ *
+ * 地图画在 canvas 上，地区和城市无法被聚焦，只靠键盘没有任何办法选中一个
+ * 省份。这张表把当前视野里的地区列成原生 table，每行一个按钮，走的是和
+ * 地图点击完全相同的 activateRegion()。
+ * ------------------------------------------------------------------ */
+
+function sortedRegionRows() {
+    const points = (AppState.viewPoints || []).slice();
+    const direction = AppState.regionSortDir;
+
+    points.sort(function(left, right) {
+        if (AppState.regionSortKey === 'name') {
+            return left.name.localeCompare(right.name, 'zh-CN') * direction;
+        }
+
+        const diff = (Number(left.value) || 0) - (Number(right.value) || 0);
+        if (diff !== 0) {
+            return diff * direction;
+        }
+
+        return left.name.localeCompare(right.name, 'zh-CN');
+    });
+
+    return points;
+}
+
+/** 行内按钮的可访问名要说清「按下去会发生什么」，两条路径的措辞要和实际行为对上。 */
+function regionActionLabel(point) {
+    const canDrill = Boolean(point.drilldownFile) && !isActiveProvinceView();
+
+    if (canDrill && !isTouchDevice && !AppState.detailModeEnabled) {
+        return `进入 ${point.name} 地图详情`;
+    }
+
+    if (AppState.detailModeEnabled && AppState.detailAccess) {
+        return `查看 ${point.name} 的同学信息`;
+    }
+
+    return `查看 ${point.name} 的公开人数`;
+}
+
+function renderRegionTable() {
+    if (!ui.regionBody) {
+        return;
+    }
+
+    const provinceName = getActiveProvinceName();
+    const points = AppState.viewPoints || [];
+    const stats = (AppState.publicData && AppState.publicData.stats) || {};
+
+    if (ui.regionNote) {
+        ui.regionNote.textContent = provinceName
+            ? `${provinceName}共 ${points.length} 个地区。地图上的地区都在下面列出来了，可以只用键盘操作。`
+            : `全国 ${points.length} 个省级区域，共 ${Number(stats.total || 0)} 位同学。地图上的地区都在下面列出来了，可以只用键盘操作。`;
+    }
+
+    if (ui.regionSortButton) {
+        const byName = AppState.regionSortKey === 'name';
+        ui.regionSortButton.textContent = byName ? '按地区名' : '按人数';
+        ui.regionSortButton.setAttribute(
+            'aria-label',
+            byName ? '当前按地区名排序，点击改为按人数排序' : '当前按人数排序，点击改为按地区名排序'
+        );
+    }
+
+    // aria-sort 只标在当前真正排序的那一列上，其余保持 none。
+    const countSort = AppState.regionSortKey === 'value'
+        ? (AppState.regionSortDir < 0 ? 'descending' : 'ascending')
+        : 'none';
+    const nameSort = AppState.regionSortKey === 'name'
+        ? (AppState.regionSortDir < 0 ? 'descending' : 'ascending')
+        : 'none';
+
+    if (ui.regionCountHeader) {
+        ui.regionCountHeader.setAttribute('aria-sort', countSort);
+    }
+    if (ui.regionNameHeader) {
+        ui.regionNameHeader.setAttribute('aria-sort', nameSort);
+    }
+
+    const rows = sortedRegionRows();
+    if (rows.length === 0) {
+        ui.regionBody.innerHTML = '<tr><td colspan="4" class="region-table__empty">这个视野下暂时没有可列出的地区。</td></tr>';
+        return;
+    }
+
+    ui.regionBody.innerHTML = rows.map(function(point) {
+        const count = Number(point.value) || 0;
+        const cityCount = Number(point.cityCount || 0);
+
+        return `
+            <tr class="region-table__row">
+                <th scope="row" class="region-table__name">${escapeHtml(point.name)}</th>
+                <td class="region-table__num">${count}</td>
+                <td class="region-table__num">${cityCount > 0 ? cityCount : '—'}</td>
+                <td class="region-table__action">
+                    <button type="button" class="region-table__btn" data-region="${escapeHtml(point.name)}" aria-label="${escapeHtml(regionActionLabel(point))}">查看</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function handleRegionTableClick(event) {
+    const button = event.target.closest('button[data-region]');
+    if (!button) {
+        return;
+    }
+
+    activateRegion(resolveRegionPoint(button.getAttribute('data-region')));
+}
+
+function toggleRegionSort() {
+    if (AppState.regionSortKey === 'value') {
+        AppState.regionSortKey = 'name';
+        AppState.regionSortDir = 1;
+    } else {
+        AppState.regionSortKey = 'value';
+        AppState.regionSortDir = -1;
+    }
+
+    renderRegionTable();
 }
 
 function toggleDetailMode() {
@@ -1663,6 +1910,21 @@ function setupStaticUi() {
 
     if (ui.authClose) {
         ui.authClose.addEventListener('click', closeAuthModal);
+    }
+
+    if (ui.authToggle) {
+        ui.authToggle.addEventListener('click', function() {
+            setPassphraseVisibility(ui.authInput.type === 'password');
+        });
+    }
+
+    // 地区一览的按钮是动态生成的，用事件委托，重建表格后不需要重新绑定。
+    if (ui.regionBody) {
+        ui.regionBody.addEventListener('click', handleRegionTableClick);
+    }
+
+    if (ui.regionSortButton) {
+        ui.regionSortButton.addEventListener('click', toggleRegionSort);
     }
 
     if (ui.authOverlay) {

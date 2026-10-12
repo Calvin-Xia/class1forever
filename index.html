@@ -16,7 +16,9 @@
     <script src="js/boot.js" defer></script>
 </head>
 <body>
-    <div id="cdn-error" class="cdn-error" style="display: none;">
+    <!-- 地图脚本整体加载失败时的兜底。role=alert 让它一出现就被读屏念出来，
+         标题用 p 而不是 h3：这块是全屏接管，不该参与正文的标题层级。 -->
+    <div id="cdn-error" class="cdn-error" role="alert" aria-labelledby="cdn-error-title" aria-describedby="cdn-error-message" style="display: none;">
         <div class="cdn-error__content">
             <div class="cdn-error__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -25,7 +27,7 @@
                     <line x1="12" y1="17.2" x2="12" y2="17.3"></line>
                 </svg>
             </div>
-            <h3 id="cdn-error-title" class="cdn-error__title">地图加载失败</h3>
+            <p id="cdn-error-title" class="cdn-error__title">地图加载失败</p>
             <p id="cdn-error-message" class="cdn-error__message">无法加载地图资源，请检查网络连接后刷新页面。</p>
             <button id="cdn-error-retry" class="cdn-error__retry" type="button">重新加载</button>
         </div>
@@ -83,7 +85,7 @@
 
                         <div class="map-toolbar">
                             <button id="map-back-btn" class="chip map-back-btn" type="button" hidden>← 返回全国</button>
-                            <button id="details-btn" class="chip details-btn" type="button" aria-label="开启查看详情模式">同学信息</button>
+                            <button id="details-btn" class="chip details-btn" type="button" aria-label="开启查看详情模式" aria-pressed="false">同学信息</button>
                             <span id="map-region-badge" class="chip map-region-badge">中国</span>
                         </div>
 
@@ -124,7 +126,9 @@
                             <span class="map-scale__label">200 km</span>
                         </div>
 
-                        <div id="map" role="img" aria-label="中国地图，显示同学分布" tabindex="-1">
+                        <!-- role=img 里的内容对读屏是纯装饰，加载文案读不出来；
+                             busy 状态靠 aria-busy 与页脚那条 role=status 的播报承担。 -->
+                        <div id="map" role="img" aria-label="中国地图，显示同学分布" aria-busy="true" tabindex="-1">
                             <div id="map-loading" class="map-loading">
                                 <div class="map-loading__spinner"></div>
                                 <p class="map-loading__text">正在展开图面…</p>
@@ -135,6 +139,33 @@
                     </div>
                 </div>
             </section>
+
+            <!-- 图表画在 canvas 上，地区和城市无法聚焦。这张表是键盘与读屏的替代路径，
+                 每行一个按钮，行为和在地图上点击该地区完全一致。 -->
+            <details class="region-ledger" id="region-ledger">
+                <summary class="region-ledger__summary">
+                    <h2 class="region-ledger__title">地区一览</h2>
+                    <span class="region-ledger__chevron" aria-hidden="true"></span>
+                </summary>
+                <div class="region-ledger__body">
+                    <div class="region-ledger__controls">
+                        <p class="region-ledger__note" id="region-ledger-note"></p>
+                        <button id="region-sort-btn" class="chip region-ledger__sort" type="button" aria-label="当前按人数排序，点击改为按地区名排序">按人数</button>
+                    </div>
+                    <table class="region-table">
+                        <caption class="visually-hidden">各地区公开人数一览。每一行都有一个按钮，作用和在地图上点击该地区相同。</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col" id="region-th-name" aria-sort="none">地区</th>
+                                <th scope="col" id="region-th-count" class="region-table__num" aria-sort="descending">人数</th>
+                                <th scope="col" class="region-table__num">城市</th>
+                                <th scope="col"><span class="visually-hidden">操作</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="region-table-body"></tbody>
+                    </table>
+                </div>
+            </details>
         </main>
 
         <footer class="page__footer">
@@ -145,13 +176,19 @@
     <div id="bs-overlay" class="bottom-sheet-overlay"></div>
 
     <div id="bottom-sheet" class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="bs-title" tabindex="-1">
-        <div class="bs-drag-indicator" aria-hidden="true"></div>
-        <div class="bs-content" id="bs-content">
-            <h2 id="bs-title" class="visually-hidden">地区详情</h2>
+        <div class="bs-header">
+            <h2 id="bs-title" class="bs-header__title">地区详情</h2>
+            <button id="bs-close" class="bs-close" type="button" aria-label="关闭地区详情" hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                </svg>
+            </button>
         </div>
+        <div class="bs-content" id="bs-content"></div>
         <div class="bs-footer">
-            <button id="bs-primary-btn" class="bs-btn bs-btn--secondary spotlight" type="button">查看详情</button>
-            <button id="bs-drilldown-btn" class="bs-btn magnet spotlight" type="button">进入地图详情</button>
+            <button id="bs-primary-btn" class="bs-btn bs-btn--secondary spotlight" type="button" hidden>查看详情</button>
+            <button id="bs-drilldown-btn" class="bs-btn magnet spotlight" type="button" hidden>进入地图详情</button>
         </div>
     </div>
 
@@ -162,8 +199,22 @@
             <p class="auth-modal__description">地图上先摊开各地人数。输入口令后，才能按地区翻到姓名和学校。</p>
             <p id="auth-hint" class="auth-modal__hint"></p>
             <form id="auth-form" class="auth-modal__form">
+                <!-- 这里没有账号概念，但密码管理器需要一个"用户名"才能把口令存下来。
+                     给个固定上下文值，浏览器就不会再提示缺少用户名字段，
+                     保存下来的口令也能说明是哪一个站点的。 -->
+                <input type="text" class="visually-hidden" name="username" autocomplete="username" tabindex="-1" aria-hidden="true" value="金鹰 1 班">
                 <label class="auth-modal__label" for="auth-passphrase">查看口令</label>
-                <input id="auth-passphrase" class="auth-modal__input" type="password" autocomplete="current-password" placeholder="输入口令">
+                <div class="auth-modal__field">
+                    <input id="auth-passphrase" class="auth-modal__input" type="password" autocomplete="current-password" placeholder="输入口令" aria-describedby="auth-hint">
+                    <button id="auth-toggle" class="auth-modal__toggle" type="button" aria-pressed="false" aria-label="显示口令">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M2.6 12S6.2 5.6 12 5.6 21.4 12 21.4 12 17.8 18.4 12 18.4 2.6 12 2.6 12z"></path>
+                            <circle cx="12" cy="12" r="3.1"></circle>
+                            <!-- 显隐状态不能只靠颜色：口令显示时加一道斜杠 -->
+                            <line class="auth-modal__toggle-slash" x1="4" y1="20" x2="20" y2="4"></line>
+                        </svg>
+                    </button>
+                </div>
                 <p id="auth-feedback" class="auth-modal__feedback" aria-live="polite"></p>
                 <button id="auth-submit" class="auth-modal__submit" type="submit">进入查看</button>
             </form>

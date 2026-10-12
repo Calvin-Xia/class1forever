@@ -208,6 +208,10 @@ function check(rootDirectory, fail) {
     assert('次要文字 --color-text-secondary 在页面底色上', tokens['color-text-secondary'], tokens['color-bg-primary'], AA_TEXT);
     assert('弱化文字 --color-text-muted 在页面底色上', tokens['color-text-muted'], tokens['color-bg-primary'], AA_TEXT);
     assert('正文色 --color-text-primary 在卡片底色上', tokens['color-text-primary'], tokens['color-bg-card'], AA_TEXT);
+    /* 衬纸比页面底更深，两处坐在衬纸上的小字（地图版权、比例尺刻度）
+       曾经只有 4.48:1 —— 只对页面底断言是漏检，这里补上。 */
+    assert('次要文字 --color-text-secondary 在衬纸底色上', tokens['color-text-secondary'], tokens['color-bg-secondary'], AA_TEXT);
+    assert('弱化文字 --color-text-muted 在衬纸底色上', tokens['color-text-muted'], tokens['color-bg-secondary'], AA_TEXT);
 
     /* 实心橙底上的白字：按钮 */
     assert('白字 on --color-accent-strong（实心按钮底色）', '#ffffff', tokens['color-accent-strong'], AA_TEXT);

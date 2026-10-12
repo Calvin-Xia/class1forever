@@ -30,6 +30,7 @@
         const panel = document.getElementById('cdn-error');
         const title = document.getElementById('cdn-error-title');
         const text = document.getElementById('cdn-error-message');
+        const retry = document.getElementById('cdn-error-retry');
         const loading = document.getElementById('map-loading');
 
         if (title) {
@@ -43,6 +44,11 @@
         }
         if (loading) {
             loading.style.display = 'none';
+        }
+        // 这块面板全屏接管了页面（role=alert），不把焦点移过去的话，
+        // 键盘用户还停在已经失效的地图区域里。
+        if (retry) {
+            retry.focus();
         }
     }
 
