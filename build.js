@@ -21,6 +21,7 @@ function read(relativePath) {
 /* 1. 关键文件齐全 */
 const requiredFiles = [
     'index.html',
+    'favicon.svg',
     'js/boot.js',
     'js/geo.js',
     'js/china.js',

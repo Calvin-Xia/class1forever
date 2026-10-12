@@ -40,3 +40,10 @@ jobs:
           node scripts/build-vendor.mjs
           git diff --exit-code -- js/vendor/echarts.min.js \
             || { echo "❌ js/vendor/echarts.min.js 与 scripts/vendor/echarts-entry.mjs 不同步，请重新执行 npm run vendor:build"; exit 1; }
+
+      - name: Favicon is in sync
+        run: |
+          set -e
+          node scripts/build-favicon.mjs
+          git diff --exit-code -- favicon.svg \
+            || { echo "❌ favicon.svg 与 js/china.js 不同步，请重新执行 npm run favicon:build"; exit 1; }

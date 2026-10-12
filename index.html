@@ -21,10 +21,10 @@
     <div id="cdn-error" class="cdn-error" role="alert" aria-labelledby="cdn-error-title" aria-describedby="cdn-error-message" style="display: none;">
         <div class="cdn-error__content">
             <div class="cdn-error__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 4 2.6 20h18.8L12 4z"></path>
-                    <line x1="12" y1="10" x2="12" y2="14.4"></line>
-                    <line x1="12" y1="17.2" x2="12" y2="17.3"></line>
+                <svg class="icon icon--lg" viewBox="0 0 24 24">
+                    <path d="M12 3.9 3.1 19.5h17.8Z"></path>
+                    <path d="M12 9.6v4.3"></path>
+                    <path d="M12 17v.01"></path>
                 </svg>
             </div>
             <p id="cdn-error-title" class="cdn-error__title">地图加载失败</p>
@@ -84,39 +84,43 @@
                         <div class="map-frame__corner map-frame__corner--br" aria-hidden="true"></div>
 
                         <div class="map-toolbar">
-                            <button id="map-back-btn" class="chip map-back-btn" type="button" hidden>← 返回全国</button>
+                            <button id="map-back-btn" class="chip map-back-btn" type="button" hidden>
+                                <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M19.4 12H4.6"></path>
+                                    <path d="m10.8 5.8-6.2 6.2 6.2 6.2"></path>
+                                </svg>
+                                <span>返回全国</span>
+                            </button>
                             <button id="details-btn" class="chip details-btn" type="button" aria-label="开启查看详情模式" aria-pressed="false">同学信息</button>
                             <span id="map-region-badge" class="chip map-region-badge">中国</span>
                         </div>
 
-                        <button id="share-btn" class="share-btn magnet spotlight" type="button" title="分享地图" aria-label="分享地图">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                <circle cx="18" cy="5" r="3"></circle>
-                                <circle cx="6" cy="12" r="3"></circle>
-                                <circle cx="18" cy="19" r="3"></circle>
-                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                        <button id="share-btn" class="share-btn magnet spotlight" type="button" title="保存分享图" aria-label="保存分享图">
+                            <svg class="icon icon--md" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 3.6v10.6"></path>
+                                <path d="m7.4 9.6 4.6 4.6 4.6-4.6"></path>
+                                <path d="M3.9 16.8v1.6a2.1 2.1 0 0 0 2.1 2.1h12a2.1 2.1 0 0 0 2.1-2.1v-1.6"></path>
                             </svg>
                         </button>
 
                         <div class="map-zoom" role="group" aria-label="地图缩放">
                             <button id="map-zoom-in" class="map-zoom__btn" type="button" aria-label="放大地图" title="放大">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
-                                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M12 5.2v13.6"></path>
+                                    <path d="M5.2 12h13.6"></path>
                                 </svg>
                             </button>
                             <button id="map-zoom-out" class="map-zoom__btn" type="button" aria-label="缩小地图" title="缩小">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
-                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M5.2 12h13.6"></path>
                                 </svg>
                             </button>
-                            <button id="map-zoom-reset" class="map-zoom__btn" type="button" aria-label="重置地图缩放" title="重置视图">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path d="M8 3H5a2 2 0 0 0-2 2v3"></path>
-                                    <path d="M16 3h3a2 2 0 0 1 2 2v3"></path>
-                                    <path d="M8 21H5a2 2 0 0 1-2-2v-3"></path>
-                                    <path d="M16 21h3a2 2 0 0 0 2-2v-3"></path>
+                            <button id="map-zoom-reset" class="map-zoom__btn" type="button" aria-label="重置地图缩放，回到铺满视图" title="重置视图">
+                                <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M9.6 3.8H5.2a1.4 1.4 0 0 0-1.4 1.4v4.4"></path>
+                                    <path d="M14.4 3.8h4.4a1.4 1.4 0 0 1 1.4 1.4v4.4"></path>
+                                    <path d="M9.6 20.2H5.2a1.4 1.4 0 0 1-1.4-1.4v-4.4"></path>
+                                    <path d="M14.4 20.2h4.4a1.4 1.4 0 0 0 1.4-1.4v-4.4"></path>
                                 </svg>
                             </button>
                         </div>
@@ -145,7 +149,9 @@
             <details class="region-ledger" id="region-ledger">
                 <summary class="region-ledger__summary">
                     <h2 class="region-ledger__title">地区一览</h2>
-                    <span class="region-ledger__chevron" aria-hidden="true"></span>
+                    <svg class="icon icon--xs region-ledger__chevron" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="m9.8 5.8 6.2 6.2-6.2 6.2"></path>
+                    </svg>
                 </summary>
                 <div class="region-ledger__body">
                     <div class="region-ledger__controls">
@@ -179,9 +185,9 @@
         <div class="bs-header">
             <h2 id="bs-title" class="bs-header__title">地区详情</h2>
             <button id="bs-close" class="bs-close" type="button" aria-label="关闭地区详情" hidden>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6.6 6.6 17.4 17.4"></path>
+                    <path d="M17.4 6.6 6.6 17.4"></path>
                 </svg>
             </button>
         </div>
@@ -194,7 +200,12 @@
 
     <div id="auth-overlay" class="auth-overlay" hidden>
         <div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
-            <button id="auth-close" class="auth-modal__close" type="button" aria-label="关闭">×</button>
+            <button id="auth-close" class="auth-modal__close" type="button" aria-label="关闭">
+                <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6.6 6.6 17.4 17.4"></path>
+                    <path d="M17.4 6.6 6.6 17.4"></path>
+                </svg>
+            </button>
             <h2 id="auth-title" class="auth-modal__title">查看详情</h2>
             <p class="auth-modal__description">地图上先摊开各地人数。输入口令后，才能按地区翻到姓名和学校。</p>
             <p id="auth-hint" class="auth-modal__hint"></p>
@@ -207,11 +218,11 @@
                 <div class="auth-modal__field">
                     <input id="auth-passphrase" class="auth-modal__input" type="password" autocomplete="current-password" placeholder="输入口令" aria-describedby="auth-hint">
                     <button id="auth-toggle" class="auth-modal__toggle" type="button" aria-pressed="false" aria-label="显示口令">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M2.6 12S6.2 5.6 12 5.6 21.4 12 21.4 12 17.8 18.4 12 18.4 2.6 12 2.6 12z"></path>
-                            <circle cx="12" cy="12" r="3.1"></circle>
+                        <svg class="icon icon--md" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M2.8 12C4.9 7.7 8.2 5.7 12 5.7s7.1 2 9.2 6.3c-2.1 4.3-5.4 6.3-9.2 6.3S4.9 16.3 2.8 12Z"></path>
+                            <circle cx="12" cy="12" r="2.9"></circle>
                             <!-- 显隐状态不能只靠颜色：口令显示时加一道斜杠 -->
-                            <line class="auth-modal__toggle-slash" x1="4" y1="20" x2="20" y2="4"></line>
+                            <path class="auth-modal__toggle-slash" d="M4.8 19.2 19.2 4.8"></path>
                         </svg>
                     </button>
                 </div>

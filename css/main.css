@@ -89,6 +89,13 @@
     --radius-md: 4px;
     --radius-lg: 6px;
 
+    /* —— 图标：统一 24 网格，尺寸只走这四档 —— */
+    --icon-stroke: 1.5;
+    --icon-xs: 14px;
+    --icon-sm: 16px;
+    --icon-md: 20px;
+    --icon-lg: 24px;
+
     --transition-fast: 0.15s ease;
     --transition-normal: 0.28s ease;
 
@@ -157,6 +164,57 @@ button,
 a,
 input {
     touch-action: manipulation;
+}
+
+/* ==========================================================================
+   图标系统
+   --------------------------------------------------------------------------
+   所有图标都画在同一个 24×24 网格上，尺寸、线宽、端点、颜色只由这一节决定：
+
+   · 线宽按网格反算，让「渲染后」的视觉线宽恒定在 --icon-stroke（1.5px），
+     而不是让 24 网格里的数字相同 —— 同一个 1.7 在 16px 下只有 1.13px，
+     在 24px 下却有 1.7px，放一起明显一粗一细。
+   · 尺寸只有 xs/sm/md/lg 四档，组件里不再各写一个 px 值。
+   · 颜色一律 currentColor，自动跟随所在控件的文字色（含 hover / disabled）。
+   · 路径上不写任何 stroke-* 表现属性，否则会盖过这里的 CSS。
+
+   新增图标时：24 网格、内容留在 3.2–20.8 之间、只写 d/points，
+   然后挑一个尺寸档。
+   ========================================================================== */
+
+.icon {
+    flex: 0 0 auto;
+    width: var(--icon-sm);
+    height: var(--icon-sm);
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: calc(var(--icon-stroke) * 24 / 16);
+}
+
+.icon--xs {
+    width: var(--icon-xs);
+    height: var(--icon-xs);
+    stroke-width: calc(var(--icon-stroke) * 24 / 14);
+}
+
+.icon--sm {
+    width: var(--icon-sm);
+    height: var(--icon-sm);
+    stroke-width: calc(var(--icon-stroke) * 24 / 16);
+}
+
+.icon--md {
+    width: var(--icon-md);
+    height: var(--icon-md);
+    stroke-width: calc(var(--icon-stroke) * 24 / 20);
+}
+
+.icon--lg {
+    width: var(--icon-lg);
+    height: var(--icon-lg);
+    stroke-width: calc(var(--icon-stroke) * 24 / 24);
 }
 
 /* ==========================================================================
@@ -549,11 +607,6 @@ button.chip:active {
     border-top: 0;
 }
 
-.map-zoom__btn svg {
-    width: 15px;
-    height: 15px;
-}
-
 .map-zoom__btn:hover {
     background: var(--color-accent-strong);
     color: var(--color-bg-card);
@@ -603,8 +656,6 @@ button.chip:active {
 }
 
 .share-btn svg {
-    width: 19px;
-    height: 19px;
     color: var(--color-text-secondary);
     transition: color var(--transition-fast);
 }
@@ -963,11 +1014,7 @@ button.chip:active {
 }
 
 .region-ledger__chevron {
-    width: 0;
-    height: 0;
-    border-left: 5px solid var(--color-text-muted);
-    border-top: 4px solid transparent;
-    border-bottom: 4px solid transparent;
+    color: var(--color-text-muted);
     transition: transform var(--transition-fast);
 }
 
@@ -1231,11 +1278,6 @@ button.chip:active {
     display: none;
 }
 
-.bs-close svg {
-    width: 18px;
-    height: 18px;
-}
-
 .bs-close:hover {
     background: var(--color-bg-sunken);
     color: var(--color-text-primary);
@@ -1380,8 +1422,6 @@ button.chip:active {
     border-radius: var(--radius-sm);
     background: transparent;
     color: var(--color-text-secondary);
-    font-size: 1.4rem;
-    line-height: 1;
     cursor: pointer;
     transition: background var(--transition-fast), color var(--transition-fast);
 }
@@ -1481,11 +1521,6 @@ button.chip:active {
     color: var(--color-text-secondary);
     cursor: pointer;
     transition: background var(--transition-fast), color var(--transition-fast);
-}
-
-.auth-modal__toggle svg {
-    width: 18px;
-    height: 18px;
 }
 
 .auth-modal__toggle-slash {
@@ -1618,11 +1653,6 @@ button.chip:active {
     color: var(--color-accent-tertiary);
     border: 1px solid var(--color-accent-tertiary);
     border-radius: var(--radius-xs);
-}
-
-.cdn-error__icon svg {
-    width: 24px;
-    height: 24px;
 }
 
 .cdn-error__title {
@@ -1789,21 +1819,11 @@ button.chip:active {
         height: 44px;
     }
 
-    .map-zoom__btn svg {
-        width: 14px;
-        height: 14px;
-    }
-
     .share-btn {
         top: 8px;
         right: 8px;
         width: 44px;
         height: 44px;
-    }
-
-    .share-btn svg {
-        width: 18px;
-        height: 18px;
     }
 
     .map-credit {
