@@ -46,14 +46,13 @@ Forked from [lvris/map](https://github.com/lvris/map)
 - `js/map.js`: 地图渲染、公开数据、详情查看交互、分享图。
 - `js/palette.js`: 地图与分享图共用的调色板与 canvas 字体。
 - `js/motion.js`: L2 动效层（光标墨晕、磁吸、聚光），无第三方依赖。
-- `favicon.svg`: 站点图标 —— 用 `js/china.js` 生成的国境线剪影，**不要手改**，跑 `npm run favicon:build` 重新生成。
+- `favicon.svg`: 站点图标 —— 纸面 + 方环 + 罗盘玫瑰（北点朱砂）。**刻意不含地图几何**，原因见下方「已知限制」。
 - `js/vendor/echarts.min.js`: 按需构建的 ECharts。
 - `css/main.css`: 页面样式、地图控件、悬浮卡片、移动端样式。
 - `functions/`: Cloudflare Pages Functions 接口。
 - `shared/data-model.mjs`: 数据规范化、公开聚合统计生成逻辑。
 - `scripts/upload-kv-data.mjs`: 将本地数据写入 Cloudflare KV。
 - `scripts/build-vendor.mjs`: 重新生成 ECharts 按需构建产物。
-- `scripts/build-favicon.mjs`: 从 `js/china.js` 重新生成 `favicon.svg`（共享边两两抵消，34 个省轮廓塌缩成一条国境线）。
 - `scripts/check-contrast.js`: 关键配色的对比度断言，以及 CSS 与 `js/palette.js` 的同值校验。
 - `tests/dev-server.mjs`: 本地前端调试服务器，用假数据顶替 Pages Functions。
 - `DESIGN.md`: 视觉设计规范（纸本图志），改样式前先读它。
@@ -82,9 +81,6 @@ Forked from [lvris/map](https://github.com/lvris/map)
 
 - `npm run vendor:build`
   重新生成 `js/vendor/echarts.min.js`。只在升级 ECharts 时执行。
-
-- `npm run favicon:build`
-  重新生成 `favicon.svg`。改了 `js/china.js` 之后要跑一次；产物提交进仓库，CI 会校验它与数据同步。
 
 - `npm run data:upload -- --dry-run`
   检查当前数据源是否能正确生成 KV 需要的两份数据。
@@ -253,6 +249,19 @@ npx wrangler pages deploy .
 仍然做不到的：地图的拖拽平移与缩放依赖指针，键盘只能用 +/− 与「重置视图」按钮；hover
 悬浮卡片在触屏和键盘下都不出现（改用点击地区或地区一览按钮打开面板）。要彻底补上这一环
 需要把渲染换成 SVG。
+
+### favicon 为什么不是地图
+
+站点图标是一枚「纸面 + 印章形方环 + 罗盘玫瑰（北点朱砂）」，**刻意不含任何地图几何**。
+
+中国地图按规范要带南海诸岛插图，而 32px 的图标放不下第二幅插图；任何"简化版国境线"都必然
+要按面积把那些岛礁当碎点筛掉。早期版本试过从 `js/china.js` 提取剪影（外环投影后把相邻省份
+共享的边界两两抵消，得到一条干净的国境线，3588 字节），形状是对的，但**南海诸岛直接消失了**
+—— 简化地图一定会丢东西，所以这个图形就不该是地图。
+
+改用图志本身的语汇：方环取印章的方形轮廓，环内是制图用的罗盘玫瑰。纸面 / 墨绿 / 朱砂三色
+仍然齐全，尺寸从 16px 到 128px 都可读，文件不到 1KB。如果将来要做地图式的图标，只能是抽象
+的制图符号，不能是残缺的国界轮廓。
 
 ## 许可证
 

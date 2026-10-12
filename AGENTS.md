@@ -13,14 +13,13 @@ Static classmate-distribution map ("蹭饭地图"). The page shows public provin
 - `js/motion.js`: the L2 motion layer — cursor glow, button magnet, card spotlight. No dependencies, rAF-throttled, and registers no listeners at all under `prefers-reduced-motion: reduce` or a coarse pointer.
 - `js/vendor/echarts.min.js`: tree-shaken ECharts build (map/geo/tooltip/visualMap/labelLayout/canvas). Regenerate with `npm run vendor:build`; the committed artifact is what ships.
 - `css/main.css`: layout, theme, map controls, tooltip, bottom-sheet, and auth-modal styles.
-- `favicon.svg`: the site icon — a China silhouette on paper stock, generated from `js/china.js` by `scripts/build-favicon.mjs`. Never hand-edit it; run `npm run favicon:build`. CI re-runs the generator and fails on a diff.
+- `favicon.svg`: the site icon — a paper tile with a seal-shaped square ring and a compass rose whose north point is seal red. Hand-authored, ~700 bytes. It is **deliberately not a map**; see the note in Map Rendering Notes before touching it.
 - `js/data.js`: local-only input for the upload script; gitignored, never loaded by the page.
 - `js/data.template.js`: data shape template (`name/school/city/province`).
 - `functions/`: Pages Functions routes — `api/map/public`, `api/map/details`, `api/auth/details`, `api/auth/logout`.
 - `shared/data-model.mjs`: normalization, province aliases, aggregate build, region filter/sort (used by Functions and the upload script).
 - `scripts/upload-kv-data.mjs`: builds `students:raw:v1` / `students:public:v1` and uploads them to `CLASS_MAP_DATA` KV; sources from `js/data.js` or the `STUDENTS_DATA` env var.
 - `scripts/build-vendor.mjs`: rebuilds `js/vendor/echarts.min.js` from `node_modules/echarts`.
-- `scripts/build-favicon.mjs`: rebuilds `favicon.svg` from `js/china.js`. It projects every province ring, cancels shared borders in pairs (so the 34 province outlines collapse into one national silhouette without any polygon union), then chains the surviving edges into closed loops and decimates them.
 - `scripts/check-contrast.js`: contrast and palette-sync assertions; `build.js` requires it directly, so `npm run build` stays the single entry point.
 - `tests/dev-server.mjs`: local mock of the Pages Functions API plus a static server, used for frontend smoke tests without Cloudflare credentials.
 - `build.js`: static safety checks (see Testing Guidelines).
@@ -33,7 +32,6 @@ Static classmate-distribution map ("蹭饭地图"). The page shows public provin
 - `npm run dev:mock`: local mock of `/api/*` on http://127.0.0.1:8788 (passphrase `demo`). Preferred for frontend work; pass `PUBLIC_DATA_FILE=<path>` to drive it with a real `students:public:v1` export.
 - `npm run cf:dev`: local Cloudflare Pages dev server (serves the real `/api/*` and reads the remote KV). In non-interactive shells it needs `CLOUDFLARE_API_TOKEN` (or `wrangler login` once interactively); the remote KV binding can fail to start in restricted sandboxes, in which case use `npm run dev:mock` for frontend checks.
 - `npm run vendor:build`: regenerate the committed ECharts bundle after upgrading `echarts`.
-- `npm run favicon:build`: regenerate `favicon.svg` after `js/china.js` changes. The artifact is committed; CI verifies it matches the generator output.
 - `npm run data:upload -- --dry-run`: validate the data source can build both KV datasets.
 - `npm run data:upload` / `npm run data:upload:preview`: upload to production / preview KV.
 - `git log --oneline -n 10`: inspect recent commit style before committing.
@@ -62,6 +60,7 @@ Static classmate-distribution map ("蹭饭地图"). The page shows public provin
 - 「地区一览」 (`.region-ledger`) is the keyboard and screen-reader substitute for the canvas chart: a native `<table>` inside `<details>` with one button per region and `aria-sort` on the sorted column. Do not give `.region-table thead th` `position: sticky` — a sticky header plus the fixed bottom sheet can cover a focused row button (WCAG 2.2 2.4.11).
 - Dialogs (bottom sheet, passphrase modal) go through `FocusScope` in `js/map.js`: background `inert`, focus moved inside, focus restored on close. `#map` and `#bottom-sheet` carry `tabindex="-1"` purely as focus anchors. The sheet is dismissed by sliding it off-screen with `bottom`, so `BottomSheet.updateButtons()` must also set `hidden` on `#bs-close` / `#bs-primary-btn` / `#bs-drilldown-btn` whenever the sheet is not `.active` — otherwise they stay focusable at y≈1660 and Tab lands on invisible controls. The map canvas itself is still not keyboard operable; `#region-table-body` is what makes region selection reachable without a pointer.
 - ECharts paints to canvas, so the `prefers-reduced-motion` block in `css/main.css` cannot reach it. `chartAnimationEnabled()` in `js/map.js` reads the media query separately and feeds `animation` / `animationDuration`; keep both halves in sync when touching motion.
+- **`favicon.svg` must not be a map drawing, and this is a data-integrity rule, not a taste call.** At 32px there is no room for the South China Sea inset that Chinese maps are expected to carry, and every attempt to simplify `js/china.js` into a silhouette drops those islands — an area threshold removes them as specks, and lowering the threshold just produces unreadable noise. A previous revision did exactly that and shipped an incomplete map as the site icon. The icon therefore uses cartographic vocabulary instead of geography: a seal-shaped square ring (echoing `.plate__seal`) around a compass rose, north point in seal red. If you want a map-like icon, it has to be an abstract cartographic mark — never a partial national outline.
 
 ## Security & Data Rules
 - Never commit `.dev.vars`, `js/data.js`, or any full student list; never serve them as static assets.
@@ -69,7 +68,7 @@ Static classmate-distribution map ("蹭饭地图"). The page shows public provin
 - Keep the page same-origin only: no CDN `<script>` tags and no inline `<script>` blocks, so `_headers` can keep `script-src 'self'`. `build.js` enforces both.
 
 ## Testing Guidelines
-No automated framework; CI (`.github/workflows/ci.yml`) runs `npm run build` plus `node --check` over all app files on push/PR, and re-runs `scripts/build-vendor.mjs` / `scripts/build-favicon.mjs` with `git diff --exit-code` to catch artifacts that drifted from their generators. `build.js` checks required files, that `index.html` does not load `js/data.js`, that no script is cross-origin or inline, that no Highcharts reference remains, that the province whitelist matches `js/province/`, that `script-src` has no `unsafe-inline`, and (via `scripts/check-contrast.js`) that key text/background pairs meet WCAG AA and that the CSS tokens match `js/palette.js`.
+No automated framework; CI (`.github/workflows/ci.yml`) runs `npm run build` plus `node --check` over all app files on push/PR, and re-runs `scripts/build-vendor.mjs` with `git diff --exit-code` to catch the committed bundle drifting from its generator. `build.js` checks required files, that `index.html` does not load `js/data.js`, that no script is cross-origin or inline, that no Highcharts reference remains, that the province whitelist matches `js/province/`, that `script-src` has no `unsafe-inline`, and (via `scripts/check-contrast.js`) that key text/background pairs meet WCAG AA and that the CSS tokens match `js/palette.js`.
 
 Manual smoke tests:
 1. `npm run dev:mock`, open the page, verify map render + the colour-band legend (public aggregates only).

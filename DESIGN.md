@@ -581,6 +581,6 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
 | `check-contrast.js` 37 条断言 | 全部色值已按 WCAG 2.2 AA 核算通过（含「弱化墨/次级墨 × 衬纸」两对） |
 | 11 对 CSS ↔ palette 同值 | §2 与 `js/palette.js` `tokens` 一一对应 |
 | `_headers` CSP | 字体走 `fonts.googleapis.com`/`fonts.gstatic.com`（已在 `style-src`/`font-src` 白名单）；纸纹用 `data:`（在 `img-src` 白名单） |
-| `favicon.svg` 由几何数据生成 | 不画通用定位针：`scripts/build-favicon.mjs` 从 `js/china.js` 提取国境线剪影（共享边两两抵消，内部省界自动消失），`npm run favicon:build` 重新生成；CI 会校验产物与数据同步。纸面 `#f7f4ec` + 墨绿 `#1f5245`，349 → 3588 字节 |
+| `favicon.svg` 不含地图几何 | 32px 放不下中国地图规范要求的南海诸岛插图，任何按面积简化的国境线剪影都会把那些岛礁当碎点筛掉（早期版本确实丢了）。改用图志语汇：纸面 + 印章形方环 + 罗盘玫瑰，北点朱砂。手写 SVG，约 700 字节 |
 | `js/map.js` 不可 `import` | 画布色与字体仍从 `window.CMapPalette` 读 |
 | 几何数据不可手改 | 本规范不触碰 `js/china.js` 与 `js/province/*.js` |

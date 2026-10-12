@@ -9,7 +9,6 @@
     "data:upload": "node scripts/upload-kv-data.mjs",
     "data:upload:preview": "node scripts/upload-kv-data.mjs --env preview",
     "dev:mock": "node tests/dev-server.mjs",
-    "favicon:build": "node scripts/build-favicon.mjs",
     "vendor:build": "node scripts/build-vendor.mjs"
   },
   "author": "",
