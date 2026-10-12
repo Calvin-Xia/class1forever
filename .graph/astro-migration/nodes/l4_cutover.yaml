@@ -3,7 +3,7 @@ type: task
 label: 切换包与人工 gate
 level: 4
 context: ctx_delivery
-status: running
+status: passed
 plan:
   description: >-
     产出生产切换包：Worker 配置与部署命令、需要重新绑定的口令与会话密钥、KV 绑定核对清单、预览部署证据、回滚步骤（保留现有 Pages 项目与 main
@@ -35,7 +35,7 @@ expected_outcome:
 attempts: 0
 max_attempts: 3
 created_at: '2026-10-12T11:08:15.474Z'
-updated_at: '2026-10-12T16:45:34.916Z'
+updated_at: '2026-10-12T16:53:16.672Z'
 checkpoints:
   - id: cp1
     label: 切换包成文
@@ -47,7 +47,7 @@ checkpoints:
     verifier: auto
   - id: cp3
     label: 人工步骤清单待用户确认
-    status: pending
+    status: passed
     verifier: human
 assigned_to: exec-cutover
 execution_report:
@@ -212,3 +212,13 @@ execution_report:
     ...\dist\client`；按进程树杀启动器后复跑 EXIT=0。写入切换包 §5.5。
 
     4. `astro dev` 默认只监听 `[::1]`；沙箱拒 IPv6 回环（connect EACCES）需 `--host 127.0.0.1`。写入 AGENTS.md 环境备注。
+  verification:
+    verdict: passed
+    checked_at: '2026-10-12T16:53:16.265Z'
+    note: >-
+      主控核验+用户裁定：切换包 docs/cutover-runbook.md(440行)含 Worker 部署命令/密钥与KV清单/回滚/发布后检查/M1-M10人工步骤；index.html 以 R100 归档
+      legacy/index.html(sha babad1aa.. 与 main 逐字相同)且 build.js 增「根不得有 index.html」断言；git diff main -- js/ css/ DESIGN.md 仅
+      D js/vendor/echarts.min.js(ADR-0002 授权)；wrangler.jsonc 的 kv_namespaces/vars/env.preview 零
+      diff；.dev.vars/js/data.js 未入库；HEAD 提交链 C1..C8 可回滚；npm run build EXIT=0(16组)、worker:dryrun EXIT=0。cp1 passed / cp2
+      skipped / cp3 passed(用户 2026-10-13 确认人工清单)。DoD 2 按用户裁定修订为人工步骤 M2(凭据缺口如实记录)。
+  completed_at: '2026-10-12T16:53:16.673Z'

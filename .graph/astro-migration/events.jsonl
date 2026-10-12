@@ -381,3 +381,6 @@
 {"ts":"2026-10-12T16:45:35.434Z","actor":"cli","kind":"adr_accepted","node":"adr_0002","from":"proposed","to":"accepted"}
 {"ts":"2026-10-12T16:45:35.864Z","actor":"cli","kind":"adr_accepted","node":"adr_0003","from":"proposed","to":"accepted"}
 {"ts":"2026-10-12T16:45:36.258Z","actor":"cli","kind":"adr_accepted","node":"adr_0004","from":"proposed","to":"accepted"}
+{"ts":"2026-10-12T16:53:01.265Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l4_cutover","from":"pending","to":"passed","detail":"checkpoint=cp3"}
+{"ts":"2026-10-12T16:53:16.298Z","actor":"cli","kind":"verdict","node":"l4_cutover","detail":"verdict=passed"}
+{"ts":"2026-10-12T16:53:16.682Z","actor":"cli","kind":"node_status","node":"l4_cutover","from":"running","to":"passed"}
