@@ -48,7 +48,7 @@
     /* —— 墨 —— */
     --color-text-primary:          #17241f;  /* 墨绿黑：正文、标题、地图标注 */
     --color-text-secondary:        #4c5852;  /* 次级墨：说明文字、图例刻度 */
-    --color-text-muted:            #5f6a63;  /* 弱化墨：版权、辅助信息 */
+    --color-text-muted:            #5b6660;  /* 弱化墨：版权、辅助信息（衬纸上 4.75:1） */
 
     /* —— 主色：苔墨绿 —— */
     --color-accent-primary:        #4f7f63;  /* 焦点环、统计数字、热力第 4 档 */
@@ -264,11 +264,76 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
 ```
 `#map` 与 `#bottom-sheet` 是**程序化焦点的锚点**（关闭弹层时把焦点还回去），保持 `outline: none`。
 
+### 4.10 地区一览 `.region-ledger`
+
+图表画在 canvas 上，地区和城市无法聚焦 —— 这块折叠表是键盘与读屏的**替代路径**，不是装饰。
+
+- 外壳用原生 `<details>` + `<summary>`：天然可键盘操作、自带展开/折叠状态播报，默认收起，不把 34 行塞给所有人（`progressive-disclosure`）。
+- 内部是原生 `<table>`：`<th scope="col">` 表头、`<th scope="row">` 地区名、`aria-sort` 只标在当前真正排序的那一列上。
+- 每行一个 `.region-table__btn`，`aria-label` 必须说清按下去会发生什么（`进入 X 地图详情` / `查看 X 的公开人数`）。
+- **表头不许 `position: sticky`**：粘性表头 + `position: fixed` 的底部面板会一起盖住 Tab 进入的行内按钮（WCAG 2.2 2.4.11）。
+
+```css
+.region-table__btn {
+    min-height: 36px;              /* ≤768px 提到 44px */
+    padding: 0 14px;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border-strong);
+    border-radius: 3px;
+    color: var(--color-text-primary);
+    font: 700 0.82rem/1 var(--font-body);
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.region-table__num {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;   /* 数字列不跳宽 */
+}
+```
+
+### 4.11 面板头 `.bs-header`
+
+显式标题 + 关闭按钮。**不要再用装饰横杠暗示「下滑关闭」** —— 本页没有实现拖拽，那是假提示。
+
+```css
+.bs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--color-border-light);
+}
+.bs-close {
+    width: 40px; height: 40px;      /* ≤768px 提到 44px */
+    background: transparent;
+    border: 0;
+    border-radius: 3px;
+    color: var(--color-text-secondary);
+}
+```
+面板靠 `bottom` 位移收起、DOM 常驻，所以 `#bs-close` 与两个 `.bs-btn` 在面板非 `.active` 时**必须同时 `hidden`**，否则 Tab 会停在 y≈1660 的屏幕外控件上。
+
+### 4.12 口令显隐开关 `.auth-modal__toggle`
+
+口令是姓名拼音，打错了看不出来。开关贴在输入框右侧（输入框 `padding-right: 52px`）。
+
+| 状态 | 表现 |
+|------|------|
+| default | `aria-pressed="false"`，眼睛图标，无斜杠 |
+| revealed | `aria-pressed="true"`，`data-revealed="true"`，**多一道斜杠** + 字色转 `--color-accent-strong` |
+| hover | `background: var(--color-bg-sunken)` |
+| active | `background: var(--color-border-light)` |
+| focus-visible | 同 4.9 |
+
+状态**不能只靠颜色**：斜杠是给色觉障碍用户的第二个信号（`color-not-only`）。
+
 ---
 
 ## 5. Layout Principles
 
-- **容器**：页面 `max-width: 1320px`；图版 `max-width: 1180px`
+- **容器**：页面 `max-width: 1320px`；图版 `max-width: 1180px`；地区一览与页脚同样 1180px
 - **扉页栅格**：`grid-template-columns: minmax(0, 1fr) 216px`，右侧为图幅信息栏；≤900px 单列堆叠，信息栏转为横向两列
 - **间距梯度**：`4 / 8 / 12 / 16 / 24 / 32 / 48 / 64`（`--space-1` … `--space-8`）
 - **图版内边距**：桌面 16px，移动 8px
@@ -357,13 +422,21 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
 
 ### 7.5 动效清单（L2 签名组合）
 
+**首屏只保留两处内容动画**（`excessive-motion` 上限是 1–2 个/屏）：
+
+1. `ink-drop` —— 标题逐字落墨；
+2. `plate-reveal` —— 图版揭示。
+
+其余（眉标、描述、图幅信息栏、印章、页脚）不再各自入场，跟着 `.page` 的整页淡入出现。
+改版前首屏同时跑 **17 个动画 / 6 个动画组**，`document.getAnimations()` 一次就能数出来。
+
 | 类别 | 落点 | 实现 |
 |------|------|------|
-| Text — Hero H1 | 标题逐字落墨 | CSS `--i` 交错 |
-| Text — Section H2 | 抽屉标题书法式淡入 | `blur`-free `opacity + translateY` |
-| Text — Label | 眉标字距收拢 + 图幅信息行交错 | CSS |
-| Animation — 元素级 | 按钮磁吸（≤4px）、卡片聚光 | `js/motion.js`，rAF 节流 |
-| Component — 交互构件 | 纸版抽屉 / 印章徽标 / 图例标尺 | CSS 过渡 + ECharts visualMap |
+| Text — Hero H1 | 标题逐字落墨（唯一的文字入场） | CSS `--i` 交错，700ms 一次性 |
+| Text — Section H2 | 抽屉标题、地区一览标题 | 静态排版，不做动画 |
+| Text — Label | 眉标字距收拢 | 静态 |
+| Animation — 元素级 | 按钮磁吸（≤4px）、卡片聚光、`:active` 按下态 | `js/motion.js`（rAF 节流）+ CSS |
+| Component — 交互构件 | 纸版抽屉 / 地区一览表 / 印章徽标 / 图例标尺 | CSS 过渡 + ECharts visualMap |
 | Background — 氛围层 | 经纬网格 + 纸纹 + 光标墨晕 | CSS + `--mx/--my` |
 
 ### 7.6 性能红线（与爆点同等优先级）
@@ -388,6 +461,11 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
 ```
 `js/motion.js` 在 `prefers-reduced-motion: reduce` 或 `(hover: none)` 下**完全不注册**光标/磁吸监听。
 
+**ECharts 要单独处理**：地图画在 canvas 上，上面这段媒体查询够不着它。`js/map.js` 的
+`chartAnimationEnabled()` 读同一个查询，喂给 `animation` / `animationDuration` /
+`animationDurationUpdate`。实测开启降低动效后 `getOption().animation === false`、
+`animationDuration === 0`。改动效时两半必须一起改，否则只降了一半。
+
 ---
 
 ## 8. Do's and Don'ts
@@ -404,6 +482,8 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
 8. **图标一律内联 SVG**，`stroke: currentColor`，随文字颜色走。
 9. **动效服务于「印刷」隐喻**：落墨、落印、翻页，而不是弹跳、光晕、粒子。
 10. **保留全部既有 ID 与类名契约**（`js/map.js` 依赖它们）。
+11. **对比度断言要覆盖一个色值实际落到的每一种底色**。`--color-text-muted` 曾经只对页面底断言（5.12:1），可它实际坐在衬纸上的两处（地图版权、比例尺刻度）只有 **4.48:1** —— 只对一种底色断言就是漏检。现在是 37 条。
+12. **交互控件统一加 `touch-action: manipulation`**，`#map` 除外：它需要保留原生拖拽与双指缩放。
 
 ### Don't
 
@@ -416,7 +496,10 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
 7. **不要**硬编码色值到 `js/map.js` —— 画布颜色统一从 `CMapPalette` 取。
 8. **不要**给地图容器加 `overflow: hidden` 之外的裁剪，也**不要**改 `aspectScale` 与 `BASE_ZOOM`（几何数据是 EPSG:3415 预投影）。
 9. **不要**新增跨域 `<script>` 或内联 `<script>`（`build.js` 会直接失败）。
-10. **不要**把 `#map` 变成可 Tab 聚焦的控件 —— 它只是焦点锚点，键盘操作地图是已知限制。
+10. **不要**把 `#map` 变成可 Tab 聚焦的控件 —— 它只是焦点锚点；键盘选地区的路径是「地区一览」表。
+11. **不要**给 `.region-table thead th` 加 `position: sticky`，也不要新增其他会盖住焦点的大面积粘性 UI（WCAG 2.2 2.4.11）。
+12. **不要**用装饰元素暗示尚未实现的手势 —— 面板原来那条 2px 横杠就是在暗示「可下滑关闭」，代码里却没有拖拽处理。
+13. **不要**让面板收起时把 `#bs-close` / `#bs-primary-btn` / `#bs-drilldown-btn` 留在焦点序列里。
 
 ---
 
@@ -428,9 +511,11 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
 | 900–1024px | 扉页双栏收窄，信息栏 180px |
 | 768–900px | 扉页单列，信息栏转为横向两列网格；地图 `62vh` |
 | ≤ 768px | 抽屉居中为 `min(560px, calc(100% - 32px))`；芯片 `min-height: 44px`；缩放按钮 44×44；地图 `58vh` |
-| ≤ 480px | 标题 `2rem`、隐藏图幅信息栏的投影/比例行；隐藏 `.map-credit`；地图 `52vh`、`min-height: 300px`；名册行允许换行 |
+| ≤ 480px | 标题 `2rem`、图幅信息栏转单列；隐藏 `.map-credit` 与 `.map-scale`；地图 `clamp(280px, 52vh, 520px)`；地区表格内边距收到 8px；名册行允许换行 |
+| ≤ 520px 高 + 横屏 | 地图 `clamp(220px, 52vh, 420px)`，扉页上下留白收紧。不加这条的话 `min-height: 320px` 会把地图顶到视口高度的 85%（实测 812×375） |
+| 200% 文字放大 | 印章用 `em` 定尺寸跟着字号长（原来写死 54px，"蹭饭"两个字会顶出方框）；`.chip` 用 `min-height` 而非固定高度。实测无裁剪、无横向溢出 |
 
-**触摸目标**：所有 `button` / `a` 在 ≤ 768px 下 `min-height: 44px`（`.map-zoom__btn` 为 44×44 方形）。
+**触摸目标**：所有 `button` / `a` / `input` 在 ≤ 768px 下 `min-height: 44px`（`.map-zoom__btn` 为 44×44 方形，`.region-table__btn` 与 `.auth-modal__toggle` 同样提到 44px）。
 
 **横向溢出**：≤ 600px 不允许出现横向滚动条；长地名用 `overflow-wrap: anywhere`，不用 `text-overflow: ellipsis` 截断关键信息。
 
@@ -445,7 +530,7 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
 | `build.js` 无内联/跨域脚本 | 动效集中在同源 `js/motion.js`；SVG 内联，无 CDN |
 | `build.js` 无 Highcharts 残留 | 不受影响 |
 | `check-contrast.js` 12 个必需变量 | §2 全部提供，且都在首个 `:root` 块内 |
-| `check-contrast.js` 35 条断言 | 全部色值已按 WCAG 2.2 AA 核算通过 |
+| `check-contrast.js` 37 条断言 | 全部色值已按 WCAG 2.2 AA 核算通过（含「弱化墨/次级墨 × 衬纸」两对） |
 | 11 对 CSS ↔ palette 同值 | §2 与 `js/palette.js` `tokens` 一一对应 |
 | `_headers` CSP | 字体走 `fonts.googleapis.com`/`fonts.gstatic.com`（已在 `style-src`/`font-src` 白名单）；纸纹用 `data:`（在 `img-src` 白名单） |
 | `js/map.js` 不可 `import` | 画布色与字体仍从 `window.CMapPalette` 读 |

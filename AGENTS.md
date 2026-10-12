@@ -40,6 +40,9 @@ Static classmate-distribution map ("蹭饭地图"). The page shows public provin
 - JavaScript uses camelCase; keep functions focused.
 - CSS follows existing component/modifier patterns such as `map-frame__corner--tl`.
 - All page colours must resolve through `:root` custom properties. The only literal values allowed outside that block are the two `.auth-modal__feedback[data-variant=...]` colours — `scripts/check-contrast.js` reads them with a regex and cannot parse `var(...)` — and the `black` stop in the `.atmosphere__grid` mask, which is an alpha channel rather than a design colour.
+- `--color-text-muted` must stay readable on **both** `--color-bg-primary` and the darker `--color-bg-secondary`: the map credit and the scale label sit on the inset colour, and at `#5f6a63` they were 4.48:1. Both pairs are asserted in `scripts/check-contrast.js` now, so shortening the token fails the build.
+- `:root` declares `color-scheme: light`. Without it a system dark mode repaints native scrollbars and form controls dark and they fight the paper surfaces.
+- Interactive elements get `touch-action: manipulation` from the generic `button, a, input` rule. Deliberately not applied to `#map`, which needs native pan and pinch.
 - `.spotlight` must never declare `position`. It sits after `.share-btn` in the cascade, so `position: relative` there silently overrides that button's `position: absolute` and drops it into the document flow, pushing the map down by 40px. Elements that need positioning declare it themselves.
 - Province map filenames stay lowercase pinyin (example: `zhejiang.js`).
 - No linter/formatter; keep changes minimal and consistent with nearby code.
@@ -51,7 +54,10 @@ Static classmate-distribution map ("蹭饭地图"). The page shows public provin
 - The China GeoJSON also carries `filename` for Taiwan/Hong Kong/Macau/Nanhai, but no province files exist for them; the whitelist is what prevents a doomed drilldown request.
 - Colours live in two places on purpose (CSS tokens for the page, `js/palette.js` for canvas drawing). Change both or `npm run build` fails. Text on the share image's header gradient is checked at the gradient midpoint. Solid button fills use white on `--color-accent-strong` (8.93:1); `--color-accent-primary` is the focus-ring / stat-number colour, and while white on it technically clears AA (4.62:1) it is not a button fill.
 - The `visualMap` legend is sized and placed by `legendLayout()` in `js/map.js`: below 768px the ruler shortens and shifts right so the `0 人` tick clears the 44px zoom cluster in the bottom-left corner. It reads `window.innerWidth` when the option is built, so a live resize re-centres the legend but keeps its length until the next view change.
-- Dialogs (bottom sheet, passphrase modal) go through `FocusScope` in `js/map.js`: background `inert`, focus moved inside, focus restored on close. `#map` and `#bottom-sheet` carry `tabindex="-1"` purely as focus anchors. The map itself is not keyboard operable — that is a known limitation, not a bug.
+- Every way of opening a region goes through `activateRegion(point)` in `js/map.js`. The map click handler and the 「地区一览」 table rows both call it, so the two paths can never drift apart; add new entry points there, not by duplicating the drilldown/detail branches.
+- 「地区一览」 (`.region-ledger`) is the keyboard and screen-reader substitute for the canvas chart: a native `<table>` inside `<details>` with one button per region and `aria-sort` on the sorted column. Do not give `.region-table thead th` `position: sticky` — a sticky header plus the fixed bottom sheet can cover a focused row button (WCAG 2.2 2.4.11).
+- Dialogs (bottom sheet, passphrase modal) go through `FocusScope` in `js/map.js`: background `inert`, focus moved inside, focus restored on close. `#map` and `#bottom-sheet` carry `tabindex="-1"` purely as focus anchors. The sheet is dismissed by sliding it off-screen with `bottom`, so `BottomSheet.updateButtons()` must also set `hidden` on `#bs-close` / `#bs-primary-btn` / `#bs-drilldown-btn` whenever the sheet is not `.active` — otherwise they stay focusable at y≈1660 and Tab lands on invisible controls. The map canvas itself is still not keyboard operable; `#region-table-body` is what makes region selection reachable without a pointer.
+- ECharts paints to canvas, so the `prefers-reduced-motion` block in `css/main.css` cannot reach it. `chartAnimationEnabled()` in `js/map.js` reads the media query separately and feeds `animation` / `animationDuration`; keep both halves in sync when touching motion.
 
 ## Security & Data Rules
 - Never commit `.dev.vars`, `js/data.js`, or any full student list; never serve them as static assets.
@@ -71,7 +77,10 @@ Manual smoke tests:
 7. Share button produces a PNG containing the map, legend band and stats.
 8. Check a narrow viewport (<=480px): controls do not overlap and there is no horizontal scroll.
 9. Keyboard pass: Tab shows a visible focus ring on every button; with the passphrase modal open, Tab never reaches the background controls and Esc returns focus to "同学信息"; closing the bottom sheet returns focus to the map. Desktop (>=768px) shows the sheet as a centred 560px drawer.
-10. `npm run build` passes; `npm run data:upload -- --dry-run` succeeds.
+10. Expand 「地区一览」 and Tab to a row's 「查看」 button, then press Enter: the result must match clicking that region on the map. Toggle the sort and check `aria-sort` moves to the other column.
+11. With the sheet open, close it, then Tab from the top of the page: the tab order must never stop on a `#bs-*` control (they sit at y≈1660 when the sheet is closed).
+12. Enable "reduce motion" in the OS and reload: the choropleth must not animate and the title must not drop in character by character.
+13. `npm run build` passes; `npm run data:upload -- --dry-run` succeeds.
 
 If automated tests are introduced later, place them under `tests/` with `*.test.js` naming.
 
