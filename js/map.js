@@ -179,6 +179,21 @@ function getActiveProvinceName() {
 }
 
 /**
+ * 公开数据里某个省的聚合：人数 + 有登记的城市数。
+ *
+ * 分享图的统计区和读屏播报都要按当前视野报数，两处必须同源。
+ * 各写一份的话，迟早一处改了另一处漏改，同一屏上出现两个口径。
+ */
+function getProvinceSummary(provinceName) {
+    const summary = ((AppState.publicData && AppState.publicData.provinces) || {})[provinceName] || null;
+
+    return {
+        count: summary ? Number(summary.count || 0) : 0,
+        cities: Object.keys((summary && summary.cities) || {}).length
+    };
+}
+
+/**
  * 把地图数据点还原成 { province, city }，供详情接口查询使用。
  * 点里的字段由 buildNationalPoints / buildProvincePoints 写入，不再依赖图表库的对象结构。
  */
@@ -1820,9 +1835,18 @@ function updateInteractionNote() {
     const stats = AppState.publicData.stats || {};
     // 下钻与返回只改地图和徽标，而徽标不是 live region。
     // 把当前地区并进这条播报，读屏才知道视野已经换了。
-    const activeProvince = getActiveProvinceName();
-    const scope = activeProvince ? `当前查看 ${activeProvince}。` : '当前查看全国。';
-    const prefix = `${scope}共覆盖 ${Number(stats.provinces || 0)} 个省级区域、${Number(stats.cities || 0)} 座城市，共 ${Number(stats.total || 0)} 位同学。`;
+    const provinceName = getActiveProvinceName();
+    // 数字必须跟着视野走：省级视野里再念一遍全国总数，听起来就是这个省有那么多同学。
+    let prefix;
+
+    if (provinceName) {
+        const summary = getProvinceSummary(provinceName);
+        prefix = summary.count === 0
+            ? `当前查看 ${provinceName}。地图上暂时还没有同学登记。`
+            : `当前查看 ${provinceName}。覆盖 ${summary.cities} 座城市，共 ${summary.count} 位同学。`;
+    } else {
+        prefix = `当前查看全国。共覆盖 ${Number(stats.provinces || 0)} 个省级区域、${Number(stats.cities || 0)} 座城市，共 ${Number(stats.total || 0)} 位同学。`;
+    }
 
     if (!AppState.detailModeAvailable) {
         ui.note.textContent = `${prefix} 现在先看看各地人数。`;
@@ -1835,7 +1859,11 @@ function updateInteractionNote() {
     }
 
     if (AppState.detailModeEnabled) {
-        ui.note.textContent = `${prefix} 现在可以点地区查看同学信息；想继续进入省内地图，请用下方按钮。`;
+        // 省级视野里没有可下钻的地区，面板上的「进入…地图详情」按钮也是隐藏的，
+        // 所以这时候只说怎么回全国，不指向一个不存在的按钮。
+        ui.note.textContent = provinceName
+            ? `${prefix} 现在可以点地区查看同学信息；用左上角的「返回全国」回到全国视野。`
+            : `${prefix} 现在可以点地区查看同学信息；想继续进入省内地图，请用下方按钮。`;
         return;
     }
 
@@ -2142,12 +2170,99 @@ function setupStaticUi() {
 }
 
 const ShareManager = (function() {
+    /**
+     * 日期一律按浏览器本地时区取。
+     * 之前用的是 toISOString().slice(0,10) —— 那是 UTC 日期，本地凌晨导出会写成前一天。
+     */
+    function formatDate(isoString) {
+        if (!isoString) {
+            return '';
+        }
+
+        const date = new Date(isoString);
+        if (isNaN(date.getTime())) {
+            return '';
+        }
+
+        const pad = function(value) {
+            return String(value).padStart(2, '0');
+        };
+
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    }
+
+    /**
+     * 分享图的人数口径必须和地图一致。
+     *
+     * 这里以前永远读全国的 publicData.stats，于是下钻到某个省之后导出的图是
+     * 「省界 + 省级色带 + 全国数字」，接收方会直接把全国总人数读成这个省的人数。
+     * 现在按当前视野取数：全国视野给全国口径，省级视野给该省口径；
+     * 副标题同时带上范围，图脱离页面之后也能自解释。
+     */
     function calculateStats() {
-        const stats = (AppState.publicData && AppState.publicData.stats) || {};
+        const national = (AppState.publicData && AppState.publicData.stats) || {};
+        const generatedAt = (AppState.publicData && AppState.publicData.generatedAt) || '';
+        const provinceName = getActiveProvinceName();
+
+        if (!provinceName) {
+            return {
+                scope: '全国',
+                generatedAt: generatedAt,
+                columns: [
+                    { value: Number(national.total || 0), label: '总人数' },
+                    { value: Number(national.provinces || 0), label: '覆盖省份' },
+                    { value: Number(national.cities || 0), label: '覆盖城市' }
+                ],
+                emptyText: ''
+            };
+        }
+
+        const summary = getProvinceSummary(provinceName);
+        const count = summary.count;
+        const total = Number(national.total || 0);
+
+        // 只要有省级地图就能下钻，和人数无关；0 人的地区给一句人话，而不是一行 0。
+        // 措辞不能写「这个省」：北京、上海这些直辖市和自治区也走这条分支，
+        // 范围交给副标题交代，这里只描述状态。
+        if (count === 0) {
+            return {
+                scope: provinceName,
+                generatedAt: generatedAt,
+                columns: null,
+                emptyText: '这里暂时还没有同学登记'
+            };
+        }
+
         return {
-            total: Number(stats.total || 0),
-            provinces: Number(stats.provinces || 0),
-            cities: Number(stats.cities || 0)
+            scope: provinceName,
+            generatedAt: generatedAt,
+            columns: [
+                // 用数据里的地区原名，避免"本省"对直辖市和自治区都不合适。
+                { value: count, label: provinceName + '人数' },
+                // 口径与全国的 stats.cities 一致：只数有登记的城市。
+                { value: summary.cities, label: '覆盖城市' },
+                { value: total > 0 ? Math.round(count / total * 100) + '%' : '—', label: '占全班' }
+            ],
+            emptyText: ''
+        };
+    }
+
+    /**
+     * 按下分享按钮那一刻就把范围和日期定死，图片和文件名共用这一份。
+     *
+     * 生成图片要等一次 Image 解码，这段时间里按 Esc 切视野完全来得及；文件名如果
+     * 等到下载时才重新读状态，就会出现「缩略图是浙江、文件名写着全国」。聊天软件里
+     * 缩略图很小，文件名往往是接收方唯一能看到的上下文，两者必须同源。
+     */
+    function createSharePlan() {
+        const stats = calculateStats();
+        const date = formatDate(stats.generatedAt);
+
+        return {
+            stats: stats,
+            // 没有数据日期就不写日期段：文件名里的日期只有「数据日期」一种含义，
+            // 拿导出当天顶上会被读成这份数据是今天更新的（副标题也是同样的取舍）。
+            filename: `蹭饭地图_${stats.scope}${date ? '_' + date : ''}.png`
         };
     }
 
@@ -2214,7 +2329,10 @@ const ShareManager = (function() {
             chart.setOption({ visualMap: { show: true } });
         }
 
-        return { dataUrl, crop };
+        // 色带的满量程和快照在同一刻取。这个函数在 await 之前同步跑完，
+        // 之后按 Esc 切视野也改不动已经定下的刻度 —— 否则图上是省级色带、
+        // 刻度却按全国重算，同一张图里颜色和刻度互相矛盾。
+        return { dataUrl, crop, heatMax: computeHeatMax(AppState.regionIndex) };
     }
 
     /**
@@ -2304,8 +2422,9 @@ const ShareManager = (function() {
         }
     }
 
-    async function generateImage() {
-        const stats = calculateStats();
+    /** shareStats 由 createSharePlan() 传入；省略时自己按当前视野算一份，方便单独调用。 */
+    async function generateImage(shareStats) {
+        const stats = shareStats || calculateStats();
         const snapshot = captureMapSnapshot();
         const mapImage = await loadImage(snapshot.dataUrl);
 
@@ -2350,7 +2469,14 @@ const ShareManager = (function() {
 
         ctx.font = '18px ' + palette.fonts.body;
         ctx.fillStyle = palette.share.headerSubtitle;
-        ctx.fillText('探索各地同学的足迹', canvas.width / 2, 105);
+        // 范围要印在图上：省界图配几个数字，脱离页面之后没有别的线索能说明这是哪个省。
+        // 数据时间缺失时只印范围，不印半个日期。
+        const dataDate = formatDate(stats.generatedAt);
+        ctx.fillText(
+            dataDate ? `${stats.scope} · 数据更新于 ${dataDate}` : stats.scope,
+            canvas.width / 2,
+            105
+        );
 
         // 等比缩放并居中；极端比例被上下限裁到时，留白用快照同色填充。
         ctx.fillStyle = SNAPSHOT_BACKGROUND;
@@ -2373,7 +2499,7 @@ const ShareManager = (function() {
 
         ctx.fillStyle = palette.share.background;
         ctx.fillRect(0, legendTop, canvas.width, SHARE_LEGEND_HEIGHT);
-        drawHeatLegend(ctx, canvas.width / 2, legendTop, SHARE_LEGEND_HEIGHT, computeHeatMax(AppState.regionIndex));
+        drawHeatLegend(ctx, canvas.width / 2, legendTop, SHARE_LEGEND_HEIGHT, snapshot.heatMax);
 
         ctx.fillStyle = palette.share.statsBackground;
         ctx.fillRect(0, statsTop, canvas.width, SHARE_STATS_HEIGHT);
@@ -2381,20 +2507,25 @@ const ShareManager = (function() {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        const statColumns = [
-            { value: stats.total, label: '总人数', x: 200 },
-            { value: stats.provinces, label: '覆盖省份', x: 600 },
-            { value: stats.cities, label: '覆盖城市', x: 1000 }
-        ];
+        if (stats.columns) {
+            // 三列等距；全国的列与标签保持原样，只有省级视野换成该省口径。
+            const statPositions = [200, 600, 1000];
 
-        statColumns.forEach(function(column) {
-            ctx.fillStyle = palette.share.statValue;
-            ctx.font = 'bold 36px ' + palette.fonts.body;
-            ctx.fillText(String(column.value), column.x, statsTop + 40);
+            stats.columns.forEach(function(column, index) {
+                const x = statPositions[index];
+                ctx.fillStyle = palette.share.statValue;
+                ctx.font = 'bold 36px ' + palette.fonts.body;
+                ctx.fillText(String(column.value), x, statsTop + 40);
+                ctx.fillStyle = palette.share.statLabel;
+                ctx.font = '16px ' + palette.fonts.body;
+                ctx.fillText(column.label, x, statsTop + 70);
+            });
+        } else {
+            // 0 人的地区：一行空状态比一行 0 更像话。
             ctx.fillStyle = palette.share.statLabel;
-            ctx.font = '16px ' + palette.fonts.body;
-            ctx.fillText(column.label, column.x, statsTop + 70);
-        });
+            ctx.font = '18px ' + palette.fonts.body;
+            ctx.fillText(stats.emptyText, canvas.width / 2, statsTop + SHARE_STATS_HEIGHT / 2);
+        }
 
         ctx.fillStyle = palette.share.footerBackground;
         roundRect(ctx, 0, footerTop, canvas.width, SHARE_FOOTER_HEIGHT, 0, true, false, [0, 0, 24, 24]);
@@ -2433,7 +2564,8 @@ const ShareManager = (function() {
     }
 
     function downloadImage(blob, filename) {
-        const finalName = filename || `蹭饭地图_${new Date().toISOString().slice(0, 10)}.png`;
+        // 省略文件名时按当前视野补一个，单独调用 downloadImage 也不会拿到无名文件。
+        const finalName = filename || createSharePlan().filename;
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -2444,8 +2576,8 @@ const ShareManager = (function() {
         URL.revokeObjectURL(url);
     }
 
-    async function shareToSocial(blob) {
-        downloadImage(blob);
+    async function shareToSocial(blob, filename) {
+        downloadImage(blob, filename);
         return true;
     }
 
@@ -2459,8 +2591,10 @@ const ShareManager = (function() {
         button.disabled = true;
 
         try {
-            const blob = await generateImage();
-            await shareToSocial(blob);
+            // 范围与日期只在这里取一次，图片和文件名从同一个来源出来。
+            const plan = createSharePlan();
+            const blob = await generateImage(plan.stats);
+            await shareToSocial(blob, plan.filename);
         } catch (error) {
             console.error('生成分享图片失败:', error);
             alert('生成分享图片失败，请稍后重试');
