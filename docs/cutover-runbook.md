@@ -230,6 +230,14 @@ $ npm run worker:dryrun                                                         
 $ npx wrangler versions upload --dry-run                                         → EXIT=0
 ```
 
+> **进程卫生（真实事故，披露）**：切换包落地后第一次复跑 `npm run build` 时报
+> `EPERM, Permission denied: …\dist\client`。原因不是代码，而是本节点的 `dev:local` 探针收尾只杀了
+> **监听端口**的 wrangler 进程，启动器 `node scripts/local-runtime.mjs …` 仍活着并把 wrangler/workerd
+> 重新拉起，持续持有 `dist/client`。修法：按进程树杀掉启动器（`taskkill /PID <launcher> /T /F`）。
+> 之后同一棵树复跑 `npm run build` → **EXIT=0**。日志：`.wrangler/probe-tmp/l4-build-tip.log`。
+> 教训与 `docs/build-gates.md` 的「dist 争用」一条一致：跑门禁前先确认 88xx/89xx 无 dev server；
+> 若报 EPERM 且路径含 `dist`，先找**启动器**（不只是端口占用者）。
+
 ---
 
 ## 6. 回滚
@@ -359,26 +367,43 @@ $ sha256sum legacy/index.html            → babad1aa4606efa62ccdadb1f7f39993692
 | `.pi/`（agent 目标池/运行态） | **不提交**（`.gitignore`） | pi 的运行态，不是项目源码 |
 | `js/data.js`、`.dev.vars`、`output/`、`.wrangler/`、`dist/` | 不提交（既有 gitignore） | 明细数据与密钥绝不入库 |
 
-### 10.2 提交点（按逻辑分组，SHA 见 §10.3）
+### 10.2 提交点（按逻辑分组）
 
-| 提交 | 内容 | 回滚含义 |
-|---|---|---|
-| C1 | 迁移主体：Astro/Worker 工程配置、`src/**`、`public/**`、脚本与测试、`build.js` 门禁、CI、`.gitignore`、生成类型 | `git revert C1` 或 `git checkout main` 整体退回旧站 |
-| C2 | 退役自建 ECharts vendor 产物（ADR-0002）：删 `js/vendor/echarts.min.js`、`scripts/build-vendor.mjs` | `git revert C2` 可把旧产物拿回来（若需要旧站页面可跑） |
-| C3 | 补文档：迁移契约、门禁分层、验收记录、context/ADR | 纯文档 |
-| C4 | dev 遮蔽处置：`index.html` → `legacy/index.html` + `legacy/README.md` + `build.js` 新断言 | `git revert C4`（或 `git mv legacy/index.html index.html`）恢复旧入口 |
-| C5 | 文档同步（AGENTS/README/DEPLOYMENT 的 Worker 口径 + 切换包） | 纯文档 |
-| C6 | 在切换包里记录各提交点 SHA | 纯文档 |
+| 提交 | SHA | 内容 | 回滚含义 |
+|---|---|---|---|
+| C1 | `a2cd64dabf2bd7ab475dac2e9f0a0772a368e3fa` | 迁移主体：Astro/Worker 工程配置、`src/**`、`public/**`、脚本与测试、`build.js` 门禁重写、CI、`.gitignore`、生成类型、旧入口归档（`R100`）、vendor 退役（两处删除） | `git checkout main` 整体退回旧站；单独恢复某件东西：`git checkout main -- js/vendor/echarts.min.js`、`git mv legacy/index.html index.html` |
+| C2 | `abc1d2019fb31b60003655da86ed3f0ebf160bff` | 补文档：迁移契约、门禁分层、验收记录、context/ADR、`CONTEXT-MAP.md`、`DECISIONS.md` | 纯文档 |
+| C3 | `28dbd546d246d88aed968d52eaf46d63f2c0e75a` | 本切换包 `docs/cutover-runbook.md` | 纯文档 |
+| C4 | `0fdcfb845b070b64d42f8acb24630a3f5ca61227` | 文档同步：`AGENTS.md` / `README.md` / `DEPLOYMENT.md` → Worker 口径（F-5） | 纯文档 |
+| C5 | `50c99c4b4596917f234396c23734036c1e0deae3` | 迁移图设计态入库 + `.graph/**` 运行时缓存与 `.pi/` 忽略 | `git revert` 不影响部署面 |
+| C6 | （本提交）在切换包里回填 C1–C5 的 SHA | 纯文档 |
 
-**绿色保证在分支尖**（已复跑 `npm run build` `EXIT=0`、`npm run worker:dryrun` `EXIT=0`、`npm run dev:local` 全通）。
-中间提交按逻辑分组，不保证逐个单独可构建（C1 落地时 vendor 产物尚未退役、字面量文档同步尚未发生）——
-这是有意的取舍：**回滚点是分支尖与 `main`，不是中间提交**。
+**绿色保证在分支尖**（C6 后复跑：`npm run build` `EXIT=0`（静态断言 16 组）、`npm run worker:dryrun` `EXIT=0`、
+`npm run dev:local` 首页 + 四路由均通）。中间提交按逻辑分组，**不保证逐个单独可构建**：
+`main` 的旧 `build.js` 把 `index.html` 与 `js/vendor/echarts.min.js` 列为必需文件，所以这两件事
+必须和「新门禁」在同一个提交里落地（这就是 C1 把工程面、归档与 vendor 退役放在一起的原因）。
+**回滚点是分支尖与 `main`，不是中间提交。**
 
-### 10.3 实际 SHA
+> 注：C5 的图设计态提交里 `nodes/l4_cutover.yaml` 是本节点**执行中**的快照（不含最终 execution report），
+> 属可接受的记录延迟；图的真相源是工作区的 `.graph/`，不是这份快照。
+
+### 10.3 分支读数
 
 ```text
-（本表在最后一次提交里回填，见 `git log --oneline`）
+$ git log --oneline main..HEAD
+50c99c4 chore: 纳入迁移图的设计态，忽略运行时缓存
+0fdcfb8 docs: 同步 AGENTS/README/DEPLOYMENT 到 Worker 口径
+28dbd54 docs: 补生产切换包与人工 gate 清单
+abc1d20 docs: 补齐迁移契约、构建门禁、验收记录与上下文/ADR
+a2cd64d feat: 迁移到 Astro 6 SSR + Cloudflare Worker + Workers Assets
+
+$ git rev-parse --abbrev-ref HEAD   → astro-migration
+$ git rev-parse main                → 90c182bc31b877ad1d9de16068d7fd2e8fa3c77c
+$ git rev-parse HEAD                → 见 C6（本提交）
+$ git rev-list --count main..HEAD   → 6
 ```
+
+**未 push 远端**（no push）；`main` 未被修改。
 
 ---
 
