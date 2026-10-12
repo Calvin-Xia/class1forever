@@ -1,0 +1,15 @@
+# 0004 — 岛屿水合走外链脚本 + createRoot，禁用 client:*，不放宽 script-src 'self'
+
+新站的 React 岛屿一律不用 Astro 的 client:* 指令；改为在 .astro 里写 <script>（Astro 编译成 /_astro/*.js 外链 chunk）+ 动态 import 岛屿入口 + createRoot 挂载。CSP 保持 script-src 'self'，不引入 unsafe-inline、不维护 hash/nonce。
+
+**Status：** proposed（待裁决）
+
+**Context：** l2_motion 与 l2_map 实测：Astro client:* 会往 HTML 注入内联水合脚本，被 public/_headers 的 CSP script-src 'self' 拦下，岛屿完全不水合（真实 Chromium 控制台两条 CSP 违规、window.__mapProbe undefined）。而仓库硬约束要求 script-src 'self' 且 build.js 断言无内联脚本。
+
+**Considered Options：** (a) 启用 Astro security.csp 给内联脚本发 hash/nonce：需改 astro.config.mjs 与 _headers，hash 随构建漂移、需额外门禁；(b) 放宽 CSP 加 unsafe-inline：安全回归，直接违反硬约束；(c) 外链 <script> + 动态 import + createRoot：已验证、CSP 不放宽、保留 React 岛屿形态（选用）。
+
+**Why：** (c) 同时满足两条硬约束（script-src 'self' + 无内联脚本），已被 l2_map（49 项 Playwright 断言全绿）与 l2_motion（双态探针）实测证明；外链 chunk 仍由 Astro/Vite 打包，形态与 client:* 等价。
+
+**Consequences：** 代价：岛屿挂载需手写一行 <script> + 动态 import 样板，不能直接用 client:load/client:visible 的声明式指令；Astro 内置的 islands 水合 runtime（astro-island 自定义元素）不参与，后续若升级 Astro 需复核本决策。收益：CSP 保持最严，无需 hash/nonce 维护，门禁可直接断言渲染页无内联脚本。
+
+> 本文由 `graph export` 从图顶点 adr_0004 生成；改图不改文，重新导出即覆盖。
