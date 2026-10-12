@@ -14,14 +14,32 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # astro 6 的 engines 要求 node >= 22.12.0（wrangler >= 22.0.0），
+          # 所以这里用 24，不再用 node 20。
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Static safety check
+      # 单一门禁入口：node build.js = 静态安全断言（明细数据不外流、脚本同源无内联、
+      # 省份白名单与 js/province 一致、script-src 无 unsafe-inline、对比度/调色板同值、
+      # ADR-0002 的 vendor 退役、_headers 与 security-headers.ts 防漂移、Node engines 匹配、
+      # 以及 `wrangler types --check`（生成类型 worker-configuration.d.ts 必须已提交且
+      # 与 wrangler.jsonc 一致 —— 官方建法：提交生成类型，CI 用 --check 防漂移））
+      # + astro check + astro build + 产物扫描（dist 无 .dev.vars / 无密钥字面量）。
+      - name: Build and static safety gates
         run: npm run build
+
+      # 真起一次本地 Worker（无 Cloudflare 凭据）：渲染页脚本全外链、文档响应与静态资产的
+      # 安全头逐条一致、/.dev.vars 等路径不可请求。
+      - name: Runtime gates (headless Worker)
+        run: npm run check:runtime
+
+      # 四路由契约断言：脚本自己起 wrangler dev（本地 KV + 演示口令），
+      # 不读 .dev.vars，也不需要 Cloudflare 凭据。
+      - name: API contract tests
+        run: npm run test:api
 
       - name: Syntax check
         run: |
@@ -33,10 +51,3 @@ jobs:
             cat "$file" | node --check --input-type=module
           done
           node --check build.js
-
-      - name: Vendor bundle is in sync
-        run: |
-          set -e
-          node scripts/build-vendor.mjs
-          git diff --exit-code -- js/vendor/echarts.min.js \
-            || { echo "❌ js/vendor/echarts.min.js 与 scripts/vendor/echarts-entry.mjs 不同步，请重新执行 npm run vendor:build"; exit 1; }

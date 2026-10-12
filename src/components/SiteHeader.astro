@@ -1,0 +1,50 @@
+---
+/**
+ * 页头图版：站名、说明文案与图幅信息。
+ *
+ * 标题的可视字块与 `aria-label` 并存：字块交给 l2_motion 做逐字落下，
+ * 读屏只读 `aria-label`（旧站同样写法）。无 JS 时字块本身就是完整标题，
+ * 因此这里不需要任何脚本参与渲染。
+ */
+const titleChars = ['金', '鹰', ' ', '1', ' ', '班', '蹭', '饭', '地', '图'];
+---
+
+<header class="page__header">
+    <div class="plate">
+        <div class="plate__main">
+            <p class="plate__eyebrow">金鹰 1 班 · 同学分布图志</p>
+            <h1 class="page__title" aria-label="金鹰 1 班蹭饭地图">
+                <span aria-hidden="true"
+                    >{titleChars.map((char, index) => (
+                        <span
+                            class:list={['char', char === ' ' && 'char--gap']}
+                            style={`--i:${index}`}>{char}</span>
+                    ))}</span
+                >
+            </h1>
+            <p class="page__description">地图上先摊开各省市的落点与人数。姓名和学校不写在公开图面上 —— 要口令才翻得开。</p>
+        </div>
+
+        <aside class="plate__meta" aria-label="图幅信息">
+            <dl>
+                <div>
+                    <dt>图幅</dt>
+                    <dd>中华人民共和国</dd>
+                </div>
+                <div>
+                    <dt>投影</dt>
+                    <dd>EPSG:3415 等距</dd>
+                </div>
+                <div>
+                    <dt>比例</dt>
+                    <dd>不按比例 · 按饭量</dd>
+                </div>
+                <div>
+                    <dt>口径</dt>
+                    <dd>人数公开</dd>
+                </div>
+            </dl>
+            <span class="plate__seal" aria-hidden="true">蹭饭</span>
+        </aside>
+    </div>
+</header>

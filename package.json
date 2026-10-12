@@ -2,14 +2,26 @@
   "name": "class1forever.github.io",
   "version": "1.0.0",
   "description": "蹭饭地图",
+  "//": "本地开发与测试：`npm run dev` = astro dev（Astro 开发服务器，绑定走本地模拟，KV 是本地数据；注意仓库根的旧 index.html 会遮蔽它，前端核对请走 dev:local）；`npm run dev:local` = 无 Cloudflare 凭据的完整通路（先由 dist 派生本地配置 + 写入本地 KV 夹具，再起 wrangler dev，演示口令 demo，需先 npm run build）；`npm run seed:local` 只写本地 KV；`npm run test:api` 用同一个本地通路跑四路由契约断言（也需先 npm run build）。门禁：`npm run build` = node build.js（静态安全断言 + astro check + astro build + 产物扫描，单入口）；`npm run check:runtime` = 起一次本地 Worker，断言渲染页无内联脚本、文档响应与静态资产的安全头逐条一致、.dev.vars 等路径不可请求；`npm run check` = build + check:runtime + test:api 全套。`npm run cf:dev` = wrangler dev（读 wrangler.jsonc 的 KV remote:true → 连远端 KV，需要 Cloudflare 凭据），`npm run preview` = 先构建再用 Worker 运行时预览产物。改动 wrangler.jsonc 的绑定后请重跑 `npm run cf:types`（= wrangler types）刷新 worker-configuration.d.ts。",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "build": "node build.js",
-    "cf:dev": "npx wrangler pages dev .",
-    "cf:types": "npx wrangler types",
+    "check": "npm run build && npm run check:runtime && npm run test:api",
+    "check:runtime": "node scripts/check-runtime.mjs",
+    "dev": "astro dev",
+    "preview": "npm run build && wrangler dev",
+    "astro:check": "astro check",
+    "worker:dryrun": "wrangler deploy --dry-run --outdir .wrangler-dryrun",
+    "dev:local": "node scripts/local-runtime.mjs",
+    "seed:local": "node scripts/local-runtime.mjs --seed-only",
+    "test:api": "node --test tests/api-contract.test.mjs",
+    "cf:dev": "wrangler dev",
+    "cf:types": "wrangler types",
+    "cf:types:check": "wrangler types --check",
     "data:upload": "node scripts/upload-kv-data.mjs",
-    "data:upload:preview": "node scripts/upload-kv-data.mjs --env preview",
-    "dev:mock": "node tests/dev-server.mjs",
-    "vendor:build": "node scripts/build-vendor.mjs"
+    "data:upload:preview": "node scripts/upload-kv-data.mjs --env preview"
   },
   "author": "",
   "license": "MIT",
@@ -25,7 +37,19 @@
   },
   "homepage": "https://github.com/Calvin-Xia/class1forever#readme",
   "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "echarts": "^6.1.0",
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.149.0"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^13.7.0",
+    "@astrojs/react": "^4.4.2",
+    "astro": "^6.4.8",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   }
 }

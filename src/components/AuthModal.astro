@@ -1,0 +1,57 @@
+---
+/**
+ * 口令弹窗（auth modal）。整块以 `hidden` 起步；开合、焦点作用域（打开时背景 `inert`、
+ * 关闭后焦点归还触发元素）与口令提交都在 `src/lib/dialogs-island.ts`（l2_dialogs）。
+ *
+ * `#auth-hint` 是 `DETAILS_HINT` 的落点（`/api/map/public` 的 `detailsHint` 字段，
+ * 未配置时为空串），无 JS 时保持空段落；`#auth-feedback` 是口令校验结果的播报位。
+ */
+import Icon from './Icon.astro';
+---
+
+<div id="auth-overlay" class="auth-overlay" hidden>
+    <div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <button id="auth-close" class="auth-modal__close" type="button" aria-label="关闭">
+            <Icon name="close" size="sm" />
+        </button>
+        <h2 id="auth-title" class="auth-modal__title">查看详情</h2>
+        <p class="auth-modal__description">地图上先摊开各地人数。输入口令后，才能按地区翻到姓名和学校。</p>
+        <p id="auth-hint" class="auth-modal__hint"></p>
+        <form id="auth-form" class="auth-modal__form">
+            <!-- 这里没有账号概念，但密码管理器需要一个"用户名"才能把口令存下来。
+                 给个固定上下文值，浏览器就不会再提示缺少用户名字段，
+                 保存下来的口令也能说明是哪一个站点的。 -->
+            <input
+                type="text"
+                class="visually-hidden"
+                name="username"
+                autocomplete="username"
+                tabindex="-1"
+                aria-hidden="true"
+                value="金鹰 1 班"
+            />
+            <label class="auth-modal__label" for="auth-passphrase">查看口令</label>
+            <div class="auth-modal__field">
+                <input
+                    id="auth-passphrase"
+                    class="auth-modal__input"
+                    type="password"
+                    autocomplete="current-password"
+                    placeholder="输入口令"
+                    aria-describedby="auth-hint"
+                />
+                <button
+                    id="auth-toggle"
+                    class="auth-modal__toggle"
+                    type="button"
+                    aria-pressed="false"
+                    aria-label="显示口令"
+                >
+                    <Icon name="eye" size="md" />
+                </button>
+            </div>
+            <p id="auth-feedback" class="auth-modal__feedback" aria-live="polite"></p>
+            <button id="auth-submit" class="auth-modal__submit" type="submit">进入查看</button>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,28 @@
+---
+/**
+ * 地图脚本整体加载失败时的兜底。`role=alert` 让它一出现就被读屏念出来，
+ * 标题用 `p` 而不是 `h3`：这块是全屏接管，不该参与正文的标题层级。
+ *
+ * 初始的 `display: none` 是内联样式，旧实现（`js/boot.js` / `js/map.js`）通过
+ * `panel.style.display` 直接翻转它；迁移后由 l2_* 岛屿沿用同一钩子，故这里保持原样。
+ */
+import Icon from './Icon.astro';
+---
+
+<div
+    id="cdn-error"
+    class="cdn-error"
+    role="alert"
+    aria-labelledby="cdn-error-title"
+    aria-describedby="cdn-error-message"
+    style="display: none;"
+>
+    <div class="cdn-error__content">
+        <div class="cdn-error__icon" aria-hidden="true">
+            <Icon name="warning" size="lg" />
+        </div>
+        <p id="cdn-error-title" class="cdn-error__title">地图加载失败</p>
+        <p id="cdn-error-message" class="cdn-error__message">无法加载地图资源，请检查网络连接后刷新页面。</p>
+        <button id="cdn-error-retry" class="cdn-error__retry" type="button">重新加载</button>
+    </div>
+</div>

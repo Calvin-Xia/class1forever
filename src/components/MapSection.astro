@@ -1,0 +1,113 @@
+---
+/**
+ * 地图区：图框、工具栏、分享按钮、缩放控件、比例尺、地图容器与版权署名。
+ *
+ * 这里只有静态结构；ECharts 实例的挂载、下钻、缩放夹紧与悬浮卡片归 l2_map（见 src/scripts/map-island-boot.ts），
+ * 按钮的磁吸 / 聚光位移归 l2_motion（`magnet` / `spotlight` 类就是给它们的钩子）。
+ */
+import Icon from './Icon.astro';
+---
+
+<section class="map-section" aria-label="互动地图">
+    <div class="map-container">
+        <div class="map-frame">
+            <div class="map-frame__corner map-frame__corner--tl" aria-hidden="true"></div>
+            <div class="map-frame__corner map-frame__corner--tr" aria-hidden="true"></div>
+            <div class="map-frame__corner map-frame__corner--bl" aria-hidden="true"></div>
+            <div class="map-frame__corner map-frame__corner--br" aria-hidden="true"></div>
+
+            <div class="map-toolbar">
+                <button id="map-back-btn" class="chip map-back-btn" type="button" hidden>
+                    <Icon name="arrow-left" size="sm" />
+                    <span>返回全国</span>
+                </button>
+                <button
+                    id="details-btn"
+                    class="chip details-btn"
+                    type="button"
+                    aria-label="开启查看详情模式"
+                    aria-pressed="false">同学信息</button
+                >
+                <span id="map-region-badge" class="chip map-region-badge">中国</span>
+            </div>
+
+            <button
+                id="share-btn"
+                class="share-btn magnet spotlight"
+                type="button"
+                title="保存分享图"
+                aria-label="保存分享图"
+            >
+                <Icon name="share" size="md" />
+            </button>
+
+            <div class="map-zoom" role="group" aria-label="地图缩放">
+                <button
+                    id="map-zoom-in"
+                    class="map-zoom__btn"
+                    type="button"
+                    aria-label="放大地图"
+                    title="放大"
+                >
+                    <Icon name="plus" size="sm" />
+                </button>
+                <button
+                    id="map-zoom-out"
+                    class="map-zoom__btn"
+                    type="button"
+                    aria-label="缩小地图"
+                    title="缩小"
+                >
+                    <Icon name="minus" size="sm" />
+                </button>
+                <button
+                    id="map-zoom-reset"
+                    class="map-zoom__btn"
+                    type="button"
+                    aria-label="重置地图缩放，回到铺满视图"
+                    title="重置视图"
+                >
+                    <Icon name="frame-reset" size="sm" />
+                </button>
+            </div>
+
+            <div class="map-scale" aria-hidden="true">
+                <span class="map-scale__bar"></span>
+                <span class="map-scale__label">200 km</span>
+            </div>
+
+            <!-- role=img 里的内容对读屏是纯装饰，加载文案读不出来；
+                 busy 状态靠 aria-busy 与页脚那条 role=status 的播报承担。 -->
+            <div
+                id="map"
+                role="img"
+                aria-label="中国地图，显示同学分布"
+                aria-busy="true"
+                tabindex="-1"
+            >
+                <div id="map-loading" class="map-loading">
+                    <div class="map-loading__spinner"></div>
+                    <p class="map-loading__text">正在展开图面…</p>
+                </div>
+            </div>
+
+            <!-- 地图岛屿（l2_map）：入口是 src/scripts/map-island-boot.ts；
+                 分享图与读屏播报（l2_share）挂在同一条入口上（src/scripts/share-boot.ts），
+                 它的两个挂载点分别在本区的 #share-btn 与页脚的 #interaction-note。
+                 不用 `client:only` 是因为 Astro 岛屿水合会注入**内联** script，
+                 被 `_headers` 的 `script-src 'self'` 拦下（实测两个内联脚本被拒）。
+                 用动态 import 让 Astro 产出外链 chunk，CSP 下才能正常加载。 -->
+            <script>
+                import('../scripts/map-island-boot');
+                import('../scripts/share-boot');
+            </script>
+
+            <a
+                href="https://echarts.apache.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="map-credit">Apache ECharts</a
+            >
+        </div>
+    </div>
+</section>
