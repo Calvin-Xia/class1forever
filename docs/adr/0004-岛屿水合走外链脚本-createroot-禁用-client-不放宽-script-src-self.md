@@ -2,7 +2,7 @@
 
 新站的 React 岛屿一律不用 Astro 的 client:* 指令；改为在 .astro 里写 <script>（Astro 编译成 /_astro/*.js 外链 chunk）+ 动态 import 岛屿入口 + createRoot 挂载。CSP 保持 script-src 'self'，不引入 unsafe-inline、不维护 hash/nonce。
 
-**Status：** accepted（2026-10-13 用户 accept）
+**Status：** accepted
 
 **Context：** l2_motion 与 l2_map 实测：Astro client:* 会往 HTML 注入内联水合脚本，被 public/_headers 的 CSP script-src 'self' 拦下，岛屿完全不水合（真实 Chromium 控制台两条 CSP 违规、window.__mapProbe undefined）。而仓库硬约束要求 script-src 'self' 且 build.js 断言无内联脚本。
 

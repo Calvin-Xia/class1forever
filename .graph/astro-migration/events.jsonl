@@ -375,3 +375,9 @@
 {"ts":"2026-10-12T16:01:14.237Z","actor":"cli","kind":"node_status","node":"l4_cutover","from":"ready","to":"running","detail":"claim by exec-cutover"}
 {"ts":"2026-10-12T16:27:33.754Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l4_cutover","from":"pending","to":"passed","detail":"checkpoint=cp1"}
 {"ts":"2026-10-12T16:27:41.632Z","actor":"pi-mcp-graph-mcp","kind":"checkpoint_updated","node":"l4_cutover","from":"pending","to":"skipped","detail":"checkpoint=cp2"}
+{"ts":"2026-10-12T16:38:33.873Z","actor":"pi-mcp-graph-mcp","kind":"execution_report","node":"l4_cutover"}
+{"ts":"2026-10-12T16:45:34.933Z","actor":"cli","kind":"adr_accepted","node":"adr_0001","from":"proposed","to":"accepted"}
+{"ts":"2026-10-12T16:45:34.952Z","actor":"cli","kind":"node_content_updated","node":"l4_cutover","detail":"fields: expected_outcome"}
+{"ts":"2026-10-12T16:45:35.434Z","actor":"cli","kind":"adr_accepted","node":"adr_0002","from":"proposed","to":"accepted"}
+{"ts":"2026-10-12T16:45:35.864Z","actor":"cli","kind":"adr_accepted","node":"adr_0003","from":"proposed","to":"accepted"}
+{"ts":"2026-10-12T16:45:36.258Z","actor":"cli","kind":"adr_accepted","node":"adr_0004","from":"proposed","to":"accepted"}
