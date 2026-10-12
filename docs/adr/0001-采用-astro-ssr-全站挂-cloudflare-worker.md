@@ -2,7 +2,7 @@
 
 新站使用 Astro 6 + @astrojs/cloudflare 适配器（output:'server'），全部请求经 Worker 处理，静态资产由 Workers Assets 的 ASSETS 绑定提供；不采用静态 Astro + 仅 /api/* 挂 Worker 的形态。
 
-**Status：** proposed（待裁决）
+**Status：** accepted（2026-10-13 用户 accept）
 
 **Context：** 现站是 Pages Functions + 纯静态页面，动态面只有四个 API 路由；迁移要在等价前提下换技术栈，并决定 Worker 承担多少。
 

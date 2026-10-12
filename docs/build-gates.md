@@ -105,10 +105,14 @@ Gate A 因此多一条：根 `index.html` 存在 → `npm run build` 失败，�
 
 ## 与 ADR 的关系
 
-- **ADR-0002（proposed）**：本节点按该 ADR 的设计执行了 vendor 退役（删除
+> 状态更新（2026-10-13）：ADR-0001..0004 已由用户 **accept**（`docs/adr/00*.md` 的 `**Status：**`
+> 已从 `proposed` 改为 `accepted`）。本节下文提到的两个 ADR 均为已 accept 的生效决策。
+
+- **ADR-0002（已 accept，2026-10-13）**：本节点按该 ADR 的设计执行了 vendor 退役（删除
   `js/vendor/echarts.min.js` 与 `scripts/build-vendor.mjs`、移除 `package.json` 的 `vendor:build`、
-  删掉 CI 的同步步骤）。ADR 本身仍是 `proposed`，**accept 是人类的事**。
+  删掉 CI 的同步步骤）。ADR 已由用户 accept（`docs/adr/0002-*.md` 的 Status 已为 accepted），
+  本文件的门禁 G 就是它落地后的防线。
   保留 `scripts/vendor/echarts-entry.mjs` 作为「模块集参考」：`src/lib/echarts.ts` 的注释以它为准
   （该文件在 l3_gates 的边界外，删掉会造成注释即刻失真）。
-- **ADR-0004（proposed）**：门禁在源码层（`.astro` 无 `is:inline`）+ 运行时层（渲染页 0 内联脚本、
+- **ADR-0004（已 accept，2026-10-13）**：门禁在源码层（`.astro` 无 `is:inline`）+ 运行时层（渲染页 0 内联脚本、
   CSP 无 `unsafe-inline`）+ 浏览器层（`window.__mapProbe` 已定义）三处守它。

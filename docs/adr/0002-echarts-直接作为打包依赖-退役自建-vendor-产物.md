@@ -2,7 +2,7 @@
 
 ECharts 由 Astro/Vite 打包链直接从 npm 依赖消费，移除自建树摇 bundle 的提交产物与 CI 同步步骤。
 
-**Status：** proposed（待裁决）
+**Status：** accepted（2026-10-13 用户 accept）
 
 **Context：** 现站用自建脚本从 node_modules/echarts 产出提交入库的树摇 bundle，CI 校验产物与生成器同步；Astro 下 ECharts 由 Vite 打包。
 

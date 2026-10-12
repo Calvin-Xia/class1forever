@@ -120,7 +120,7 @@ Manual smoke tests:
 10. Expand 「地区一览」 and Tab to a row's 「查看」 button, then press Enter: the result must match clicking that region on the map. Toggle the sort and check `aria-sort` moves to the other column.
 11. With the sheet open, close it, then Tab from the top of the page: the tab order must never stop on a `#bs-*` control (they sit at y≈1660 when the sheet is closed).
 12. Enable "reduce motion" in the OS and reload: the choropleth must not animate and the title must not drop in character by character.
-13. On a touch device (or `playwright-cli open --device "iPhone 15"`), tap a province: it drills down. Tap 台湾: the sheet opens instead. A tap held longer than 300ms must still work — that is the `TapFallback` path; zrender alone drops it.
+13. On a touch device (or `playwright-cli open --device "iPhone 15"`), tap a province: it drills down. Tap 台湾: the info sheet **opens, then closes again** — the click synthesised by that same touch lands on the overlay that has just covered the map. Expect that sequence, not a sheet that stays open: it is **pre-migration behaviour, not a migration regression** (new and old sites produce byte-identical event sequences — `docs/parity-touch-compare.md`, whose user ruling on 2026-10-13 accepted the equivalence override). A tap held longer than 300ms must still work — that is the `TapFallback` path; zrender alone drops it.
 14. `npm run build` passes; `npm run data:upload -- --dry-run` succeeds.
 
 If automated tests are introduced later, place them under `tests/` with `*.test.js` naming.

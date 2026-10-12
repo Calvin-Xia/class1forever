@@ -285,6 +285,8 @@ git mv legacy/index.html index.html  # 单独回滚 dev 遮蔽处置（会重新
 4. 口令流程：错误口令 401（`remainingAttempts` 递减）、连续 10 次后 429；正确口令签发 HttpOnly Cookie；
    匿名 `GET /api/map/details` 401；登录后按省返回 `{province,city,count,people}`；`退出查看` 清会话。
 5. 悬停省份出卡片、色带同步标记；有数据省份点击下钻、Esc/返回全国；台湾/香港/澳门/南海诸岛不请求省级脚本。
+   触摸轻点台湾是「打开面板 → 同一次触摸的合成 click 落在刚盖上的遮罩上 → 面板关闭」（迁移前既有行为，
+   2026-10-13 已裁定接受等价性 override，见 §11.5 与 `docs/parity-touch-compare.md`）。
 6. 触摸设备：**600ms 长按**仍能下钻（`TapFallback` 路径，非 zrender 的 300ms 补发）。
 7. 分享图：全国/省级/空态三种范围文案与文件名正确（`蹭饭地图_<范围>_<日期>.png`，日期取本地时区）。
 8. 键盘 passes：焦点环可见；口令弹窗与抽屉打开时背景 `inert`、Esc 关闭且焦点归还。
@@ -302,7 +304,7 @@ git mv legacy/index.html index.html  # 单独回滚 dev 遮蔽处置（会重新
 | # | 步骤 | 命令 / 位置 | 为什么必须人工 |
 |---|---|---|---|
 | **M1** | 登录并确认账号权限 | `npx wrangler login` → `npx wrangler whoami` | 凭据在人手上（本环境 token 已过期且非交互） |
-| **M2** | **真预览部署 + 验证**（首页 + 四路由） | `npx wrangler versions upload --preview-alias cutover-preview`（或 `npx wrangler deploy` 后先验 workers.dev）→ 按 §7 的 1–4 条核对 | 需要凭据；agent 已做 dry-run 与本地 Worker 等价验证（§5.2/§5.3） |
+| **M2** | **真预览部署 + 验证**（首页 + 四路由） | `npx wrangler versions upload --preview-alias cutover-preview`（或 `npx wrangler deploy` 后先验 workers.dev）→ 按 §7 的 1–4 条核对 | 需要凭据；**用户已裁定：M2 由人工执行，agent 不再尝试**（凭据缺口见 §5.1，等价验证见 §5.2/§5.3） |
 | **M3** | 绑定两个 Secret | `npx wrangler secret put DETAILS_PASSPHRASE`、`npx wrangler secret put DETAILS_SESSION_SECRET`（`npx wrangler secret list` 核对） | 取值只有人知道，绝不入库 |
 | **M4** | 核对 KV 绑定与两个键 | 部署页 bindings 表 / 控制台：`CLASS_MAP_DATA` = `e6c9c4ff…`；`students:raw:v1`、`students:public:v1` 存在且**未被改写** | 生产数据只读核对；agent 不碰生产 KV |
 | **M5** | 确认 `--env preview` 实际绑到的 namespace | 见 §4 的 ⚠️；必要时改 `env.preview` 或显式改绑 | 会决定预览读的是哪份数据 |
@@ -310,7 +312,7 @@ git mv legacy/index.html index.html  # 单独回滚 dev 遮蔽处置（会重新
 | **M7** | 观察期后下线 Pages 项目 | 控制台删除/停用 Pages 项目（**在确认线上稳定之后**） | 保留期就是回滚后路，不能提前砍 |
 | **M8** | 发布后按 §7 全量复跑 + 观察期 | 浏览器逐条 + `npx wrangler tail` | 真实网络与真实数据下的人工确认 |
 | **M9** | 若走 Git 集成：把 Worker 的 Git 连接与 production branch 换成 `astro-migration` 合并后的 `main` | 控制台 Workers Builds | 属生产配置；且需要先决定合并策略 |
-| **M10** | ADR-0001..0004 的 accept | `docs/adr/00*.md` | ADR 的 accept 是人的裁决（图里四个 ADR 仍是 `proposed`） |
+| **M10** | ADR-0001..0004 的 accept（**已于 2026-10-13 完成，仅留档**） | `docs/adr/00*.md`（`**Status：**` 已为 `accepted`） | 无需再执行；留在这里是为了让交接清单完整可核 |
 
 ---
 
@@ -376,10 +378,12 @@ $ sha256sum legacy/index.html            → babad1aa4606efa62ccdadb1f7f39993692
 | C3 | `28dbd546d246d88aed968d52eaf46d63f2c0e75a` | 本切换包 `docs/cutover-runbook.md` | 纯文档 |
 | C4 | `0fdcfb845b070b64d42f8acb24630a3f5ca61227` | 文档同步：`AGENTS.md` / `README.md` / `DEPLOYMENT.md` → Worker 口径（F-5） | 纯文档 |
 | C5 | `50c99c4b4596917f234396c23734036c1e0deae3` | 迁移图设计态入库 + `.graph/**` 运行时缓存与 `.pi/` 忽略 | `git revert` 不影响部署面 |
-| C6 | （本提交）在切换包里回填 C1–C5 的 SHA | 纯文档 |
+| C6 | `06663b64506917f234396c23734036c1e0deae3` | 在切换包里回填 C1–C5 的 SHA + 首次 build EPERM 的进程卫生披露 | 纯文档 |
+| C7 | （本提交）文档收尾：P2 裁定（接受等价性 override）与 ADR-0001..0004 accept 的同步 | 纯文档；不改任何实现/几何文件 |
 
 **绿色保证在分支尖**（C6 后复跑：`npm run build` `EXIT=0`（静态断言 16 组）、`npm run worker:dryrun` `EXIT=0`、
-`npm run dev:local` 首页 + 四路由均通）。中间提交按逻辑分组，**不保证逐个单独可构建**：
+`npm run dev:local` 首页 + 四路由均通；**C7 只改 `AGENTS.md` 与 `docs/**`**（P2 裁定与 ADR accept 同步），
+未碰 `js/**`、`css/**`、`src/**`、`build.js`、几何与视觉资产，所以门禁读数不变）。中间提交按逻辑分组，**不保证逐个单独可构建**：
 `main` 的旧 `build.js` 把 `index.html` 与 `js/vendor/echarts.min.js` 列为必需文件，所以这两件事
 必须和「新门禁」在同一个提交里落地（这就是 C1 把工程面、归档与 vendor 退役放在一起的原因）。
 **回滚点是分支尖与 `main`，不是中间提交。**
@@ -391,6 +395,8 @@ $ sha256sum legacy/index.html            → babad1aa4606efa62ccdadb1f7f39993692
 
 ```text
 $ git log --oneline main..HEAD
+（本提交） docs: 文档收尾 —— P2 裁定与 ADR accept 同步
+06663b6 docs: 在切换包里回填提交点 SHA 与进程卫生披露
 50c99c4 chore: 纳入迁移图的设计态，忽略运行时缓存
 0fdcfb8 docs: 同步 AGENTS/README/DEPLOYMENT 到 Worker 口径
 28dbd54 docs: 补生产切换包与人工 gate 清单
@@ -399,8 +405,8 @@ a2cd64d feat: 迁移到 Astro 6 SSR + Cloudflare Worker + Workers Assets
 
 $ git rev-parse --abbrev-ref HEAD   → astro-migration
 $ git rev-parse main                → 90c182bc31b877ad1d9de16068d7fd2e8fa3c77c
-$ git rev-parse HEAD                → 见 C6（本提交）
-$ git rev-list --count main..HEAD   → 6
+$ git rev-parse HEAD                → 分支尖（C7 = 本文档收尾提交；C1–C6 的完整 SHA 见 §10.2）
+$ git rev-list --count main..HEAD   → 7
 ```
 
 **未 push 远端**（no push）；`main` 未被修改。
@@ -413,9 +419,14 @@ $ git rev-list --count main..HEAD   → 6
 2. **`--env preview` 可能绑到生产 KV**（§4 ⚠️）：dry-run 实测读数如此。人工部署前必须确认。
 3. **`SESSION` / `IMAGES` 绑定由适配器注入**：`SESSION` 无 id，首次部署会**创建**一个 KV namespace（新资源）；
    `IMAGES` 需要账号开通 Images。这两项在 dry-run 里可见但**没有**在 `wrangler.jsonc` 里显式声明。
-4. **ADR-0001..0004 仍为 `proposed`**：accept 是人的裁决（M10）。ADR-0002 的产物退役已按设计执行。
-5. **P2（smoke 13「台湾」子项）待人类裁定**（`docs/acceptance-l3-verify.md` §5.3）：新旧站事件序列逐字相同，
-   判为非迁移回归，但与 `AGENTS.md` smoke 13 的文字期望不符。切换验收时应一并裁定。
+4. **ADR-0001..0004 已由用户 accept（2026-10-13）**：`docs/adr/00*.md` 的 `**Status：**` 已从 `proposed`
+   改为 `accepted`，`docs/build-gates.md` 的「与 ADR 的关系」已同步。ADR-0002 的产物退役已按设计执行；
+   M10 因此从待办降为留档项。
+5. **P2（smoke 13「台湾」子项）已裁定（2026-10-13，用户）**：**接受等价性 override** —— 新旧站事件序列逐字相同，
+   判为基线既有行为而非迁移回归；`AGENTS.md` smoke 13 已改写为实测口径（「轻点台湾＝打开面板，
+   但同一次触摸合成的 click 落在刚盖上的遮罩上把面板关掉」），裁定与证据记录在 `docs/parity-touch-compare.md`
+   的「裁决记录」。**本次只改文档，未动 `js/map.js` / `src/**` 的交互逻辑**（若要真修「打开后不被合成 click 关掉」，
+   属独立开票，需重新走一轮触摸对照 + smoke 13）。
 6. **`WORKERS_CI` / Git 集成**：本分支未 push，Worker 的 Git 构建连接与 production branch 属人工配置（M9）。
 7. **文档口径**：`DEPLOYMENT.md` / `README.md` / `AGENTS.md` 已在本节点同步为 Worker 口径（C5）；
    若还有人从旧文档复制 `wrangler pages ...` 命令，按 §2 的 Worker 口径替换。

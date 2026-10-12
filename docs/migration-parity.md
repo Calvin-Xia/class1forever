@@ -271,8 +271,13 @@
 | 10 | 展开「地区一览」，Tab 到某行「查看」按 Enter | 结果与点地图该地区一致；切排序后 `aria-sort` 换列 |
 | 11 | 面板打开再关闭，从页首 Tab | 焦点顺序绝不停在 `#bs-*` 控件（关闭时位于 y≈1660） |
 | 12 | OS 开 reduce motion 后刷新 | choropleth 不动画，标题不逐字落下 |
-| 13 | 触摸设备（或 `playwright-cli open --device "iPhone 15"`） | 点省份即下钻；点台湾开面板；按住 >300ms 的点击仍生效（走 `TapFallback`） |
+| 13 | 触摸设备（或 `playwright-cli open --device "iPhone 15"`） | 点省份即下钻；点台湾**开面板后随即被同一次触摸合成的 click 关掉**（合成 click 落在刚盖上的遮罩上）；按住 >300ms 的点击仍生效（走 `TapFallback`） |
 | 14 | `npm run build`；`npm run data:upload -- --dry-run` | 两条命令均成功（后者不实际写入 KV） |
+
+> **smoke 13「台湾」子项的口径（2026-10-13 用户裁定，补记）**：上表第 13 行的台湾子项以**实测**为准 ——
+> 「轻点台湾＝打开信息面板，但同一次触摸合成的 click 落在刚盖上的遮罩上把面板关掉」。这是**迁移前既有行为**
+> （新旧站事件序列逐字相同），用户已**接受该等价性 override**；`AGENTS.md` smoke 13 与此同步改写，
+> 裁定与证据记录见 `docs/parity-touch-compare.md` 的「裁决记录」。桌面端点击（上表第 4 行）不受影响：面板打开并保持。
 
 > **smoke 第 1 项实跑记录**（2026-10-12，`l2_contract_rev` 节点，本分支）：
 >

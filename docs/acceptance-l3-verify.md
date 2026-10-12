@@ -7,6 +7,18 @@
   - 唯一一次写实现文件是「注入反例」：`src/components/SiteFooter.astro` 临时注入后按 sha256 **逐字节还原**（见 §3.1）。
 - 环境：`TEMP=$PWD/.wrangler/probe-tmp TMP=$PWD/.wrangler/probe-tmp`；跑 `npm run build` 前用 `netstat` 确认 88xx/89xx 无 dev server 占 `dist`（见 §7 进程处置）。
 
+> **后续状态（2026-10-13 补记，用户裁定）** —— 本文件正文保持 2026-10-12 验收当时的**原始记录**，不改写历史；
+> 下面三项在此之后已落地，读正文时请以本框为准：
+>
+> 1. **ADR-0001..0004 已由用户 accept**（`docs/adr/00*.md` 的 `**Status：**` 已由 `proposed` 改为 `accepted`）——
+>    正文里「均为 proposed」是 2026-10-12 的状态；§1 与 §6 第 6 条已就地标注。
+> 2. **P2（smoke 13「台湾」子项）已裁定**：用户**接受等价性 override**（新旧站事件序列逐字相同 → 基线既有行为，
+>    非迁移回归）；`AGENTS.md` smoke 13 已改写为实测口径（「轻点台湾＝打开面板，但同一次触摸合成的 click
+>    落在刚盖上的遮罩上把面板关掉」），裁定与证据记录见 `docs/parity-touch-compare.md` 的「裁决记录」。
+>    **只改文档，未动 `js/**` / `src/**` 的交互逻辑。**
+> 3. **P4（整迁移尚未提交）已修复**：`l4_cutover` 已按逻辑提交 C1–C6（完整 SHA 见 `docs/cutover-runbook.md` §10.2），
+>    C7 为本次纯文档收尾；`main` 未被修改、未 push 远端。
+
 ---
 
 ## 1. 状态层读数（cp1 前半）
@@ -37,6 +49,7 @@
 17 个工作流顶点：`l1_spec/l1_scaffold/l1_api/l1_test/l1_shell/l2_visual/l2_motion/l2_map/l2_dialogs/l2_share/l2_contract_rev/l2_island_contract_fix/l3_typecheck_fix/l3_gates/l3_parity` = **passed（15）**；
 `l3_verify` = running（本节点自身，验收中的正常态）；`l4_cutover` = pending（**下游人工 gate，pending 属正常**）。
 知识顶点（`ctx_runtime/ctx_ui/ctx_delivery` = context，`adr_0001..0004` = proposed）**不计入 task 残留口径**。
+（2026-10-13 补记：四个 ADR 已由用户 accept，见文首「后续状态」第 1 条。）
 
 **结论：除下游 `l4_cutover` 外，无 failed / blocked / pending / cancelled 残留的 task 节点。** 与 brief 口径一致。
 
@@ -193,16 +206,16 @@
 | 发现 | 内容 | 处置 |
 |---|---|---|
 | **P1** | **新树 / CI 红**：`worker-configuration.d.ts` 未提交（CI 不生成）→ 干净 clone 构建面不绿 | **已修复并复核**：exec-backend 在 `l3_gates` 按建法①修复（`git add` 入索引 + `build.js` 新增 A2 生成类型门禁三道拦截 + `package.json` `cf:types`/`cf:types:check` + CI 走 `npm run build`）。本节点独立复核（§5.5）：`git ls-files --cached` 有输出、`git check-ignore` 不匹配、`npm run build` exit 0（静态断言 15 组） |
-| **P2** | smoke 13「台湾」子项：新旧事件序列**逐字相同**＝非迁移回归，但与 `AGENTS.md` smoke 13 文字期望「Tap 台湾: the sheet opens instead」不符 | **待人类裁定**；**不计入 exit 标准 3 的「逐条通过」** |
+| **P2** | smoke 13「台湾」子项：新旧事件序列**逐字相同**＝非迁移回归，但与 `AGENTS.md` smoke 13 文字期望「Tap 台湾: the sheet opens instead」不符 | **待人类裁定**；**不计入 exit 标准 3 的「逐条通过」**（2026-10-13 补记：**已裁定为接受等价性 override**，`AGENTS.md` smoke 13 已改写，见文首第 2 条） |
 | **P3** | 主控跟进项 | 由主控跟进；**本记录未展开其内容**（主控口径：P1/P2/P3/P4 由主控跟） |
-| **P4** | **整迁移尚未提交** | **前置整改**：须由 `l4_cutover`（含提交动作）处理；之后才能宣称可交付 |
+| **P4** | **整迁移尚未提交** | **前置整改**：须由 `l4_cutover`（含提交动作）处理；之后才能宣称可交付（2026-10-13 补记：**已完成**，C1–C6，见切换包 §10.2） |
 | **P5** | **记录侧瑕疵**：① 本记录 §1 代码块把 `graph status` 人读输出与 `graph next --json` 的 `summary` 混排（3 个 `0` 不在 `graph status` 原始输出里）；② §3.3「弹窗 inert 与焦点归还」行误指 `shots/smoke6-details.png`（该图证不了 inert/焦点） | **已在本记录更正**：§1 改为逐字分列引用；§3.3 改指 `parity-smoke-8-14.json` 的 `groups["smoke9 键盘与焦点"]` 断言记录 |
 
 ### 5.3 签署边界（explicit，3 条）
 
 1. cp3 **只签「交叉复核已完成、结论可信」**，**不等于 exit 标准 5 成立**（`l4_cutover` pending、本节点 running，均**不代签**）。
 2. exit 标准 3 的 **smoke 13「台湾」子项按 P2 标为「待人类裁定」**，**不是「逐条通过」**。
-3. 发现 **P1（新树/CI 红）与 P4（整迁移未提交）必须先由 `l3_gates` / `l4_cutover` 修复**，之后才能对外宣称「全绿 / 可交付」。
+3. 发现 **P1（新树/CI 红）与 P4（整迁移未提交）必须先由 `l3_gates` / `l4_cutover` 修复**，之后才能对外宣称「全绿 / 可交付」。（2026-10-13 补记：两者均已修复，见文首「后续状态」第 3 条。）
 
 ### 5.4 cp3 签署记录（已落）
 
@@ -210,6 +223,9 @@
 - 签署前置条件已满足：主控通知「P1 已修」，本节点完成 §5.5 的三项独立复核。
 - 本节点**未写 verdict、未流转 `l3_verify` 为 passed**（裁决归主控/裁决方）。
 - 与 §5.3 的三条边界合读：本签署**不**代表 exit 标准 5 成立，也**不**代表 smoke 13「台湾」子项已「逐条通过」（P2 待人类裁定），也**不**代表已可对外宣称「全绿/可交付」（P4 整迁移未提交归 `l4_cutover`）。
+
+> 2026-10-13 补记：本行是**签署当时**的边界陈述。其后 P2 已裁定为接受等价性 override、P4 已由 `l4_cutover` 提交 C1–C6 修复；
+> 见文首「后续状态」第 2、3 条。
 
 ### 5.5 P1 修复的独立复核（本节点，P1 判据）
 
@@ -231,9 +247,11 @@
 3. 本节点**未逐条重放** `docs/build-gates.md` 的 19 条注入反例，只独立复跑 1 条。
 4. smoke 证据为**抽样**核对，未做像素级判读。
 5. 「全部 task passed」当前**不成立**（`l4_cutover` pending、本节点 running），故标准 5 该分句待 `l4_cutover`。
-6. ADR `adr_0001..0004` 均为 `proposed`：accept 属人类裁决，**不是本节点的残留项**。
+6. ADR `adr_0001..0004` 在本次验收时均为 `proposed`：accept 属人类裁决，**不是本节点的残留项**。
+   （2026-10-13 补记：**四个 ADR 已由用户 accept**，见文首「后续状态」第 1 条。）
 7. **前置整改（复核发现 P1/P4，不由本节点处理）**：`worker-configuration.d.ts` 未提交/CI 不生成（P1，打回 `l3_gates`）、整迁移尚未提交（P4，归 `l4_cutover`）。修好前不得对外宣称「全绿/可交付」。
 8. **P2（smoke 13 台湾子项）待人类裁定**：不计入 exit 标准 3 的「逐条通过」。
+   （2026-10-13 补记：**已裁定为接受等价性 override**，`AGENTS.md` smoke 13 已改写为实测口径，见文首第 2 条。）
 
 ---
 
