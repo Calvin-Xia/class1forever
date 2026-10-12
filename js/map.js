@@ -1369,6 +1369,10 @@ function initChart() {
     chart.on('georoam', clampMapRoam);
     AppState.chart = chart;
 
+    // 显式把实例传进去：这行必须在 AppState.chart 赋值之后，
+    // 否则 init 里拿不到实例、监听根本挂不上（触摸兜底会静默失效）。
+    TapFallback.init(chart);
+
     if (typeof ResizeObserver === 'function') {
         new ResizeObserver(function() {
             chart.resize();
@@ -1566,21 +1570,204 @@ function handleRegionClick(params) {
         return;
     }
 
+    // 记一笔，让触摸兜底知道这次触摸已经被 zrender 处理过了。
+    TapFallback.noteChartActivation();
     activateRegion(point);
 }
+
+/* ------------------------------------------------------------------ *
+ * 触摸点击兜底
+ *
+ * zrender 只在 touchend 距 touchstart **小于 300ms** 时才补发一次 click
+ * （zrender/lib/dom/HandlerProxy.js 的 TOUCH_CLICK_DELAY）。手机上对着小省份
+ * 小心点按、或者设备本身有输入延迟，很容易超过这个窗口，表现就是"点了没反应"：
+ * 面板不开、也不下钻。而地区一览是普通 DOM 按钮，没有这个限制，
+ * 于是就会出现"列表能进去、地图点不动"。
+ *
+ * 这里自己判定一次点击：位移和时长都比 zrender 宽松，并用时间戳与 zrender
+ * 已经派发的点击去重，避免同一次触摸触发两遍。
+ * ------------------------------------------------------------------ */
+
+const TapFallback = (function() {
+    const MAX_MOVE_PX = 14;
+    const MAX_DURATION_MS = 900;
+    const DEDUPE_MS = 450;
+
+    let startX = 0;
+    let startY = 0;
+    let startAt = 0;
+    let tracking = false;
+    let lastActivationAt = 0;
+
+    /** 射线法：点是否落在环内。 */
+    function pointInRing(x, y, ring) {
+        let inside = false;
+
+        for (let current = 0, previous = ring.length - 1; current < ring.length; previous = current, current += 1) {
+            const currentX = ring[current][0];
+            const currentY = ring[current][1];
+            const previousX = ring[previous][0];
+            const previousY = ring[previous][1];
+
+            if ((currentY > y) !== (previousY > y) &&
+                x < (previousX - currentX) * (y - currentY) / (previousY - currentY) + currentX) {
+                inside = !inside;
+            }
+        }
+
+        return inside;
+    }
+
+    /**
+     * 屏幕坐标 → 地区名。
+     * 先用 ECharts 的公开 API 把像素换成数据坐标，再对当前地图做点在多边形内判定。
+     * 不走 zrender / ECharts 的私有字段，地图换层（全国 / 省级）都能用。
+     */
+    function regionNameAt(clientX, clientY) {
+        if (!AppState.chart || !AppState.activeMapId || !CMapGeo.has(AppState.activeMapId)) {
+            return null;
+        }
+
+        const viewportRoot = AppState.chart.getZr().painter.getViewportRoot();
+        if (!viewportRoot) {
+            return null;
+        }
+
+        const rect = viewportRoot.getBoundingClientRect();
+        let dataPoint;
+
+        try {
+            dataPoint = AppState.chart.convertFromPixel(
+                { seriesIndex: 0 },
+                [clientX - rect.left, clientY - rect.top]
+            );
+        } catch (error) {
+            return null;
+        }
+
+        if (!Array.isArray(dataPoint) || !isFinite(dataPoint[0]) || !isFinite(dataPoint[1])) {
+            return null;
+        }
+
+        const geoJson = CMapGeo.get(AppState.activeMapId);
+        if (!geoJson || !Array.isArray(geoJson.features)) {
+            return null;
+        }
+
+        for (const feature of geoJson.features) {
+            const name = normalizeRegionToken((feature.properties || {}).name);
+            if (!name) {
+                continue;
+            }
+
+            const geometry = feature.geometry || {};
+            const polygons = geometry.type === 'Polygon'
+                ? [geometry.coordinates]
+                : (geometry.type === 'MultiPolygon' ? geometry.coordinates : []);
+
+            for (const polygon of polygons) {
+                // 只判外环：飞地孔洞在点击精度内没有意义。
+                if (polygon.length > 0 && pointInRing(dataPoint[0], dataPoint[1], polygon[0])) {
+                    return name;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /** zrender 自己派发过点击时要记一笔，避免同一次触摸触发两遍。 */
+    function noteChartActivation() {
+        lastActivationAt = Date.now();
+    }
+
+    function handleTouchStart(event) {
+        if (!event.touches || event.touches.length !== 1) {
+            tracking = false;
+            return;
+        }
+
+        const touch = event.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+        startAt = Date.now();
+        tracking = true;
+    }
+
+    function handleTouchEnd(event) {
+        if (!tracking) {
+            return;
+        }
+        tracking = false;
+
+        const touch = event.changedTouches && event.changedTouches[0];
+        if (!touch) {
+            return;
+        }
+
+        if (Date.now() - startAt > MAX_DURATION_MS) {
+            return;
+        }
+
+        // 拖拽平移和双指缩放都不算点击。
+        if (Math.hypot(touch.clientX - startX, touch.clientY - startY) > MAX_MOVE_PX) {
+            return;
+        }
+
+        if (Date.now() - lastActivationAt < DEDUPE_MS) {
+            return;
+        }
+
+        // 弹层打开时背景是 inert，这里再挡一道，避免误触。
+        if (BottomSheet.isActive() || (ui.authOverlay && !ui.authOverlay.hidden)) {
+            return;
+        }
+
+        const name = regionNameAt(touch.clientX, touch.clientY);
+        if (!name) {
+            return;
+        }
+
+        lastActivationAt = Date.now();
+        activateRegion(resolveRegionPoint(name));
+    }
+
+    function handleTouchCancel() {
+        tracking = false;
+    }
+
+    function init(chart) {
+        const viewportRoot = chart && chart.getZr().painter.getViewportRoot();
+        if (!viewportRoot) {
+            return;
+        }
+
+        // passive：绝不阻塞页面滚动，判不判成点击由我们自己的阈值决定。
+        viewportRoot.addEventListener('touchstart', handleTouchStart, { passive: true });
+        viewportRoot.addEventListener('touchend', handleTouchEnd, { passive: true });
+        viewportRoot.addEventListener('touchcancel', handleTouchCancel, { passive: true });
+    }
+
+    return {
+        init: init,
+        noteChartActivation: noteChartActivation
+    };
+})();
 
 /**
  * 打开一个地区的唯一入口：地图点击与地区一览表格都走这里，
  * 两条路径的行为必须完全一致（否则键盘用户拿到的结果和鼠标不一样）。
+ *
+ * 触摸设备上也一样下钻：手机上本来就够不到 hover，而"先看聚合面板"会让
+ * 点省份变得没有反馈（一个省要点两次才进得去）。人数在「地区一览」里随时能看到。
  */
 function activateRegion(point) {
     if (!point) {
         return;
     }
 
-    // 桌面端未开启详情模式时，点击省份可以直接下钻；移动端统一先看聚合面板。
     const canDrill = Boolean(point.drilldownFile) && !isActiveProvinceView();
-    if (canDrill && !isTouchDevice && !AppState.detailModeEnabled) {
+    if (canDrill && !AppState.detailModeEnabled) {
         drillIntoProvince(point).catch(function(error) {
             console.error('Drilldown failed:', error);
         });
@@ -1687,7 +1874,7 @@ function sortedRegionRows() {
 function regionActionLabel(point) {
     const canDrill = Boolean(point.drilldownFile) && !isActiveProvinceView();
 
-    if (canDrill && !isTouchDevice && !AppState.detailModeEnabled) {
+    if (canDrill && !AppState.detailModeEnabled) {
         return `进入 ${point.name} 地图详情`;
     }
 
