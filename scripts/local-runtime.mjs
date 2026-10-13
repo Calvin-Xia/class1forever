@@ -191,6 +191,16 @@ export function writeLocalConfig() {
         delete base[key];
     }
 
+    // 本地通路用演示口令填 vars（见下）。`secrets.required` 会让同一个名字同时落到
+    // Secret 与 Environment Variable 两种绑定上，wrangler 会以「同名绑定」拒绝启动；
+    // 本地不需要密钥存在性校验，直接剔除。
+    delete base.secrets;
+    for (const env of Object.values(base.env || {})) {
+        if (env && typeof env === 'object') {
+            delete env.secrets;
+        }
+    }
+
     base.main = entry;
     base.assets = { ...(base.assets || {}), binding: 'ASSETS', directory: path.join(REPO_ROOT, 'dist', 'client') };
 

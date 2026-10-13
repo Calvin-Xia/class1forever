@@ -88,6 +88,7 @@ npx wrangler versions list
 | `DETAILS_HINT` | 普通变量（非密钥） | `wrangler.jsonc` 的 `vars.DETAILS_HINT`（公开提示语） | 无需动作，随配置部署 |
 
 - 两个 Secret **只从运行时 env 读取**（`import { env } from 'cloudflare:workers'`），不硬编码、不入库。
+- `wrangler.jsonc` 顶层声明了 `secrets.required: ["DETAILS_PASSPHRASE", "DETAILS_SESSION_SECRET"]`：一是让 `wrangler types` 的生成类型**不依赖本地 `.dev.vars`**（本地与 CI 一致，`--check` 门禁可复现——这是 PR CI 曾经红的原因），二是让 `wrangler deploy` 在 Secret 未绑定时直接报错。因此**先按 M3 绑 Secret 再部署**（顺序见 §2.3）。
 - 本地开发用 `.dev.vars`（gitignore）；`npm run dev:local` 用自己派生的本地配置注入演示口令 `demo`，不读 `.dev.vars`。
 - 注意：Pages 项目的 Secrets 与 Worker 的 Secrets **是两套**。切换前 Worker 侧没有这两个 Secret 时，
   详情功能会 500/401——**先绑 Secret 再部署**（顺序见 §2.3）。
