@@ -1,0 +1,40 @@
+---
+/**
+ * 底部抽屉与它的遮罩层（信息面板）。
+ *
+ * 可达性要点（migration-parity A8 / A9，实现在 `src/lib/dialogs-island.ts`）：
+ * - 抽屉用 `bottom` 滑出屏幕来关闭，所以 `#bs-close` / `#bs-primary-btn` /
+ *   `#bs-drilldown-btn` 的 `hidden` 必须由关闭逻辑同步维护 —— 否则它们在
+ *   y≈1660 处仍可聚焦，Tab 会落到看不见的控件上；
+ * - 打开时背景 inert、关闭后焦点归还，走 `FocusScope` 那一套。
+ * 因此三个按钮在这里一律以 `hidden` 起始。
+ */
+import Icon from './Icon.astro';
+---
+
+<div id="bs-overlay" class="bottom-sheet-overlay"></div>
+
+<div id="bottom-sheet" class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="bs-title" tabindex="-1">
+    <div class="bs-header">
+        <h2 id="bs-title" class="bs-header__title">地区详情</h2>
+        <button id="bs-close" class="bs-close" type="button" aria-label="关闭地区详情" hidden>
+            <Icon name="close" size="sm" />
+        </button>
+    </div>
+    <div class="bs-content" id="bs-content"></div>
+    <div class="bs-footer">
+        <button id="bs-primary-btn" class="bs-btn bs-btn--secondary spotlight" type="button" hidden
+            >查看详情</button
+        >
+        <button id="bs-drilldown-btn" class="bs-btn magnet spotlight" type="button" hidden
+            >进入地图详情</button
+        >
+    </div>
+</div>
+
+<!-- 抽屉 / 口令弹窗 /「地区一览」的水合入口（l2_dialogs，控制器在 src/lib/dialogs-island.ts）。
+     不用 `client:*`：Astro 岛屿水合会注入**内联** script，被 `_headers` 的
+     `script-src 'self'` 拦下；动态 import 让 Astro 产出外链 chunk，CSP 下才能加载。 -->
+<script>
+    import('../scripts/dialogs-island-boot');
+</script>

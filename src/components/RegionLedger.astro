@@ -1,0 +1,48 @@
+---
+/**
+ * 「地区一览」：`<details>` + 原生 `<table>`。
+ *
+ * 图表画在 canvas 上，地区和城市无法聚焦。这张表是键盘与读屏的替代路径，
+ * 每行一个按钮，行为和在地图上点击该地区完全一致（两条路径都走 `activateRegion()`）。
+ *
+ * 表体由客户端填：控制器在 `src/lib/region-ledger.ts`（l2_dialogs），数据来自地图岛屿
+ * 广播的当前视野（`map-bridge` 的 `view.points`）。所以这里给的是骨架：表头、初始排序
+ * 状态与 caption 都在静态 HTML 里，禁用 JS 时整块仍可展开阅读。
+ * 不要给 `.region-table thead th` 加 `position: sticky`（WCAG 2.2 2.4.11）。
+ */
+import Icon from './Icon.astro';
+---
+
+<details class="region-ledger" id="region-ledger">
+    <summary class="region-ledger__summary">
+        <h2 class="region-ledger__title">地区一览</h2>
+        <Icon name="chevron-right" size="xs" class="region-ledger__chevron" />
+    </summary>
+    <div class="region-ledger__body">
+        <div class="region-ledger__controls">
+            <p class="region-ledger__note" id="region-ledger-note"></p>
+            <button
+                id="region-sort-btn"
+                class="chip region-ledger__sort"
+                type="button"
+                aria-label="当前按人数排序，点击改为按地区名排序">按人数</button
+            >
+        </div>
+        <table class="region-table">
+            <caption class="visually-hidden"
+                >各地区公开人数一览。每一行都有一个按钮，作用和在地图上点击该地区相同。</caption
+            >
+            <thead>
+                <tr>
+                    <th scope="col" id="region-th-name" aria-sort="none">地区</th>
+                    <th scope="col" id="region-th-count" class="region-table__num" aria-sort="descending"
+                        >人数</th
+                    >
+                    <th scope="col" class="region-table__num">城市</th>
+                    <th scope="col"><span class="visually-hidden">操作</span></th>
+                </tr>
+            </thead>
+            <tbody id="region-table-body"></tbody>
+        </table>
+    </div>
+</details>

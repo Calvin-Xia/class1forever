@@ -1,0 +1,138 @@
+id: l1_shell
+type: task
+label: Astro 页面骨架与静态内容迁移
+level: 1
+context: ctx_ui
+status: passed
+plan:
+  description: >-
+    把旧首页的页面结构（页头、工具栏、图例、地图容器、底部抽屉、口令弹窗、地区一览、署名区）迁为 Astro 布局与组件，文案与语义保持一致；静态可读部分在禁用 JS 时仍可读；沿用旧站
+    meta、站点图标、安全响应头与同源约束。范围：src/layouts/、src/pages/index.astro、展示型组件与 public/；动效与地图画布归 l2_* 节点，旧 index.html 保持未改。
+expected_outcome:
+  definition_of_done:
+    - 禁用 JS 时新站首页仍可见页头、说明文案与地区一览骨架（DOM 检查或截图记录为证）
+    - 页面不含内联 script 与跨源 script，安全响应头语义与旧站一致
+    - 页面文案与旧站逐段对照无缺失（对照记录写入执行报告）；git diff main -- index.html 为空
+    - （计划已修订·口径澄清）安全响应头分两口：静态资源由 public/_headers 保证、须与旧站逐条一致；Worker 渲染的文档响应头由 l1_api 的中间件补齐——本节点只对前者负责
+attempts: 0
+max_attempts: 3
+created_at: '2026-10-12T11:08:11.796Z'
+updated_at: '2026-10-12T12:18:44.001Z'
+checkpoints:
+  - id: cp1
+    label: 布局与静态区块迁完
+    status: passed
+    verifier: auto
+  - id: cp2
+    label: 无 JS 可读性与头部语义核对
+    status: passed
+    verifier: auto
+  - id: cp3
+    label: 文案逐段对照无缺失
+    status: passed
+    verifier: auto
+assigned_to: exec-shell
+execution_report:
+  summary: >-
+    l1_shell 页面骨架完成：cp1/cp2/cp3 全部 passed。旧首页结构迁为 1 个 Astro 布局 + 9 个展示型组件 +
+    首页装配（src/layouts/BaseLayout.astro、src/components/{SiteHeader,MapSection,RegionLedger,BottomSheet,AuthModal,SiteFooter,Atmosphere,CdnError,Icon}.astro、src/pages/index.astro、占位
+    src/styles/main.css、public/favicon.svg、public/_headers）。证据（均在 .wrangler/evidence/）：用 wrangler dev 跑迁移后 Worker 取真实
+    SSR HTML（index.ssr.html，8928 B）→ script 标签 0 个、无内联/跨源脚本；body 145 个元素与旧站逐位相同；可见文本 43/43
+    段、id/aria-label/title/placeholder 缺失 0（parity-report.txt、structure-report.txt）；Playwright javaScriptEnabled:false
+    实测页头/说明/地区一览可见、<details> 原生展开后 aria-sort 保持（no-js-probe.txt、no-js-probe2.txt）；node build.js exit 0、npm run build
+    exit 0、astro check 24 files 0 error（TEMP 规避后）；git diff main -- index.html css js functions _headers 为空。两项缺口如实上报：dev
+    `/` 被根 index.html 遮蔽（Vite 静态中间件先于 Astro 路由）；SSR 文档响应不带 CSP 等头（Workers Assets 的 _headers 只作用于静态资源）。
+  started_at: '2026-10-12T11:46:12.796Z'
+  artifacts:
+    - src/pages/index.astro
+    - src/layouts/BaseLayout.astro
+    - src/components/Icon.astro
+    - src/components/CdnError.astro
+    - src/components/Atmosphere.astro
+    - src/components/SiteHeader.astro
+    - src/components/MapSection.astro
+    - src/components/RegionLedger.astro
+    - src/components/SiteFooter.astro
+    - src/components/BottomSheet.astro
+    - src/components/AuthModal.astro
+    - src/styles/main.css
+    - public/favicon.svg
+    - public/_headers
+    - .wrangler/evidence/index.ssr.html
+    - .wrangler/evidence/index.ssr.headers.json
+    - .wrangler/evidence/no-js-probe.txt
+    - .wrangler/evidence/no-js-probe2.txt
+    - .wrangler/evidence/parity-report.txt
+    - .wrangler/evidence/structure-report.txt
+    - .wrangler/evidence/astro-check.log
+    - .wrangler/evidence/astro-build-3.log
+    - .wrangler/evidence/dev-root-served-legacy-index.html
+    - .wrangler/probe-tmp/check-shell-parity.mjs
+    - .wrangler/probe-tmp/check-shell-structure.mjs
+    - .wrangler/probe-tmp/no-js-probe.js
+    - .wrangler/probe-tmp/no-js-probe2.js
+    - .wrangler/probe-tmp/wrangler.probe.json
+    - .wrangler/probe-tmp/dev.sh
+  blockers:
+    - >-
+      astro dev 下 `/` 被仓库根 index.html 遮蔽：Vite 静态中间件先于 Astro 路由，返回旧站 HTML（另用 wrangler dev 证实迁移后的 Worker 渲染正确）。影响
+      l2_*/l3_parity 的 dev 人工 smoke；修复手段（移动/改名旧入口或加 dev 中间件）不在本节点 lane，须由 l4_cutover 或 l3_gates 决策。
+    - >-
+      SSR 文档响应缺安全响应头：`_headers` 在 Workers Assets 下只作用于静态资源响应。已实测 /favicon.svg、/_astro/*.js 带
+      CSP/nosniff/referrer/x-frame/permissions，而 Worker 生成的 `/` HTML 响应一条都没有。DoD『安全响应头语义与旧站一致』目前只对静态资源成立，HTTP 文档响应需
+      Worker 侧中间件补齐（l3_gates 收口或 l1_api middleware lane）。
+  notes: >-
+    【范围与边界】只写 src/layouts/**、src/pages/index.astro、src/components/**（展示型）、src/styles/main.css（占位）、public/**。未碰
+    index.html / css/ / js/ / functions/ / _headers(根) / build.js / wrangler.jsonc / astro.config.mjs / package.json /
+    tests/ / scripts/ / .github/ / docs/ / src/pages/api/** / .graph/。`git diff main -- index.html css js functions
+    _headers` 为空（实测）。未新增依赖、未部署。地图画布挂载/动效/样式表/弹窗逻辑分别留给 l2_map / l2_motion / l2_visual /
+    l2_dialogs；「地区一览」表体仍由客户端取公开聚合数据填充（未改成 SSR 取数）。
+
+
+    【迁移内容】BaseLayout（head：lang=zh-CN / charset / viewport / description / theme-color / title / favicon / Google Fonts
+    preconnect+样式表；样式表入口 import '../styles/main.css'）+ 组件：Icon（24×24 图标集，路径逐字节沿用旧站，按 AGENTS.md 不在 path 上写
+    stroke-*）、CdnError、Atmosphere、SiteHeader（标题逐字块 + aria-label + 图幅 dl +
+    印章）、MapSection（工具栏/分享/缩放/比例尺/#map/#map-loading/版权署名）、RegionLedger（details + 原生 table + aria-sort 初始
+    none/descending）、SiteFooter（#interaction-note role=status）、BottomSheet（#bs-overlay/#bottom-sheet，三个 #bs-* 按钮 hidden
+    起始）、AuthModal（#auth-overlay hidden、#auth-hint 为 DETAILS_HINT 落点、data 反馈区、口令显隐）。文案中文标点一字未改。
+
+
+    【无 JS 可读性证据】Playwright 以 javaScriptEnabled:false 打开迁移后 Worker
+    首页（.wrangler/evidence/no-js-probe.txt、no-js-probe2.txt）：scriptCount=0；.page__header / .page__description /
+    #region-ledger 可见；h1 可访问名=「金鹰 1 班蹭饭地图」；原生点击 summary 展开后 .region-table thead
+    可见，表头「地区/人数/城市/操作」，aria-sort=none/descending；#interaction-note 存在。SSR HTML 本身 script 标签 0 个、内联脚本 0、跨源脚本 0。
+
+
+    【逐段对照】.wrangler/probe-tmp/check-shell-parity.mjs（复跑：node .wrangler/probe-tmp/check-shell-parity.mjs）读数：可见文本 43/43
+    段、id、aria-label、title、placeholder 缺失均为 0；结构对照 check-shell-structure.mjs：body 145 个元素（tag+class+id）逐位差异
+    0，class/style/role/hidden 多重集缺失与新增均为 0。
+
+
+    【有意偏差（3 条 head link + 1 条路径归一，均有据）】1) css/main.css link —— 由 Astro 侧 src/styles/main.css 入口取代；本节点该文件是空注释占位（l2_visual
+    才写真样式），故构建不产出样式表 link，页面当前无 CSS。2) preload js/vendor/echarts.min.js 与 js/china.js —— 客户端资源加载归 l2_map，骨架里不钉旧路径。3)
+    favicon.svg → /favicon.svg（站内绝对路径；public/favicon.svg 与根 favicon.svg sha256 相同
+    7f0137d6ded4c5a94368954098f299d7dcbf5b63a9524306a38697d4edaac4d2）。
+
+
+    【新增 public/_headers 的理由】与旧根 _headers 字节一致（sha256
+    8dac0763c6b8f99eb54e35b9c3ccf6e910e5f10c0b2258a0468ec9b884321bd4）。加之前构建产物 dist/client/_headers 只有适配器注入的 /_astro/*
+    缓存规则，安全头全丢；加之后 dist/client/_headers = 缓存规则 + 旧五条头，且适配器日志确认「Injected immutable Cache-Control for /_astro/* into
+    _headers」仍正常（它会在已有内容前追加，不覆盖）。如 l3_gates 另有收口方案，可直接替换本文件。
+
+
+    【构建/校验读数】node build.js exit 0（对比度断言 37 项）；npm run build exit 0（build.js + astro build，dist/client 内无 index.html、无
+    js/boot.js，旧入口不进产物）；TEMP/TMP 指向 .wrangler/probe-tmp 时 npm run astro:check = 24 files / 0 error / 0 warning / 0
+    hint（不加 TEMP 会因 miniflare 无法建 miniflare-email-store 目录而失败，属环境限制）。
+
+
+    【环境观察（编排用）】1) 另有一个 wrangler dev（assets 持 ./dist）在跑时，`astro build` 在清空 dist 阶段会 EPERM（Device or resource busy）；并行
+    worker 需要串行化 dist 使用，或各自指定 --outDir 到 .wrangler/ 下（本次探针即用 .wrangler/probe-dist）。2)
+    本次探针进程已全部收掉（4321/4391/4392/4393/4394 无监听）。3) .wrangler/probe-dist 是探针构建产物，可随时删除。
+  verification:
+    verdict: passed
+    checked_at: '2026-10-12T12:18:43.552Z'
+    note: >-
+      机械核对：checkpoint 3/3 passed；public/_headers 与旧 _headers 逐字一致；SSR 证据 HTML 零 script
+      标签；关键结构标记（region-table/bottom-sheet/auth-modal/interaction-note/bs-*）齐备；git diff main -- index.html css js
+      functions 为空。文档口径修订（计划已修订）：文档响应头归 l1_api 中间件
+  completed_at: '2026-10-12T12:18:44.002Z'

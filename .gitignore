@@ -1,6 +1,8 @@
 .trae/
 .dev.vars
 .wrangler/
+.wrangler-dryrun/
+.astro/
 js/data.js
 node_modules/
 dist/
@@ -12,3 +14,13 @@ test-results/
 
 # 设计与视觉验证产物（DESIGN.md 是文档，要提交；截图不提交）
 output/
+
+# 图工具的运行时缓存（快照 / 索引 / 锁）：设计态 graph.yaml、nodes/、edges/ 入库，缓存不入库
+.graph/index/
+.graph/**/index/
+.graph/**/snapshots/
+.graph/.locks/
+.graph/**/.locks/
+
+# pi 运行态（目标池 / 运行账本），不是项目源码
+.pi/

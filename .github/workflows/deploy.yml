@@ -1,0 +1,62 @@
+name: Deploy (Cloudflare Workers)
+
+# 部署面是 Cloudflare Worker + Workers Assets（不是 Pages）：
+#   build → npx wrangler deploy（读仓库根的 wrangler.jsonc：main + assets.directory=./dist）
+#
+# 需要的仓库 Secrets（Settings → Secrets and variables → Actions）：
+#   CLOUDFLARE_API_TOKEN   必填。Token 需带 Workers Scripts:Edit（以及 KV 只读/编辑、Account Settings:Read）
+#   CLOUDFLARE_ACCOUNT_ID  可选；单账号时可留空由 wrangler 自行解析
+#   DETAILS_PASSPHRASE     可选。填了则在部署前同步为 Worker Secret（首次部署很方便）；
+#   DETAILS_SESSION_SECRET 不填也行——但 wrangler.jsonc 声明了 secrets.required，
+#                          这两个 Secret 必须已在 Worker 上存在，否则 deploy 会直接报错。
+#
+# 只跑 main + 手动触发：避免往分支推时触发生产部署。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-workers
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      DETAILS_PASSPHRASE: ${{ secrets.DETAILS_PASSPHRASE }}
+      DETAILS_SESSION_SECRET: ${{ secrets.DETAILS_SESSION_SECRET }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          # astro 6 要求 node >= 22.12.0；与 ci.yml 保持 24。
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # 单一门禁入口：node build.js（静态断言 + astro check + astro build + 产物扫描）。
+      # 构建不过就不部署。
+      - name: Build (static gates + type check + astro build)
+        run: npm run build
+
+      # 可选：把两个应用密钥从仓库 Secrets 同步到 Worker Secrets（幂等）。
+      # 没填就跳过 —— 但那样要求 Worker 上已经存在这两个 Secret（见文件头说明）。
+      - name: Sync Worker secrets (only if provided as repo secrets)
+        if: ${{ env.DETAILS_PASSPHRASE != '' && env.DETAILS_SESSION_SECRET != '' }}
+        run: |
+          printf '%s' "$DETAILS_PASSPHRASE" | npx wrangler secret put DETAILS_PASSPHRASE
+          printf '%s' "$DETAILS_SESSION_SECRET" | npx wrangler secret put DETAILS_SESSION_SECRET
+
+      - name: Deploy to Cloudflare Workers
+        run: npx wrangler deploy

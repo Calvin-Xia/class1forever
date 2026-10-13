@@ -1,0 +1,123 @@
+id: l2_contract_rev
+type: task
+label: 等价性契约与项目文档对齐修订
+level: 2
+context: ctx_delivery
+status: passed
+plan:
+  description: >-
+    把执行期发现的契约与文档漂移收口到唯一参照上：① docs/migration-parity.md 补记 Astro security.checkOrigin 中间件语义（非 GET/HEAD/OPTIONS 且无
+    Content-Type 时需同源 Origin 才放行，否则 403 Cross-site POST form submissions are forbidden；JSON 请求不检查），使 §1.2/§1.4
+    的口径与实现一致；② 同文档移除已废弃的 npm run dev:mock 指引，改指新本地通路 dev:local，并同步 14 项 smoke 清单第 1 项；③ 更新 AGENTS.md，使其描述从 Pages
+    Functions 口径改为 Worker/Workers Assets 口径（含本地开发命令、CI 门禁组成、wrangler 形态）。范围：docs/**、AGENTS.md；不改实现代码。
+attempts: 0
+max_attempts: 3
+created_at: '2026-10-12T12:19:07.413Z'
+updated_at: '2026-10-12T12:31:24.045Z'
+expected_outcome:
+  definition_of_done:
+    - >-
+      docs/migration-parity.md §1.2/§1.4 明写 checkOrigin 中间件语义（含无 Origin → 403 为有意安全行为的判据），可与 tests/api-contract.test.mjs
+      的断言逐条对照
+    - docs/migration-parity.md 中不再出现 npm run dev:mock；smoke 清单第 1 项命令改为新本地通路并实跑一次
+    - >-
+      AGENTS.md 的部署/开发口径为 Worker 单一入口 + Workers Assets，含 npm run dev:local / npm run build / CI 步骤的现况，且不再出现 Pages
+      Functions 作为当前形态
+checkpoints:
+  - id: cp1
+    label: 契约文档补 checkOrigin 语义并可与测试断言对照
+    status: passed
+    verifier: auto
+  - id: cp2
+    label: 移除 dev:mock 指引、smoke 第 1 项改新通路并实跑
+    status: passed
+    verifier: auto
+  - id: cp3
+    label: AGENTS.md 口径改为 Worker/Workers Assets 现况
+    status: passed
+    verifier: auto
+assigned_to: exec-backend
+execution_report:
+  summary: >-
+    契约与项目文档对齐修订完成，三处漂移全部收口。【改动 1】docs/migration-parity.md §1.2 新增「安全中间件：Astro security.checkOrigin」整段（四行判据表：安全方法不检查／无
+    Content-Type 必须 Origin === url.origin 否则 403 Cross-site POST form submissions are forbidden／表单类 Content-Type
+    同理／application/json 不检查）+ 明确「403 是有意的安全行为、不是缺陷」+ 浏览器自动带 Origin、curl/脚本需 `-H \"Origin: <站点源>\"`、被拦时不下发 Cookie + 说明
+    §1.2 错误表要叠加读；§1.4 新增「恒 200 的前提」一段。两处逐字引用 tests/api-contract.test.mjs 的 5 个用例名，已 grep 逐条确认同名用例存在。【改动 2】§5 第 1 项命令改为
+    `npm run dev:local`（含先 build、演示口令 demo、STUDENTS_PUBLIC_FILE 喂真实数据），§6.3 第 4 条改指 dev:local/cf:dev 并注明旧假 API
+    脚本已退役；表格下新增「smoke 第 1 项实跑记录」块。实跑：dev:local 就绪 → `/` 200 + CSP、`/api/map/public` 200
+    `{\"stats\":{\"total\":6,\"provinces\":3,\"cities\":4}}` + `Vary: Cookie` + `Cache-Control: no-store`、页面 0
+    处姓名/学校字段；但页面当前 0 个 `<script>`，地图岛（l2_map）/样式迁移（l2_visual）未落地，故「地图渲染 + 色带图例」标为待复跑。【改动 3】AGENTS.md 全面改为 Worker/Workers
+    Assets 口径：Project Overview 写明 Astro 6 SSR 单 Worker + `main=\"@astrojs/cloudflare/entrypoints/server\"` +
+    `assets{ASSETS→./dist}` + KV 绑定名与 id 不变 + main 仍服务旧 Pages 站、切换是人工 gate；结构清单补
+    src/**、astro.config.mjs/tsconfig/worker-configuration.d.ts、scripts/local-runtime.mjs、tests/api-contract.test.mjs，把
+    functions/ 与 index.html/js/css 标为迁移前基准、tests/dev-server.mjs 标 retired、vendor 产物注明
+    ADR-0002；命令段整段重写（build/astro:check/dev:local/seed:local/test:api/dev/cf:dev/preview/worker:dryrun/vendor:build/data:upload*）+
+    三条本地环境注记（同源 POST 需 Origin、Windows 沙箱 TEMP/TMP、本地 KV 单写者）；Testing Guidelines 改为 CI 现况（node 24、npm ci → build →
+    astro:check → test:api → node --check 循环、vendor 步骤为非阻塞提示）；Security 增「env 来自 cloudflare:workers、改绑定后重跑 cf:types」；Map
+    Rendering Notes 加「等价性基准」前言；smoke 第 1 项改 dev:local。grep：`dev:mock` 在 docs/ AGENTS.md README.md DEPLOYMENT.md
+    package.json 中**零命中**；`Pages Functions` 在 AGENTS.md 仅剩 2 处历史/对照语境。另新增 §7 修订记录（含边界外遗留：build.js 成功文案仍写 Pages
+    Functions、§2 现实现位置仍指旧站 js/map.js）。未写 verdict、未流转 passed，停在 report。
+  started_at: '2026-10-12T12:20:44.714Z'
+  artifacts:
+    - docs/migration-parity.md
+    - AGENTS.md
+  blockers:
+    - >-
+      smoke 第 1 项只能给出「部分结论」：本地通路本身已通过（`/` 200 + CSP、`/api/map/public` 200 聚合 JSON + `Vary: Cookie` + `Cache-Control:
+      no-store`、页面 0 处姓名/学校字段），但本分支页面当前**没有任何 `<script>` 标签**，地图岛（l2_map）与样式迁移（l2_visual）尚未落地，所以「地图渲染完成 +
+      色带图例出现」这半句不可验证——已按实跑结论写进文档并标明需在两个节点通过后重跑。
+    - >-
+      本节点边界外、已记录在 §7 的遗留：① `build.js` 的成功文案仍写「地图数据仍由 Cloudflare Pages Functions + KV 提供」（旧门禁的打印字符串，改它不在本节点范围，AGENTS.md
+      里已注明该字符串不代表部署形态）；② `docs/migration-parity.md` §2「现实现位置」列仍全部指向旧站 `js/map.js` 行号——那是等价性基准，岛屿化后需由相关节点逐条重新落地并标注新位置。
+  notes: >-
+    边界内只改了 `docs/migration-parity.md` 与 `AGENTS.md`，未动任何其它文件（注意：`scripts/check-contrast.js` 在 `git status` 里显示
+    modified，那是并发的 l2_visual 车道改的——已把门禁切到 `src/styles/main.css` + `src/styles/palette.ts`，与本节点无关，我未触碰）。
+
+    【改动 1｜docs/migration-parity.md §1.2 新增「安全中间件」段（原：只有 Cookie/令牌两条
+    bullet，没有中间件语义）】新增内容摘要：`security.checkOrigin`（`astro/dist/core/app/middlewares.js` 的
+    `createOriginCheckMiddleware`）在进路由前先判一次，一张四行表写清「安全方法不检查／无 Content-Type 必须有同源 Origin 否则 403／表单类 Content-Type 同理／JSON
+    不检查」，并明确 **403 是有意的安全行为不是缺陷**、浏览器会自动带 Origin、curl/脚本要加 `-H \"Origin: <站点源>\"`、被拦时不下发 Cookie，最后说明 §1.2
+    错误表要叠加读（`invalid_request_body` 仅在过了 checkOrigin 后可达）。§1.4 新增「但『恒 200』有个前提」一段，把同一语义挂到 logout 上。两处共逐字引用
+    `tests/api-contract.test.mjs` 的 5 个用例名（已用脚本逐条 grep 确认测试文件里存在同名用例）。
+
+    【改动 2｜docs/migration-parity.md §5 第 1 项 + 新增实跑记录 + §6.3 第 4 条】第 1 项：`npm run dev:mock 打开页面` → `npm run dev:local（需先
+    npm run build；演示口令 demo；要看真实聚合数字用 STUDENTS_PUBLIC_FILE=public.json npm run dev:local）打开 http://127.0.0.1:8788`。§6.3
+    第 4 条：`本地 dev:mock / cf:dev` → `本地 npm run dev:local / cf:dev`，并注明旧假 API 脚本已随 `tests/dev-server.mjs`
+    退役（写作上避开已删除的脚本名）。表格下方新增「smoke 第 1 项实跑记录」块，原文含命令、输出与读数。
+
+    【改动 3｜AGENTS.md 口径】① Project Overview：`provided by Cloudflare Pages Functions + KV` → `served by four /api/* routes
+    backed by a CLASS_MAP_DATA KV namespace`，并新增一段写明本分支是 Astro 6 SSR 单 Worker + Workers Assets（`output:'server'`、`main:
+    \"@astrojs/cloudflare/entrypoints/server\"`、`assets{binding:ASSETS,directory:./dist}`）、KV 绑定名与 id/preview_id
+    不变、`main` 仍服务旧 Pages 站、切换是人工 gate（l4_cutover）。② 结构清单：新增
+    `src/pages|layouts|components|lib|styles`、`astro.config.mjs/tsconfig.json/worker-configuration.d.ts`、`scripts/local-runtime.mjs`、`tests/api-contract.test.mjs`
+    条目；`functions/` 改标「pre-migration Pages Functions … 运行中的路由是 src/pages/api/**」；`tests/dev-server.mjs` 改标
+    **retired**；`index.html` 段落前新增「迁移状态：src/** 是新站；index.html / js/** / css/main.css / functions/**
+    是迁移前实现，保留作等价基准」；`js/vendor/echarts.min.js` 条目补 ADR-0002 退役计划与 CI 只告警的现状；`wrangler.jsonc` 条目改为 Worker + Workers
+    Assets。③ 命令段整段重写：build（`node build.js` + `astro build`）、astro:check、dev:local（无需凭据 + 演示口令 demo +
+    `--port/--reset/--state-dir/--public-file/--raw-file` + STUDENTS_* 环境变量）、seed:local、test:api、dev（astro dev，走
+    .dev.vars）、cf:dev（wrangler dev + remote:true → 远端
+    KV，需登录，非免凭据路径）、preview、worker:dryrun、vendor:build、data:upload*，并新增三条本地环境注记（同源 POST 必须带 Origin / Windows 沙箱 TEMP-TMP
+    规避 / 本地 KV 一个写者、并发用 --state-dir）。④ Testing Guidelines：改成 `.github/workflows/ci.yml`（Node 24，astro 6 engines
+    >=22.12）的现况步骤 `npm ci → npm run build → npm run astro:check → npm run test:api → node --check 循环`，说明 vendor
+    同步步骤已降为非阻塞提示（含 main 上就有 13 字节漂移），并保留 `build.js` 检查项清单 + 注明其成功文案里的「Pages Functions + KV」是旧门禁字符串、不代表部署形态。⑤ Security &
+    Data Rules：新增一条——运行时 env 用 `import { env } from 'cloudflare:workers'`（Astro 6 已移除 `Astro.locals.runtime`），密钥只从 env
+    读、改 binding 后要重跑 `npm run cf:types`。⑥ Map Rendering Notes 加前言：这些规则是迁移前的等价性基准，指向旧文件路径处按「行为契约」理解。⑦ smoke 第 1 项：改为 `npm
+    run build && npm run dev:local` 打开 8788（口令 demo，可用 STUDENTS_PUBLIC_FILE 喂真实聚合）。
+
+    【smoke 第 1 项实跑输出】`TEMP=… TMP=… npm run dev:local -- --port 8910 --reset` → `✅ 本地站点已就绪：http://127.0.0.1:8910（演示口令
+    demo，Ctrl+C 结束）`；`curl -i /` → `HTTP/1.1 200 OK` + `Content-Type: text/html` + CSP `script-src 'self'`；`curl -i
+    /api/map/public` → `HTTP/1.1 200 OK` + `Cache-Control: no-store` + `Vary: Cookie` +
+    `{\"version\":\"v1\",\"stats\":{\"total\":6,\"provinces\":3,\"cities\":4},…`；页面 `id=\"map\"` 挂载点存在、`school` 字段 0 处；但
+    `<script>` 标签 0 个 → 地图岛未落地，「地图渲染 + 色带图例」标为待复跑（已写进文档）。跑完已停表并用 PowerShell 精确清理，8910 无监听、无残留进程。
+
+    【grep 结果】`grep -rn \"dev:mock\" docs/ AGENTS.md README.md DEPLOYMENT.md package.json` → **无输出（空的）**；`grep -n \"Pages
+    Functions\" AGENTS.md` → 仅 2 处且都是历史/对照语境：第 30 行（`functions/` 迁移前路由说明）、第 104 行（`build.js` 旧门禁成功文案的引用）。
+
+    【另】文档新增 §7 修订记录，写清本轮三处收口、事实来源（Astro 源码 + 真浏览器实测）与两项边界外遗留。未写 verdict、未流转 passed，按派单停在 report。
+  verification:
+    verdict: passed
+    checked_at: '2026-10-12T12:31:23.608Z'
+    note: >-
+      机械核对：checkpoint 3/3 passed；仅 AGENTS.md 被修改（docs/ 为新增契约文档，无其它越界）；docs/migration-parity.md 已含 checkOrigin 中间件语义表（无
+      Origin → 403 为有意安全行为）；dev:mock 在 docs/AGENTS.md/README/DEPLOYMENT/package.json 中零残留
+  completed_at: '2026-10-12T12:31:24.046Z'

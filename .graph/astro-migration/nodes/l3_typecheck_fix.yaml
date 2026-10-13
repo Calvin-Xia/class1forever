@@ -1,0 +1,111 @@
+id: l3_typecheck_fix
+type: task
+label: 类型检查清零（motion.ts / share-card.ts）
+level: 3
+context: ctx_ui
+status: passed
+plan:
+  description: >-
+    修掉 l3_gates 门禁里 astro check 报出的 10 条类型错误（均在 l2_motion / l2_share 的产物里）：src/scripts/motion.ts 9 条——6 条 Element.style
+    不存在于 Element 类型（querySelectorAll 返回 Element，需收窄为 HTMLElement 或用类型守卫）、3 条 as EventListener 需改 as unknown as
+    EventListener（或把 handler 参数类型改成 Event 后自行收窄）；src/lib/share-card.ts 1 条 Uint8Array<ArrayBufferLike> 不能赋给
+    BlobPart。只做类型层修复，不改运行时行为与视觉产出。l3_gates 的 executor
+    已备好最小补丁（.wrangler/probe-tmp/diagnostic-patch.diff），可直接参照，但请自行确认正确性而非盲目照抄。范围：src/scripts/motion.ts、src/lib/share-card.ts；必要时仅限类型标注相关的最小改动。
+expected_outcome:
+  definition_of_done:
+    - npx astro check 退出码 0（用例数 48 文件 0 error 0 warning）；npm run build 退出码 0（其内部已包含类型检查）
+    - npm run check:runtime 退出码 0；动效三效果与分享图产物行为不变（真实浏览器/产物对照为证）
+    - git diff main -- js/ css/ index.html 为空；无新增依赖
+attempts: 0
+max_attempts: 3
+created_at: '2026-10-12T14:36:01.868Z'
+updated_at: '2026-10-12T14:53:27.888Z'
+checkpoints:
+  - id: cp1
+    label: astro check 类型错误清零
+    status: passed
+    verifier: auto
+  - id: cp2
+    label: build + check:runtime 全绿与行为不变
+    status: passed
+    verifier: auto
+assigned_to: exec-typefix
+execution_report:
+  summary: >-
+    l3_typecheck_fix 完成：astro check 10 条类型错误清零（motion.ts 9 条 + share-card.ts 1
+    条），只做类型层最小改动，运行时行为与视觉产出经字节级与真实浏览器双重对照证明不变。改动：src/scripts/motion.ts（querySelectorAll<HTMLElement> 两处收窄 + 删除 3 处 as
+    EventListener cast）、src/lib/share-card.ts（let bytes: Uint8Array<ArrayBuffer>）。验证：npx astro check 退出码 0（48 文件 0 error
+    0 warning 0 hint）；npm run build 退出码 0；npm run check:runtime 退出码 0；dist/client 全部 47 个资产（含
+    motion.B6anujzU.js、share-boot.R5jtJNRt.js 两个 chunk）修复前后 sha256 逐字节相同；真实浏览器探针复现三效果 CSS 变量与修复前逐值相同（normal 六项有值 /
+    reduce 与 coarse 全空且 0 注册）；分享图四张 PNG 与修复前产物逐字节相同、plan 数值逐字段相同。未写 verdict、未流转 passed、未触碰其它节点与文件。
+  started_at: '2026-10-12T14:38:13.675Z'
+  artifacts:
+    - src/scripts/motion.ts
+    - src/lib/share-card.ts
+    - .wrangler/probe-tmp/typecheck-fix/final-build.log
+    - .wrangler/probe-tmp/typecheck-fix/final-check-runtime.log
+    - .wrangler/probe-tmp/typecheck-fix/dist-before.sha256
+    - .wrangler/probe-tmp/typecheck-fix/dist-after.sha256
+    - .wrangler/probe-tmp/typecheck-fix/motion-effects-after.json
+    - .wrangler/probe-tmp/typecheck-fix/motion-probe-after.json
+    - .wrangler/probe-tmp/typecheck-fix/share-probe-after.json
+    - .wrangler/probe-tmp/typecheck-fix/share-probe-after-run2.json
+    - .wrangler/probe-tmp/typecheck-fix/png/national.png
+    - .wrangler/probe-tmp/typecheck-fix/png/gansu.png
+    - .wrangler/probe-tmp/typecheck-fix/png/zhejiang.png
+    - .wrangler/probe-tmp/typecheck-fix/png/esc-during-export.png
+  blockers:
+    - >-
+      DoD 第 3 条按字面不满足：git diff main -- js/ css/ index.html 非空，唯一差异是 js/vendor/echarts.min.js（-20 行）——这是本节点认领前就存在的
+      ADR-0002 退役改动（开工前 git status 已显示 ' D js/vendor/echarts.min.js'），不是本节点引入。css/ 与 index.html 的 diff 为空。请裁决方按此判读。
+  notes: >-
+    修复方式（未照抄 diagnostic-patch.diff，选了更弱的类型手段，全部类型层、esbuild 完全擦除）：
+
+    - src/scripts/motion.ts：querySelectorAll<HTMLElement>('.magnet') / ('.spotlight') 两处显式类型参数（元素就是 button，收窄准确）；3 处
+    addEventListener('pointermove', trackXxx as EventListener) 直接删掉 cast —— HTMLElement/Window 的 'pointermove' 重载签名参数是
+    PointerEvent，与 PointerHandler 参数 PointerLikeEvent 结构兼容（方法签名双变），无需 unknown 双跳 cast。共 9 条错误清零。
+
+    - src/lib/share-card.ts：let bytes: Uint8Array → Uint8Array<ArrayBuffer>（TS 5.9 的 TypedArray 泛型）。new
+    Uint8Array(length) 推断即 Uint8Array<ArrayBuffer>，只改声明、零运行时改动；未采用补丁里的 new Uint8Array(bytes)（那会多一次数据拷贝）。
+
+    - 未改 tsconfig.json / astro.config.mjs / package.json，未放宽任何检查配置，无新增依赖（package.json mtime 22:17 早于本节点开工 22:38）。
+
+
+    证据 1（cp1）：TEMP/TMP 指向 .wrangler/probe-tmp 下 npx astro check 退出码 0，Result (48 files): 0 errors / 0 warnings / 0
+    hints（修复前同命令复现 10 errors：motion.ts 88/105/106/113/117/118/135/136/143 + share-card.ts 248）。
+
+    证据 2（cp2）：npm run build 退出码 0（build.js 单入口：静态断言 13 组 + astro check + astro build + 产物扫描；见 final-build.log，其内 Result
+    (48 files): 0 errors/0 warnings/0 hints）；npm run check:runtime 退出码 0（9 组断言，见 final-check-runtime.log）；构建后
+    dist/server/.dev.vars 已被 build.js 移除。
+
+    证据 3（行为不变，最强证据）：修复前用 npx astro build 产出基线 dist 并做 sha256 清单（dist-before.sha256），修复后 npm run build
+    再取清单（dist-after.sha256）。dist/client/** 全部 47 个资产 + _headers 逐字节相同；出问题的两个 chunk
+    名与内容完全一致：motion.B6anujzU.js、share-boot.R5jtJNRt.js 均 cmp 逐字节相同（motion.before.js / share-boot.before.js 为副本）。唯一差异是
+    dist/server/chunks/worker-entry_*.mjs 里 Astro 每次构建随机生成的 "key":"..."（同源连跑两次 npx astro build 也得到三个不同 hash，已用
+    worker-entry.After1.mjs 对照证明为构建随机量），以及基线裸 astro build 残留的 dist/server/.dev.vars（被 build.js
+    正确移除）。即：本修复对客户端运行时代码零字节影响。
+
+    证据 4（真实浏览器探针，post-fix）：起本地 Worker（.wrangler/probe-tmp/typecheck-fix/serve-dist.mjs，派生自 l2_share 的
+    serve-share.mjs，dist 用标准产物、端口 8950、夹具 浙江 2/北京 3）：
+
+    - 动效三效果（motion-effects-after.json，hover .share-btn 右上角内 3px，分步移动避免单次跳变）：normal → --mx=1197px / --my=339.75px /
+    --magnet-x=3.40px / --magnet-y=-3.40px / --sx=92.50% / --sy=7.50%，与 l2_motion 基线 probe-final.txt
+    数值逐个相同；reduced-motion → 六项全空、动效监听 0 注册；coarse-pointer（未改动的 motion-probe-tcfix.js）→ 六项全空、0 注册。
+
+    - 分享图（share-probe-after-run2.json + png/*.png）：四张 PNG（national / gansu / zhejiang / esc-during-export）sha256 与修复前
+    l2_share 产物逐字节相同；plan 数值（scope / filename / heatMax / emptyText / columns /
+    generatedAt=2026-10-12T23:30:00.000Z）与修复前 share-probe-pretty.json 逐字段相同（文件名仍 蹭饭地图_<范围>_2026-10-13.png，UTC+14
+    时区取本地日期）。注：第一次跑 share 探针时 national/gansu 与基线有像素级差异，重跑一次即与基线逐字节相同 —— 属探针抓取地图动画帧的时序抖动，与代码无关。
+
+    环境：所有 build/测试带 TEMP/TMP=$PWD/.wrangler/probe-tmp；跑 build 前 netstat 确认 88xx/89xx 无 dev server 占 dist（跑完已 taskkill 探针
+    wrangler/workerd，当前仅 8934 图预览在听）；验证走 wrangler dev 起真实 Worker（不用被根 index.html 遮蔽的 astro dev）。
+  verification:
+    verdict: passed
+    checked_at: '2026-10-12T14:53:27.531Z'
+    note: >-
+      主控核验：npx astro check 退出码0(48 files 0 error 0 warning)；motion.ts 已改 querySelectorAll<HTMLElement> 并移除 as
+      EventListener，share-card.ts bytes 声明为 Uint8Array<ArrayBuffer>；tsconfig 仍继承 astro/tsconfigs/strict(未放宽消错)；artifacts
+      存在。exec-typefix 证据：build 与 check:runtime 均 exit 0；dist/client 47 资产修复前后 sha256 全同、motion/share chunk 逐字节 cmp
+      相同；浏览器探针三效果值与基线一致、4 张分享图 PNG 逐字节相同。DoD 3 的 js/ diff 唯一差异是 ADR-0002 授权的 js/vendor/echarts.min.js 退役(-20行)，css/ 与
+      index.html 为空，属预期例外。
+  completed_at: '2026-10-12T14:53:27.888Z'

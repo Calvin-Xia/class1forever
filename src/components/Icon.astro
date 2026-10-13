@@ -1,0 +1,55 @@
+---
+/**
+ * 站点图标集：统一 24×24 网格，尺寸 / 描边 / 端帽 / 颜色全部由 `.icon` / `.icon--*`
+ * 类提供（`stroke-width` 按尺寸计算，保证渲染描边恒为 1.5px）。
+ *
+ * 纪律（见 AGENTS.md「Coding Style」）：这里只输出几何路径，**绝不**在 path 上写
+ * `stroke-*` 之类的呈现属性 —— 它们会压过 CSS；也不引入四种尺寸之外的档位。
+ * 图标一律内联 SVG：不用 emoji、不用图标字体、不用文字字形顶替图标。
+ */
+type IconName =
+    | 'warning'
+    | 'arrow-left'
+    | 'share'
+    | 'plus'
+    | 'minus'
+    | 'frame-reset'
+    | 'chevron-right'
+    | 'close'
+    | 'eye';
+
+type IconSize = 'xs' | 'sm' | 'md' | 'lg';
+
+interface Props {
+    name: IconName;
+    /** 缺省不带尺寸类，由使用方自行决定（旧站个别图标就只带 `.icon`）。 */
+    size?: IconSize;
+    class?: string;
+}
+
+/** 路径逐字节沿用旧站 `index.html`，不做简化或重排。 */
+const ICONS: Record<IconName, string> = {
+    warning:
+        '<path d="M12 3.9 3.1 19.5h17.8Z"></path><path d="M12 9.6v4.3"></path><path d="M12 17v.01"></path>',
+    'arrow-left': '<path d="M19.4 12H4.6"></path><path d="m10.8 5.8-6.2 6.2 6.2 6.2"></path>',
+    share:
+        '<path d="M12 3.6v10.6"></path><path d="m7.4 9.6 4.6 4.6 4.6-4.6"></path><path d="M3.9 16.8v1.6a2.1 2.1 0 0 0 2.1 2.1h12a2.1 2.1 0 0 0 2.1-2.1v-1.6"></path>',
+    plus: '<path d="M12 5.2v13.6"></path><path d="M5.2 12h13.6"></path>',
+    minus: '<path d="M5.2 12h13.6"></path>',
+    'frame-reset':
+        '<path d="M9.6 3.8H5.2a1.4 1.4 0 0 0-1.4 1.4v4.4"></path><path d="M14.4 3.8h4.4a1.4 1.4 0 0 1 1.4 1.4v4.4"></path><path d="M9.6 20.2H5.2a1.4 1.4 0 0 1-1.4-1.4v-4.4"></path><path d="M14.4 20.2h4.4a1.4 1.4 0 0 0 1.4-1.4v-4.4"></path>',
+    'chevron-right': '<path d="m9.8 5.8 6.2 6.2-6.2 6.2"></path>',
+    close: '<path d="M6.6 6.6 17.4 17.4"></path><path d="M17.4 6.6 6.6 17.4"></path>',
+    // 显隐状态不能只靠颜色：口令显示时加一道斜杠（`.auth-modal__toggle-slash` 控制它的显隐）。
+    eye: '<path d="M2.8 12C4.9 7.7 8.2 5.7 12 5.7s7.1 2 9.2 6.3c-2.1 4.3-5.4 6.3-9.2 6.3S4.9 16.3 2.8 12Z"></path><circle cx="12" cy="12" r="2.9"></circle><path class="auth-modal__toggle-slash" d="M4.8 19.2 19.2 4.8"></path>'
+};
+
+const { name, size, class: className } = Astro.props;
+---
+
+<svg
+    class:list={['icon', size && `icon--${size}`, className]}
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+    set:html={ICONS[name]}
+/>

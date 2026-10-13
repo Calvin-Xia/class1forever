@@ -1,0 +1,184 @@
+id: l2_dialogs
+type: task
+label: 交互部件岛屿化与可达性
+level: 2
+context: ctx_ui
+status: passed
+plan:
+  description: >-
+    把底部抽屉、口令弹窗与地区一览迁为岛屿或组件：弹窗开启时背景 inert、关闭后焦点归还触发元素；抽屉关闭时其内部按钮不可聚焦；地区一览每个地区一个按钮、排序切换时 aria-sort 随列移动；窄视口（480px
+    及以下）无横向滚动、控件不重叠。范围：抽屉、弹窗、地区一览组件与焦点管理模块；不改服务端路由。
+expected_outcome:
+  definition_of_done:
+    - 键盘 Tab 全程可见焦点环；弹窗打开时 Tab 不进入背景控件，Esc 关闭后焦点回到触发按钮
+    - 抽屉关闭后 Tab 不落在抽屉内控件上（Tab 序列记录为证）
+    - 地区一览每个地区一个按钮且 Enter 结果与点击地图同区域一致；切换排序后 aria-sort 移到另一列
+    - 480px 视口下 scrollWidth 不超过视口宽（记录为证）
+attempts: 0
+max_attempts: 3
+created_at: '2026-10-12T11:08:13.384Z'
+updated_at: '2026-10-12T13:50:16.013Z'
+checkpoints:
+  - id: cp1
+    label: 抽屉与焦点归还
+    status: passed
+    verifier: auto
+  - id: cp2
+    label: 口令弹窗与背景 inert
+    status: passed
+    verifier: auto
+  - id: cp3
+    label: 地区一览按钮、aria-sort 与窄视口
+    status: passed
+    verifier: auto
+assigned_to: exec-shell
+execution_report:
+  summary: >-
+    l2_dialogs 完成：cp1（抽屉与焦点归还）/ cp2（口令弹窗与背景 inert）/ cp3（地区一览按钮、aria-sort 与窄视口）全部 passed。把抽屉、口令弹窗与「地区一览」迁成岛屿：新增 7
+    个文件（src/lib/{dialogs-island,focus-scope,dialog-cards,dialog-api,region-ledger}.ts + src/components/DialogsCanvas.tsx
+    + src/scripts/dialogs-island-boot.ts），只最小改动 3 个 .astro（BottomSheet 加水合 script，另两个订正/改指注释）。**未用 client:***：走 .astro
+    `<script>` + 动态 import + createRoot，渲染页 3 个 script 全带 src、0 内联（CSP 不放宽）。地区激活只有一条路：一览行按钮与地图点击都汇到 map-island 的
+    activateRegion（产物核对两个入口共享同一个 map-island chunk = 同一模块实例）。**真实 Chromium 65 项断言全绿（exit 0）**：Tab 全程可见焦点环；弹窗打开时背景+抽屉一起
+    inert 且 Tab 不进入背景、Esc 关闭后焦点回到 #details-btn；抽屉关闭后 Tab 序列 0 个 #bs-*（三个按钮 hidden）；一览 35 行 35 按钮、Enter
+    与鼠标点地图同一下钻到浙江（source=ledger vs source=map）、切排序 aria-sort 在 name/count 两列间移动且首行 北京→安徽；480/375px
+    无横向滚动（含抽屉打开）。另有一处**有意修正**（A/B 实测旧站 Esc 后焦点丢给 body，新站归还触发按钮）与一条**功能差异**如实上报：抽屉「进入地图详情」在详情模式开启时下钻不了，因为 map-island 没导出
+    drillIntoProvince（需主控裁决一行导出）。git diff main -- js/ css/ index.html 全为 0 行。
+  started_at: '2026-10-12T13:18:58.239Z'
+  artifacts:
+    - src/lib/dialogs-island.ts
+    - src/lib/focus-scope.ts
+    - src/lib/dialog-cards.ts
+    - src/lib/dialog-api.ts
+    - src/lib/region-ledger.ts
+    - src/components/DialogsCanvas.tsx
+    - src/scripts/dialogs-island-boot.ts
+    - src/components/BottomSheet.astro
+    - src/components/AuthModal.astro
+    - src/components/RegionLedger.astro
+    - .wrangler/probe-dialogs/dialogs-evidence.mjs
+    - .wrangler/probe-dialogs/out/dialogs-evidence.md
+    - .wrangler/probe-dialogs/out/dialogs-evidence.json
+    - .wrangler/probe-dialogs/restart.sh
+    - .wrangler/probe-dialogs/make-config.mjs
+    - .wrangler/probe-dialogs/seed.mjs
+    - .wrangler/probe-dialogs/legacy-focus-check.mjs
+    - .wrangler/evidence/dialogs-evidence-run.txt
+    - .wrangler/evidence/dialogs-legacy-focus-ab.txt
+    - .wrangler/evidence/dialogs-astro-check.log
+    - .wrangler/evidence/dialogs-build-probe.log
+    - .wrangler/evidence/dialogs-npm-build.log
+  blockers:
+    - >-
+      ①【需要 map-island 多一个只读导出，请主控裁决】抽屉里的「进入 X 地图详情」按钮在**详情模式开启时下钻不了**：`activateRegion(point, source)` 内部先算 `canDrill =
+      Boolean(point.drilldownFile) && !isActiveProvinceView()`，然后 `if (canDrill && !detailMode.enabled)` 才下钻，否则只广播
+      `map:region-activate`。旧站的 `handleDrilldownClick()` 走的是独立的 `drillIntoProvince(point)`，不受详情模式影响 —— 也就是说：旧站「详情模式开着 +
+      点某个可下钻省份 → 出明细卡 → 点『进入 X 地图详情』」是会下钻的，新站目前只会把明细卡重画一遍（不复制下钻分支是派单硬约束，所以我没有另写一份）。最小修法（一行）：`src/lib/map-island.ts` 导出
+      `drillIntoProvince`（或给 `activateRegion` 加一个 `intent: 'drill'` 参数），我这边把 `dialogs-island.ts` 的 onDrilldown
+      换成它即可。**未改任何只读文件**；改动落点与证据：`.wrangler/probe-dialogs/dialogs-evidence.mjs` 的 g7 注释、`src/lib/dialogs-island.ts` 的
+      onDrilldown 注释。
+    - >-
+      ②【环境，非代码】`npm run build` 在清空 `dist/` 阶段 EPERM：主控的验证进程 `npm run dev:local -- --port 8941 --state-dir
+      .wrangler/local/state-verify` 正持着 `dist/client`。本节点改用独立产物 `npx astro build --outDir
+      .wrangler/probe-dialogs/dist`（exit 0，见 .wrangler/evidence/dialogs-build-probe.log），代码本身可构建；`node build.js` 单独跑
+      exit 0（37 项对比度断言）。等 8941 那台停掉后 `npm run build` 应可复现通过。
+    - >-
+      ③【契约小缺口，不阻塞】`src/lib/map-bridge.ts` 的 `MAP_EVENT_NAMES` 只列了
+      ready/view-change/public-data/zoom-change/region-activate，但地图侧实际还广播两个**字面量**事件：`map:escape`（map-island.ts 的
+      keydown 分支）与 `map:detail-mode-change`（map-bridge.ts 的 setDetailModeState）。本节点按字面量订阅（dialogs-island.ts 里两个常量 +
+      注释说明），功能正常；建议后续把这两个名字补进 `MAP_EVENT_NAMES`，免得下一个消费方再去翻源码。
+  notes: >-
+    【交付形态】沿用 l2_map 证明过的 CSP 安全套路，**没有用 `client:*`**：`BottomSheet.astro` 里
+    `<script>import('../scripts/dialogs-island-boot');</script>` → Astro 编译成外链
+    chunk（`/_astro/BottomSheet.astro_astro_type_script_index_0_lang.*.js`，429 B）→ 动态 import
+    `dialogs-island-boot.*.js`（16.8 KB）→ `createRoot` 挂 `DialogsCanvas.tsx`（渲染
+    null，控制器是命令式的）。`scripts/dialogs-island-boot.ts` 与 `src/scripts/map-island-boot.ts` 同一形状。渲染页实测 3 个 `<script>` **全部带
+    src、0 内联**（g0 断言）。
+
+
+    【模块划分】`src/lib/dialogs-island.ts` 是控制器（抽屉 / 口令弹窗 / 详情拉取 / 详情模式 / 事件绑定 /
+    boot+destroy），拆出四个可单测的模块：`focus-scope.ts`（FocusScope 栈 + inert + 焦点归还，A8）、`dialog-cards.ts`（加载卡/明细卡/名册字符串渲染，转义沿用
+    `escapeHtml`）、`dialog-api.ts`（fetchJson / 错误归一 / 地区缓存键 / 两个
+    POST）、`region-ledger.ts`（表格行、排序、aria-sort、note、行内按钮措辞、事件委托）。公开卡片不重画：复用 l2_map 留在 `tooltip-card.ts` 的
+    `renderPublicCardHtml`（与悬浮卡逐字相同）。
+
+
+    【跨岛屿单一入口（零重复分支）】地区激活只有一条路：`region-ledger.ts` 的行按钮与地图点击都汇到 `map-island.ts` 导出的 `activateRegion(point,
+    source)`。构建产物里两个入口 chunk 共享同一个 `map-island.Dvi8XlQ6.js`（Rollup 共享 chunk），所以是**同一个模块实例**（`activateRegion`
+    看到的是已启动的地图状态）—— 这点已从产物里核对（MapSection 与 BottomSheet 两个 boot chunk 的依赖表都指向同一个 chunk）。抽屉里的下钻按钮同样走 activateRegion（差异见
+    blockers ①）。
+
+
+    【65 项 Playwright 断言全绿（.wrangler/probe-dialogs/out/dialogs-evidence.md，站点 = wrangler dev × astro build 产物 :8961，真实
+    Chromium）】g0 水合与 CSP（0 内联脚本 / 岛屿 booted / 三个 #bs-* 初始 hidden / #map 与 #bottom-sheet 仍 tabindex=-1 / 一览行数 35 =
+    视野点数）；g1 关闭态 Tab 序列（24 次 Tab：share-btn → 缩放三键 → 版权链接 → summary → details-btn，**0 个 #bs-***，每个控件 `outline: solid
+    2px`）；g2 抽屉（Enter 打开 → `.page-wrapper` inert、焦点 = #bottom-sheet、#bs-close 可见、台湾无下钻按钮、主按钮「输入口令后查看」；打开时 Tab 只在
+    #bs-close/#bs-primary-btn 间循环；Esc 关闭 → inert 解除、焦点回**触发的一览行按钮**、三按钮全 hidden；关闭后再走 12 次 Tab，序列里出现 region-sort-btn
+    与行按钮但**仍无 #bs-***）；g3 口令弹窗（#details-btn 打开 → 背景 + 抽屉一起 inert、焦点自动进 #auth-passphrase、8 次 Tab 全在弹窗内、输入框的可见焦点提示是它自己的
+    `box-shadow 0 0 0 3px` 环、错误口令 → `data-variant=error` + `aria-invalid=true` + `aria-describedby="auth-hint
+    auth-feedback"` + 「剩余 9 次尝试」、Esc → 焦点回 **#details-btn**）；g4 详情流程（口令 demo → access/enabled=true、#details-btn 变「退出查看」+
+    aria-pressed=true；北京明细卡 3 行名册按城市分组「朝阳区/海淀区」、人数 3 人、主按钮「重新加载」、可下钻地区显示「进入地图详情」；服务端 detailAccess=true；「退出查看」→
+    本地与服务端会话都清（in-page fetch 复核 detailAccess=false）、按钮回「同学信息」、再开抽屉只剩公开卡 0 行名册）；g5 地区一览（35 行 35 按钮、初始
+    count=descending/name=none、note「全国 35 个省级区域，共 6 位同学…」、**表头 position: static 不是 sticky**、Enter 浙江 → 下钻且 activations 记
+    source=ledger、Esc 回全国、**鼠标点地图浙江 → 同样下钻且 source=map**、切排序 → name=ascending/count=none + 文案与 aria-label 同步 + 首行
+    北京→安徽、再切回 descending）；g6 窄视口（480/375：scrollWidth = innerWidth，375 + 抽屉打开同样不横滚）；g7 视野切换关抽屉（台湾公开卡打开 → 探针激活浙江 →
+    activeProvince=浙江 且抽屉自动关闭、inert 解除）。
+
+
+    【有意修正（相对旧站，已 A/B 实测）】口令弹窗的焦点归还。旧站 `openAuthModal()` 先 `setPassphraseVisibility(false)`（里面会 `authInput.focus()`）再
+    `FocusScope.open()`，于是记下的「焦点来源」是弹窗里的输入框；关闭时输入框已 hidden，`focus()` 无处可去 → 焦点丢给
+    `body`。实测对照（`.wrangler/evidence/dialogs-legacy-focus-ab.txt`，旧站跑在 tests/dev-server.mjs :8991）：旧站
+    `{opened:{active:'auth-passphrase'}, afterEsc:{active:'BODY'}}`；新站 `afterEsc: details-btn`（g3 断言，带 2px 焦点环）。DoD 第 1
+    条与 AGENTS.md 键盘清单都要求「Esc 后焦点回触发按钮」，所以我把 `openFocusScope()` 提到 `setPassphraseVisibility()` 之前（`dialogs-island.ts` 的
+    openAuthModal 里有注释说明），这是本节点唯一一处刻意偏离旧实现的行为。
+
+
+    【如实上报：未迁移 / 行为有差异（逐条）】
+
+    1) 抽屉「进入 X 地图详情」在详情模式开启时不下钻 —— 见 blockers ①（旧站走独立的 `drillIntoProvince`，新站只能走
+    `activateRegion`，而它被详情模式门挡下）。这是本节点唯一的**功能差异**。
+
+    2) 口令弹窗关闭后的焦点归还：见上，有意修正（旧站丢 body）。
+
+    3) Esc 的归属：旧站在 `js/map.js` 的 keydown 里直接关弹层；新站由地图侧广播 `map:escape`、抽屉侧关闭（l2_map 定的跨岛屿契约）。行为等价（顺序：弹窗 → 抽屉 → 地图退全国）。
+
+    4) 旧站在我的这几条流程里会顺手调 `updateInteractionNote()`；新站 `#interaction-note` 归 l2_share，本节点**不碰**它，改由 `setDetailModeState()`
+    / `map:public-data` 事件让那边自己更新（派单边界要求）。
+
+    5) `fetchJson` / `normalizeApiErrorMessage` 在新站有两份实现（`map-island.ts` 的私有版 + 本节点的 `dialog-api.ts`）。契约一致（`credentials:
+    'same-origin'`、非 2xx 抛带 `status`/`payload` 的 Error，401 分流重新要口令）。根因：`map-island.ts` 对本节点只读且那两个函数没导出；若后续要收敛成一份，请把导出加到
+    map-island（属于 l2_map 的边界）。
+
+    6) 抽屉关闭时地图侧不再调 `BottomSheet.close()`（旧站 `drillIntoProvince` / `drillUpToCountry` 里各调一次）；新站由抽屉侧监听
+    `map:view-change`、**只在 province 变化时**关闭（同视野的数据刷新不关，与旧站一致）。
+
+    7) `#details-btn` 的状态（hidden/aria-pressed/文案）在旧站散在 `updateDetailsButton`，新站由抽屉侧统一维护，触发点改为三条事件（`map:public-data` /
+    `map:detail-mode-change` / `map:view-change`）+ 自身状态变更，结果等价。
+
+    8) 明确未迁移（别的节点负责）：分享图与读屏播报（l2_share，`MapSection.astro` / `SiteFooter.astro`
+    一个字没动）、动效（l2_motion）、地图下钻/缩放/触摸兜底/悬浮卡（l2_map，只读复用 `activateRegion` + `map-bridge`）。
+
+    9) 水合形态：`client:*` → `.astro` `<script>` + 动态 import + createRoot（CSP 原因，与 l2_map/l2_motion 一致）。
+
+
+    【硬约束与自检】`git diff main -- js/ css/ index.html` 全部 0
+    行；`src/styles/**`、`src/lib/{map-bridge,map-island,map-model,auth,data,http,security-headers}.ts`、`src/middleware.ts`、`src/pages/api/**`、`package.json`、`tests/**`、`docs/**`、`AGENTS.md`、`.github/**`
+    我这边 0 改动（`git diff` 读数；AGENTS.md/package.json/.github 的 diff 是别的车道的）。本节点新增 7 个文件、改 3 个 `.astro`（BottomSheet 加挂载
+    script；RegionLedger 按派单订正归属注释 + AuthModal/BottomSheet 注释改指新模块），`MapSection.astro` / `SiteFooter.astro` 未触碰。`node
+    build.js` exit 0；`astro check` 我这条车道的文件 **0 error**（整仓仍有 10 条 error，全在 `src/scripts/motion.ts`(9) 与
+    `src/lib/share-card.ts`(1)，属 l2_motion / l2_share 车道）。
+
+
+    【环境备注】1) 探针走独立产物 + 独立 KV state（`.wrangler/probe-dialogs/`），因为同批次 l2_share 与主控的 dev:local 都在用仓库根 `dist/`（`astro
+    build` 清目录会 EPERM）。2) 探针运行台 `http://127.0.0.1:8961` **留着没关**，便于主控现场核对；重启用 `bash
+    .wrangler/probe-dialogs/restart.sh`（会重建产物并重启，独立 KV 已 seed）。旧站对照用的 :8991 mock 已停。3) 本地口令 = `demo`（local-runtime
+    的演示口令），提示语由 `DETAILS_HINT` 注入，`#auth-hint` 实测显示「口令提示：本地演示口令：demo（仅本地通路与测试使用）」。
+  verification:
+    verdict: passed
+    checked_at: '2026-10-12T13:50:15.642Z'
+    note: >-
+      主控核验：10 个 artifacts 均存在；git diff main -- js/ css/ index.html 为空；未用 client:*，走外链
+      script+createRoot；RegionLedger.astro 注释已订正为 l2_dialogs 口径；65 项 Playwright
+      断言(焦点环/背景inert/Esc焦点归还/抽屉关闭0个#bs-*可聚焦/一览35行35按钮且Enter与地图同一下钻到浙江/aria-sort两列迁移/480+375px无横滚)。DoD
+      4条全绿。blocker①(详情模式下钻回归，已核旧站 js/map.js handleDrilldownClick 属实)与③(MAP_EVENT_NAMES缺2字面量事件)已落新节点
+      l2_island_contract_fix 收口；②构建EPERM系主控自己的dev:local占dist，已停，非缺陷。
+  completed_at: '2026-10-12T13:50:16.014Z'

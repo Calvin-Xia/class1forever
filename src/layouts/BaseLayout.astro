@@ -1,0 +1,60 @@
+---
+/**
+ * 站点外壳：`<head>` 的 meta / 站点图标 / 字体与全局样式表入口。
+ *
+ * 与旧首页（`index.html`）逐条对齐的部分：
+ * - `lang="zh-CN"`、`charset`、`viewport`、`description`、`theme-color`、`title`、`favicon`；
+ * - Google Fonts 的 preconnect 与样式表链接 —— `_headers` 的 `style-src` / `font-src`
+ *   本来就为这两个源留了口子（`script-src` 仍是 `'self'`，字体不属于脚本）。
+ *
+ * 页面结构（页头 / 地图 / 地区一览 / 底部抽屉 / 口令弹窗）全部由 `index.astro` 经 slot 装配，
+ * 这里刻意不预置任何业务区块。
+ *
+ * 样式：本节点只建占位 `src/styles/main.css`，真正的样式表迁移归 l2_visual。
+ */
+import '../styles/main.css';
+
+interface Props {
+    /** 文档标题，与旧站 `<title>` 一字不差。 */
+    title: string;
+    /** 文档 description，与旧站 meta 一字不差。 */
+    description: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="description" content={description} />
+        <meta name="theme-color" content="#f7f4ec" />
+        <title>{title}</title>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600&display=swap"
+            rel="stylesheet"
+        />
+    </head>
+    <body>
+        <slot />
+        <!--
+            L2 动效层（光标墨晕 / 按钮磁吸 / 卡片聚光），实现见 src/scripts/motion.ts。
+
+            这里用**动态** import 而不是静态 import，是有原因的：Astro 会把「自包含
+            （无 import / dynamic import）且体积小于 vite.build.assetsInlineLimit（默认
+            4096 字节）的 script 标签直接内联进 HTML」——见 astro/dist/core/build/plugins/
+            plugin-scripts.js 的 shouldInlineAsset 分支。而 _headers 的 CSP 是
+            `script-src 'self'`，内联脚本会被浏览器直接拦下，动效层在线上就整个失效。
+            动态 import 会让入口变成带 dynamicImports 的外链 chunk（Astro 不内联它），
+            动效代码落到 /_astro/motion.<hash>.js，在 CSP 下正常加载。
+        -->
+        <script>
+            import('../scripts/motion');
+        </script>
+    </body>
+</html>

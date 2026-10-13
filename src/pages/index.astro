@@ -1,0 +1,46 @@
+---
+/**
+ * 首页：把页头、地图区、地区一览、页脚与两个弹层装配起来。
+ *
+ * 装配纪律：
+ * - 这里只有展示型组件的编排，没有一处内联 `<script>`，也没有跨源脚本
+ *   （`_headers` 的 `script-src 'self'` 必须继续成立）；
+ * - 地图画布挂载（l2_map）、动效（l2_motion）、弹窗与口令流程（l2_dialogs）、
+ *   样式表迁移（l2_visual）都在各自的节点里，不从本文件越界；
+ * - 「地区一览」的表体仍由客户端取公开聚合数据后填充，不在这里 SSR 取数。
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CdnError from '../components/CdnError.astro';
+import Atmosphere from '../components/Atmosphere.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import MapSection from '../components/MapSection.astro';
+import RegionLedger from '../components/RegionLedger.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import BottomSheet from '../components/BottomSheet.astro';
+import AuthModal from '../components/AuthModal.astro';
+
+const title = '金鹰 1 班蹭饭地图';
+const description = '蹭饭地图 - 金鹰 1 班同学分布图志，点击地图查看各省市的落点';
+---
+
+<BaseLayout title={title} description={description}>
+    <CdnError />
+
+    <Atmosphere />
+
+    <div class="page-wrapper">
+        <main class="page" role="main">
+            <SiteHeader />
+
+            <MapSection />
+
+            <RegionLedger />
+        </main>
+
+        <SiteFooter />
+    </div>
+
+    <BottomSheet />
+
+    <AuthModal />
+</BaseLayout>

@@ -1,0 +1,158 @@
+id: l2_island_contract_fix
+type: task
+label: 跨岛屿契约收口与详情模式下钻修复
+level: 2
+context: ctx_ui
+status: passed
+plan:
+  description: >-
+    收口 l2_dialogs 上报的两处跨岛屿契约缺口。(1) 功能回归：旧站底部抽屉的「进入 X
+    地图详情」按钮走独立下钻入口，不受详情模式门禁；新站的地区激活入口在详情模式开启时不执行下钻，导致该按钮只重画明细卡、下钻不了。修法：在地图岛屿模块暴露只读的下钻入口（导出下钻函数，或给地区激活入口加 intent:'drill'
+    参数），抽屉岛屿的对应回调改用它——不得复制第二条下钻分支，一览/地图点击仍走地区激活入口。(2) 事件契约：跨岛屿桥的 MAP_EVENT_NAMES 只列 5 个，但地图岛屿还广播 map:escape、事件桥广播
+    map:detail-mode-change 两个字面量事件；补齐这两个常量并让消费方改用常量订阅。范围：地图岛屿模块、跨岛屿桥模块、抽屉岛屿模块；不改其它行为语义。
+expected_outcome:
+  definition_of_done:
+    - 详情模式开启 + 点击可下钻省份出明细卡 + 点「进入 X 地图详情」→ 真实浏览器里下钻到该省（记录为证）；一览与地图点击路径仍走 activateRegion（产物核对共享同一 map-island 模块实例）
+    - MAP_EVENT_NAMES 含 map:escape 与 map:detail-mode-change；消费方以常量订阅，源码中无散落字面量
+    - git diff main -- js/ css/ index.html 为空；无新增依赖；渲染页脚本全部外链（无内联，CSP 不放宽）
+attempts: 0
+max_attempts: 3
+created_at: '2026-10-12T13:48:12.551Z'
+updated_at: '2026-10-12T14:04:15.401Z'
+checkpoints:
+  - id: cp1
+    label: 下钻入口导出与 dialogs 接线
+    status: passed
+    verifier: auto
+  - id: cp2
+    label: 事件契约补齐与全量回归
+    status: passed
+    verifier: auto
+assigned_to: exec-api
+execution_report:
+  summary: >-
+    l2_island_contract_fix 完成（未写 verdict/passed，停在
+    execution_report）。三个文件改动：src/lib/map-island.ts、src/lib/map-bridge.ts、src/lib/dialogs-island.ts。
+
+
+    ① 详情模式下钻回归已修：选了「给 `activateRegion` 加 `intent` 参数」而不是导出 `drillIntoProvince`（理由：门禁只有一份、不复制下钻分支；`intent='drill'` 精确等价旧站
+    `BottomSheet.handleDrilldownClick()`，不可下钻时静默返回）。抽屉侧只改一行 → `activateRegion(point, 'sheet', 'drill')`；一览与地图点击仍走默认
+    `auto`。
+
+
+    ② 事件契约补齐：MAP_EVENT_NAMES 增至 7 个常量（新增 escape / detailModeChange）并成为唯一真相源；map-island 的 8 处广播、dialogs-island
+    的本地字面量常量、map-bridge 的广播全部改用常量。
+
+
+    【证据】Worker 渲染路径（wrangler dev × astro build 产物）真实 Chromium，24 项断言全绿（island-contract-evidence.md）：
+
+    · 目标链路：详情模式开启 → 点浙江 → 明细卡 + 按钮「进入 浙江 地图详情」→ 点它 → activeProvince=浙江 / mapId=cn/zhejiang / viewChange(浙江) / 按需拉取
+    zhejiang chunk / 抽屉自动关闭 / activationLog `source='sheet'`（同一 activateRegion）。
+
+    · 对照一（详情模式关）：地图点四川 → 直接下钻 `source='map'`；对照二（详情模式开）：一览行按钮 → 不下钻、只开抽屉 `source='ledger'` —— 三条路径同一模块实例。
+
+    · Esc 广播 `MAP_EVENT_NAMES.escape` 并被常量订阅收到；渲染页 0 个可执行内联脚本、脚本全外链、console 0 报错；`git diff main -- js/ css/ index.html`
+    为空；未新增依赖。
+
+    · 全量回归：l2_map 的 49 项 Playwright 证据重跑 **49 ✅ / 0 ❌**（回归脚本补了一步「特殊地区点击后关抽屉」—— 因为 l2_dialogs
+    上线后点台湾等会真的打开抽屉，这是脚本适配而非产品变化）。
+
+
+    【越界残留（非阻塞，请在裁决时点名）】src/scripts/share-boot.ts:27 仍有 `const DETAIL_MODE_EVENT = 'map:detail-mode-change';` 与已过时的注释（第
+    26 行），不在本节点边界内未改；字符串一致故功能无碍，建议 l2_share 一行换成 `MAP_EVENT_NAMES.detailModeChange`。
+
+
+    【环境备注】执行期间验证侧 lane 持有 dist/client 导致 `npm run build` EPERM；改用同一 Worker 渲染路径的独立 outDir + 独立 KV state
+    取证（未触碰对方进程），并停掉了我自己 8788 上服务旧 dist 的 dev:local。
+  started_at: '2026-10-12T13:50:53.659Z'
+  artifacts:
+    - src/lib/map-island.ts
+    - src/lib/map-bridge.ts
+    - src/lib/dialogs-island.ts
+    - .wrangler/probe-api/out/island-contract-evidence.md
+    - .wrangler/probe-api/out/island-contract-evidence.json
+    - .wrangler/probe-api/out/map-evidence.md
+    - .wrangler/probe-api/out/map-evidence-regression.txt
+  blockers:
+    - >-
+      无硬阻塞（不写 verdict/passed，等裁决）。一条越界残留需 l2_share 顺手收：`src/scripts/share-boot.ts:27` 仍有 `const DETAIL_MODE_EVENT =
+      'map:detail-mode-change';`（以及第 26 行注释「详情模式事件不在 MAP_EVENT_NAMES 里」已过时）。字符串一致所以功能不受影响，但不在本节点文件边界内，未改。建议一行替换为
+      `MAP_EVENT_NAMES.detailModeChange`（该文件已 import MAP_EVENT_NAMES）。
+    - >-
+      FYI（非阻塞，环境层面）：执行期间有另一条 lane（验证侧，`local-runtime.mjs --port 8941 --state-dir .wrangler/local/state-verify`）正持有
+      `dist/client`，导致 `npm run build` 在清目录时 EPERM。我改用同一套 Worker 渲染路径的独立产物（`astro build --outDir
+      .wrangler/probe-api/dist` + 独立 KV state + `wrangler dev`）取证，未触碰那条 lane 的进程；同时停掉了我自己那个 8788 的 dev:local（它服务的是旧
+      dist，且也在占 dist/client）。
+  notes: >-
+    【选型说明】下钻入口选了「给 `activateRegion` 加 `intent` 参数」而不是「导出 `drillIntoProvince`」：
+
+    · 理由：`activateRegion` 已经是旧站唯一的地区激活入口，门禁（`drilldownFile` + `!isActiveProvinceView()`）也已经在它内部；再导出一个
+    `drillIntoProvince` 会让抽屉侧也持有一份「能不能下钻」的判断，两处迟早漂移。加 intent
+    只多一个参数，守卫仍只有一份，且「不可下钻时静默返回」的旧站语义（handleDrilldownClick）能在同一处表达。
+
+    · 具体：`export type RegionActivationIntent = 'auto' | 'drill'`；`activateRegion(point, source='external',
+    intent='auto')`。`intent==='drill'` → 可下钻就 `drillIntoProvince`，不可下钻直接返回（不广播 region-activate，避免把抽屉又打开一遍）；`auto`
+    分支逻辑与改动前逐字一致（详情模式关闭且可下钻 → 下钻，否则广播 region-activate）。抽屉侧只改一行：`activateRegion(point, 'sheet', 'drill')`。
+
+    · 无第二条下钻分支：下钻仍只有 `drillIntoProvince` 一处调用点由 intent 选择；一览（region-ledger → `activate:` 回调）与地图点击（TapFallback / zrender
+    click）都仍走 `activateRegion` 默认 auto。
+
+
+    【事件契约】`MAP_EVENT_NAMES` 现在是 7 个常量（新增 `escape: 'map:escape'`、`detailModeChange:
+    'map:detail-mode-change'`），并作为**唯一真相源**：
+
+    · `src/lib/map-island.ts`：8 处 `emitMapEvent('map:xxx', …)` 全部改引用常量（ready / viewChange ×2 / publicData / zoomChange
+    ×3 / regionActivate / escape）。
+
+    · `src/lib/dialogs-island.ts`：删掉本地 `ESCAPE_EVENT` / `DETAIL_MODE_EVENT` 两个字面量常量，订阅改用 `MAP_EVENT_NAMES.escape` /
+    `MAP_EVENT_NAMES.detailModeChange`（region-activate / view-change / public-data 本来就是常量）。
+
+    · `src/lib/map-bridge.ts`：`setDetailModeState()` 的广播改用常量；文档注释改写成「7 个名字以 MAP_EVENT_NAMES
+    为唯一真相源」（注释里保留线上名字是给外部监听者看的，不是消费代码）。
+
+    · 全仓 `grep -rn "map:escape|map:detail-mode-change" src/` 只剩：map-bridge 的常量定义 + 契约注释，以及 **越界** 的
+    `src/scripts/share-boot.ts:12,27`（见 blockers）。
+
+
+    【证据 A：新站 Worker 渲染路径（wrangler dev × astro build 产物 :8931），Playwright 真实 Chromium，24
+    项断言全绿】.wrangler/probe-api/out/island-contract-evidence.md
+
+    · 事件契约：`window.__mapProbe.events` 暴露的 MAP_EVENT_NAMES 含 escape / detailModeChange（打印 7 个键值）。
+
+    · 开启详情模式：点 #details-btn → 口令弹窗 → 填 demo → 提交 → `detailMode {available:true, access:true}` → 再点 #details-btn →
+    `enabled:true`。
+
+    · **目标动作（修复点）**：详情模式下点地图上的浙江 → 只开明细卡（activeProvince 仍 null，广播 region-activate source=map）→ 抽屉出现按钮「进入 浙江 地图详情」→ 点它 →
+    `activeProvince=浙江`、`mapId=cn/zhejiang`、广播 viewChange(province=浙江)、按需拉取
+    `/_astro/zhejiang.DPCA4wJq.js`、抽屉自动关闭、`activationLog` 里同一条记录 `source='sheet'`（证明走的是同一个 activateRegion 而不是新开的分支）。
+
+    · **对照一**：关掉详情模式（点 #details-btn → enabled:false，同时清掉会话）后点地图上的四川 → 直接下钻，`activationLog source='map'`（auto 分支未回归）。
+
+    · **对照二**：详情模式开启时点「地区一览」行按钮 → 不下钻（activeProvince 仍 null）、抽屉打开、`activationLog source='ledger'` ——
+    一览与地图点击、抽屉按钮三条路径共用同一个 map-island 模块实例（同一份 activationLog）。
+
+    · Esc 契约：弹层打开时按 Esc → 广播 `MAP_EVENT_NAMES.escape`（常量订阅收到 1 条）且抽屉关闭。
+
+    · CSP：渲染页 HTML 里 **0 个可执行内联脚本**，三个 `<script type="module" src=…>` 全部外链；全程 console 0 报错。
+
+
+    【证据 B：全量回归】改动后重跑 l2_map 的 5 组 49 项 Playwright 证据（同站点）：**49 ✅ / 0 ❌**（.wrangler/probe-api/out/map-evidence.md，原始输出
+    map-evidence-regression.txt）。说明：因为 l2_dialogs 上线后点台湾/香港/澳门/南海**真的会打开抽屉**（这正是 l2_map 那条待办 DoD
+    的落地），回归脚本里补了一步「每个特殊地区之后关掉抽屉」（抽屉带遮罩且背景 inert，不关掉无法继续点地图与缩放按钮）；这是脚本适配，不是产品行为变化。
+
+
+    【DoD 逐条核对】① 详情模式下钻已修复并有真实浏览器记录（见证据 A）。② MAP_EVENT_NAMES 含两常量、消费方用常量（见上）。③ `git diff main -- js/ css/ index.html`
+    为空；未新增依赖（本次只改 3 个 src 文件，未碰 package.json）；渲染页无内联脚本、CSP 未放宽；禁止 `client:*` 的约束未触碰（MapSection/BottomSheet 的挂载方式原样）。
+
+
+    【未处理 / 有意不动】src/scripts/share-boot.ts 的那个字面量（越界，见 blockers）；未改任何其它节点的文件与行为语义。
+  verification:
+    verdict: passed
+    checked_at: '2026-10-12T14:04:15.026Z'
+    note: >-
+      主控核验：MAP_EVENT_NAMES 现含7常量(含escape/detailModeChange)；map-island.ts 有 RegionActivationIntent 类型与
+      activateRegion(point,source,intent)，内部 emitMapEvent 字面量残留=0；dialogs-island.ts 用常量订阅且
+      onDrilldown=activateRegion(point,'sheet','drill')；git diff main -- js/ css/ index.html 为空；无新依赖；npm run build
+      EXIT=0(先清掉占 dist 的残留 dev server 后复现)。exec-api 24项契约断言(详情模式开启→抽屉按钮→真下钻 cn/zhejiang source=sheet；对照 auto/ledger
+      两条路径同一 map-island 实例)+l2_map 49项回归全绿。DoD 3条全绿(range内)。残留：share-boot.ts:27 仍有同值字面量(越界未改，交 l3_gates 顺手收口)。
+  completed_at: '2026-10-12T14:04:15.401Z'

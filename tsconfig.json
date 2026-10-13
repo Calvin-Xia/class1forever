@@ -1,0 +1,21 @@
+{
+    "extends": "astro/tsconfigs/strict",
+    "compilerOptions": {
+        // React 岛屿（@astrojs/react）：Astro 用 react-jsx 运行时而非 classic。
+        "jsx": "react-jsx",
+        "jsxImportSource": "react",
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["src/*"]
+        }
+    },
+    "include": [
+        ".astro/types.d.ts",
+        // wrangler types 生成的绑定与运行时类型（含 `declare module 'cloudflare:workers'` 与
+        // CLASS_MAP_DATA: KVNamespace）。改了 wrangler.jsonc 的绑定后必须重跑 `npm run cf:types`。
+        "worker-configuration.d.ts",
+        "src/**/*",
+        "tests/**/*"
+    ],
+    "exclude": ["dist", ".wrangler-dryrun", "node_modules"]
+}

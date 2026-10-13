@@ -3,10 +3,20 @@
  *
  * 由 build.js 调用：任何一项不达标都会让 `npm run build` 失败，CI 也会一起拦下。
  *
- * 色值现在有两个来源，这里两个都读——css/main.css 的 :root 变量，以及
- * js/palette.js 里给地图和分享图用的调色板。两边本该保持一致，所以除了对比度，
- * 还顺带校验对应项是否同值：只改一处会立刻失败，而不是等分享图和页面颜色对不上
- * 才发现。
+ * 色值有两个来源，这里两个都读——新站样式表 src/styles/main.css 的 :root 变量，
+ * 以及 src/styles/palette.ts 里给地图和分享图用的调色板。两边本该保持一致，所以
+ * 除了对比度，还顺带校验对应项是否同值：只改一处会立刻失败，而不是等分享图和页面
+ * 颜色对不上才发现。
+ *
+ * 迁移前这两个来源是 css/main.css 与 js/palette.js；旧文件仍留在仓库里供切换节点
+ * 比对，但门禁已改指新位置，断言项一个没减（21 条对比度 + 11 条同值 + 5 条热力
+ * 色带单调 = 37）。
+ *
+ * palette.ts 是 TypeScript 模块，门禁读的是它的**真实取值**：摘掉 TS 语法后用 vm
+ * 求值，既不复写色值也不引第三方依赖（node:module 的 stripTypeScriptTypes 在
+ * Node 22.13 以下不存在，且会打一条 Experimental 警告，故不用它）。
+ * 因此该模块必须保持「顶层 `export const` + `as const` + 字面量取值」的稳定形状；
+ * 形状变了下面的守卫会明确报错，不会静默放过。
  *
  * 阈值按 WCAG 2.2 AA：正文 4.5:1，大字号（≥24px，或 ≥18.66px 粗体）3:1，
  * 焦点环这类非文字 UI 组件 3:1（1.4.11）。
@@ -123,15 +133,23 @@ function readRuleColor(css, selector) {
     return match ? match[1].trim() : null;
 }
 
-/** js/palette.js 是经典脚本，用 vm 跑一遍取全局注册表，与 build.js 读 geo.js 的方式一致。 */
+/**
+ * src/styles/palette.ts 的取值。
+ *
+ * 门禁要读的是真实取值，所以摘掉 TS 语法后直接求值：只认「顶层 export const」、
+ * 「as const」与单行的 `type X = typeof Y;`，其它写法留给下面的结构守卫去报错。
+ */
 function readPalette(rootDirectory) {
-    const context = vm.createContext({ window: {} });
-    vm.runInContext(
-        fs.readFileSync(path.join(rootDirectory, 'js/palette.js'), 'utf8'),
-        context,
-        { filename: 'js/palette.js' }
-    );
-    return context.window.CMapPalette;
+    const filename = 'src/styles/palette.ts';
+    const source = fs.readFileSync(path.join(rootDirectory, filename), 'utf8');
+    const javascript = source
+        .replace(/^\s*export\s+type\s+[\w$]+\s*=\s*typeof\s+[\w$]+\s*;\s*$/gm, '')
+        .replace(/^\s*export\s+(?=const\b)/gm, '')
+        .replace(/\s+as\s+const\b/g, '');
+
+    const context = vm.createContext({});
+    vm.runInContext(`${javascript}\n;globalThis.__palette = palette;`, context, { filename });
+    return context.__palette;
 }
 
 /** 报错时把解析后的颜色还原成可读文本，渐变中点这类计算值才不会打印成 [object Object]。 */
@@ -144,7 +162,7 @@ function formatColor(color) {
 }
 
 function check(rootDirectory, fail) {
-    const css = fs.readFileSync(path.join(rootDirectory, 'css/main.css'), 'utf8');
+    const css = fs.readFileSync(path.join(rootDirectory, 'src/styles/main.css'), 'utf8');
     const tokens = readTokens(css);
     const palette = readPalette(rootDirectory);
 
@@ -172,7 +190,7 @@ function check(rootDirectory, fail) {
     }
 
     if (!palette || !palette.share || !Array.isArray(palette.heat)) {
-        fail('js/palette.js 没有导出预期的调色板结构。');
+        fail('src/styles/palette.ts 没有导出预期的调色板结构（该文件必须保持顶层 export const + as const 的字面量形状）。');
         return 0;
     }
 

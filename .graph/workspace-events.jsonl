@@ -1,0 +1,2 @@
+{"ts":"2026-10-12T11:05:13.893Z","actor":"cli","kind":"init","detail":"graph=astro-migration label=\"Astro+Workers 迁移\""}
+{"ts":"2026-10-12T11:05:13.901Z","actor":"cli","kind":"switch","detail":"active -> astro-migration"}

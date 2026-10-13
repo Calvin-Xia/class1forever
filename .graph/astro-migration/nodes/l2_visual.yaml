@@ -1,0 +1,114 @@
+id: l2_visual
+type: task
+label: 视觉 token 与组件系统重表达
+level: 2
+context: ctx_ui
+status: passed
+plan:
+  description: >-
+    把纸本图志身份重表达为 Astro 下的 token 与组件样式系统：12 个必需 CSS 变量与 11 组 CSS↔调色板同值对保持成立，对比度 AA 判据在新样式表上继续通过，组件样式沿用既有 BEM
+    命名习惯；不改视觉取值、不引入暗色主题。范围：src/styles/、调色板的 TypeScript 化模块与对比度断言脚本的输入；不修改 DESIGN.md 的身份取值。
+expected_outcome:
+  definition_of_done:
+    - 对比度脚本对新样式表与调色板模块 0 error
+    - 12 个必需 CSS 变量在新样式表全部声明，且与调色板模块逐对同值
+    - git diff main -- DESIGN.md 为空（身份取值未变）
+attempts: 0
+max_attempts: 3
+created_at: '2026-10-12T11:08:12.186Z'
+updated_at: '2026-10-12T12:31:24.774Z'
+checkpoints:
+  - id: cp1
+    label: token 迁移与变量声明齐备
+    status: passed
+    verifier: auto
+  - id: cp2
+    label: 同值对与对比度断言通过
+    status: passed
+    verifier: auto
+assigned_to: exec-shell
+execution_report:
+  summary: >-
+    l2_visual 完成：cp1（token 迁移与变量声明齐备）/ cp2（同值对与对比度断言通过）全部 passed。src/styles/main.css 由 css/main.css
+    逐字迁移（去注释后两份**逐字节相同**：规则块 275/275、:root 变量 65/65、声明 1027/1027、12 个必需变量 12/12、color-scheme: light 在位；仅 3
+    处注释改写，类名零重命名）；调色板迁为 TypeScript 模块 **src/styles/palette.ts**（选 styles/ 而非 src/lib/，避开另一条车道的
+    src/lib/*.ts，报告里说明）；scripts/check-contrast.js 改指新位置，断言项未增未减：实测 21 条对比度 + 11 条同值 + 5 条热力色带单调 = 37 项，node build.js /
+    npm run build exit 0，npm run astro:check 27 files 0 error。11 组同值对逐对 ✅（独立第二实现复算）、关键对比度 10/10 达标（--color-text-muted
+    在页面底 5.44:1、衬纸 4.75:1）。门禁有效性用负向测试证明（故意改错 → exit 1，改回后 37 项全绿）。端到端：产物 dist/client/_astro/index.C6KDHLpr.css 已随页面 link
+    发布（immutable）。越界自检：git diff main -- DESIGN.md / css / js / build.js 均为 0 行；src/ 下只动 src/styles/ 两个文件。
+  started_at: '2026-10-12T12:20:42.388Z'
+  artifacts:
+    - src/styles/main.css
+    - src/styles/palette.ts
+    - scripts/check-contrast.js
+    - .wrangler/evidence/visual-migration-report.txt
+    - .wrangler/evidence/token-pairs-report.txt
+    - .wrangler/evidence/visual-selector-coverage.txt
+    - .wrangler/evidence/visual-page-css.txt
+    - .wrangler/evidence/visual-page.html
+    - .wrangler/evidence/visual-page.css
+    - .wrangler/evidence/negative-test-palette.txt
+    - .wrangler/evidence/negative-test-css.txt
+    - .wrangler/evidence/visual-build.log
+    - .wrangler/evidence/visual-build-probe.log
+    - .wrangler/evidence/visual-astro-check.log
+    - .wrangler/probe-visual/check-style-migration.mjs
+    - .wrangler/probe-visual/check-token-pairs.mjs
+    - .wrangler/probe-visual/check-selector-coverage.mjs
+  blockers: []
+  notes: >-
+    【palette 模块位置的选择】放 `src/styles/palette.ts`（不选 `src/lib/`）：另一条车道正在写 src/lib/{auth,data,http,types}.ts（现已多出
+    security-headers.ts），把调色板放进 styles/ 与它所属的样式表同目录，既零冲突风险、也让「页面 token（main.css）与画布 token（palette.ts）同处一个目录」这件事一眼可见。导出
+    `tokens` / `fonts` / `palette` 三个具名常量，palette 结构与迁移前的 window.CMapPalette 一一对应（heat / regionBorder / hoverArea /
+    hoverBorder / mapLabel / mapLabelEmphasis / visualMapText / snapshotBackground / fonts / 各 halo 与 shadow / share.*）。
+
+
+    【迁移保真度】src/styles/main.css 是 css/main.css 的逐字迁移：去注释后两份文件**逐字节相同**（探针 check-style-migration.mjs：规则块 275/275
+    逐块相同、:root 变量 65/65 无缺无多无改值、声明 `;` 计数 1027/1027、12 个必需变量 12/12、`color-scheme: light` 在位）。只改了三处注释：文件头（改写为「token 单点拥有
+    + 与 palette.ts 的对应关系 + 类名不重命名」）、两处 `js/motion.js` 指代改为「动效层（l2_motion）」。类名一个没改，组件/岛屿/分享图继续复用同一套选择器。
+
+
+    【门禁改动】scripts/check-contrast.js 只改输入与文案（git diff：+32/-14，无断言增删）：读 `src/styles/main.css`、读 `src/styles/palette.ts`（摘
+    TS 语法后 vm 求值，取真实取值），失败文案改指新路径。断言数实测 21 条对比度 + 11 条同值 + 5 条热力色带单调 = **37**（`node -e
+    "require('./scripts/check-contrast.js').check(...)"` 直接读数为 37 条 / 失败 0）。build.js **无需改动**（它只 require 脚本并传入
+    rootDirectory），已实测 `node build.js` exit 0、`npm run build` exit 0。不引第三方依赖：刻意不用 node:module 的
+    stripTypeScriptTypes（Node 22.13 以下不存在，且每次构建都会打一条 Experimental 警告），也不用 esbuild（l3_gates 计划退役
+    scripts/build-vendor.mjs，届时 esbuild 可能被移除）。
+
+
+    【门禁有效性（负向）】两处故意改错都让 build.js 以 exit 1 失败：palette `accent` 改 1 位 → 触发两条同值对失败；`--color-text-muted` 调浅到 #8a938d →
+    触发两种底色上的对比度失败（2.88:1 / 2.52:1）。测试后两份文件逐字节还原（diff 为空），复跑 37 项全绿。
+
+
+    【逐对核对（独立第二实现）】check-token-pairs.mjs 不依赖门禁脚本自行复算：11/11 同值对逐对
+    ✅（heat[0]=#eae5d8↔--color-bg-secondary；heat[3]=#4f7f63↔--color-accent-primary；heat[5]=#1a4539↔--color-accent-strong-hover；regionBorder=#ddd6c6↔--color-border；mapLabel=#17241f↔--color-text-primary；visualMapText=#4c5852↔--color-text-secondary；share.statValue=#4f7f63↔--color-accent-primary；share.headerFrom=#1f5245↔--color-accent-strong；share.headerTo=#1a4539↔--color-accent-strong-hover；share.background=#f7f4ec↔--color-bg-primary；snapshotBackground=#eae5d8↔--color-bg-secondary）；关键对比度
+    10/10 达标，其中 --color-text-muted 在页面底 5.44:1、在衬纸 4.75:1（AGENTS.md 点名的两处），白字 on accent-strong 8.93:1、on
+    accent-strong-hover 10.75:1、on accent-tertiary 6.34:1，焦点环 4.20:1≥3，地图标签 on heat[0] 12.76:1。
+
+
+    【样式真的随产物发布（端到端）】`astro build` 产出 dist/client/_astro/index.C6KDHLpr.css（32,156 B）；用 wrangler dev 跑迁移后的 Worker 取首页：SSR
+    HTML 带 `<link rel="stylesheet" href="/_astro/index.C6KDHLpr.css">`，该请求 200 + `Cache-Control: public,
+    max-age=31536000, immutable`；产物 CSS 归一化后含
+    `color-scheme:light`、`.map-frame__corner--tl`、`.auth-modal__feedback[data-variant=error]`、`.region-table`、`@media
+    (prefers-reduced-motion:reduce)` 与全部 token 值（Vite 只压掉了空白与引号，取值未变）。`npm run astro:check` = 27 files / 0 error / 0
+    warning（含 palette.ts 的类型检查）。
+
+
+    【如实列出「SSR HTML 里没有对应元素」的规则】共 24 个类选择器（探针 check-selector-coverage.mjs，未能归类的 0 个），全部是客户端注入的 DOM / 状态类，迁移前同样由 js/map.js
+    注入，不是被静默丢掉：l2_map ——
+    .map-tooltip/.tooltip/.tooltip__meta/.tooltip__hint/.tooltip__callout/.tooltip__empty（悬浮卡片）、.series/.profile/.name/.value（墨色卡片里的字与统计）、.region-table__name/__action/__btn/__row/__empty（表格行，客户端填表体）；l2_dialogs
+    —— .active/.roster/.roster__group/__city/__row/__index/__name/__school（底部面板状态与名单）；l2_share ——
+    .share-btn.loading。样式表里的 id 选择器只有 `#map`，SSR HTML 中存在。除此之外 110 个类选择器里 86 个在静态 HTML 里就有对应元素。
+
+
+    【交接提示（给下游节点）】1) l2_map 从 `src/styles/palette.ts` import（具名 `palette`；canvas 字体在 `palette.fonts`），不再有
+    window.CMapPalette；2) 上面 24 个类名与 `.bottom-sheet.active` 这类状态类必须沿用，否则样式会失配；3) 门禁现只读新文件：在 l4_cutover 删除旧 css/main.css
+    与 js/palette.js 之前，旧文件的改动不会被门禁拦住（本节点已用独立探针证明当前两版逐字相同，值没有漂移）；4) 顺带观察到另一条车道新增了 src/middleware.ts 与
+    src/lib/security-headers.ts —— 我在 l1_shell 报的「SSR 文档响应无安全头」缺口看起来正由那条车道补，仅作提示，本节点未触碰。
+  verification:
+    verdict: passed
+    checked_at: '2026-10-12T12:31:24.394Z'
+    note: >-
+      机械核对：checkpoint 2/2 passed；node build.js exit 0 且对比度 37 项全绿（21 对比度 + 11 同值对 + 5 色带单调）；12/12 必需变量在
+      src/styles/main.css 的 :root；DESIGN.md/css/js 与 main 零差异（取值零改动）；负向测试证明门禁有效
+  completed_at: '2026-10-12T12:31:24.775Z'

@@ -1,0 +1,224 @@
+id: l4_cutover
+type: task
+label: 切换包与人工 gate
+level: 4
+context: ctx_delivery
+status: passed
+plan:
+  description: >-
+    产出生产切换包：Worker 配置与部署命令、需要重新绑定的口令与会话密钥、KV 绑定核对清单、预览部署证据、回滚步骤（保留现有 Pages 项目与 main
+    分支现状直到人工确认）、以及需要在浏览器侧复核的发布后检查项；生产域名切换与 Pages 下线由人工执行，agent 不触碰生产配置。范围：文档与预览部署；不改生产 Pages 与域名、不改写 KV 两键数据。
+expected_outcome:
+  definition_of_done:
+    - 切换包文档含部署命令、密钥与 KV 清单、预览地址与验证记录、回滚步骤、发布后检查项
+    - 预览部署成功且首页与四个路由在预览环境可用（记录为证）
+    - 生产未变更：未由 agent 修改生产 Pages 与域名，KV 两个数据键未被改写
+    - 需要人工执行的步骤以清单形式列出，作为交接项
+    - >-
+      切换包把文档里的 Pages 口径命令（wrangler pages deploy / pages secret put）改为 Worker 口径（wrangler deploy / wrangler secret
+      put），并注明 Pages 项目保留至人工确认 —— 复核发现 F5
+    - >-
+      处理 dev 遮蔽：仓库根 index.html 会让 astro dev 的 / 返回旧站页面（Vite 静态中间件先于 Astro
+      路由）；切换时移除或归档旧入口（index.html/js/css/functions），并确认 astro dev 与 wrangler dev 都渲染新站
+    - >-
+      同步文档与代码，无陈旧口径残留：AGENTS.md（vendor 退役、build.js 单入口=静态断言+astro check+astro build+产物扫描、CI 步骤清单、'success message'
+      描述）、README.md（js/vendor 与 vendor:build 已删除、npm run build 新口径）、DEPLOYMENT.md（Pages→Worker 命令口径，F-5）全部更新
+    - >-
+      提交策略与 repo 侧「生产未改」读数（复核 P3/P4）：按逻辑提交本次迁移并决定 docs/、.graph/、生成类型的入库策略（给出可切换/可回滚的提交点）；交接清单里补 repo
+      侧可核读数（main/astro-migration/HEAD 同 SHA、git diff main -- 读数），凭据类（Pages 项目、域名、KV 两键）单列为人工步骤
+    - >-
+      预览部署口径（用户裁定 2026-10-13）：真预览部署为人工步骤 M2（本环境无 Cloudflare 凭据，wrangler whoami=Not logged in）；agent 侧以 wrangler
+      dry-run（worker:dryrun EXIT=0 + versions upload/deploy --dry-run）+ 本地 Worker 等价验证交付，缺口如实记录于切换包
+    - >-
+      smoke 13 台湾子项（用户裁定 2026-10-13）：接受等价性 override——AGENTS.md 的 smoke 13 文字改为与实测/旧站一致（轻点台湾＝面板开→被同一次触摸合成的 click
+      关闭），裁定记录进 docs/parity-touch-compare.md 或切换包
+attempts: 0
+max_attempts: 3
+created_at: '2026-10-12T11:08:15.474Z'
+updated_at: '2026-10-12T16:53:16.672Z'
+checkpoints:
+  - id: cp1
+    label: 切换包成文
+    status: passed
+    verifier: auto
+  - id: cp2
+    label: 预览部署与验证记录
+    status: skipped
+    verifier: auto
+  - id: cp3
+    label: 人工步骤清单待用户确认
+    status: passed
+    verifier: human
+assigned_to: exec-cutover
+execution_report:
+  summary: >-
+    l4_cutover 执行完毕，停在 execution_report（未写 verdict、未流转 passed、未碰其它节点）。
+
+
+    【交付物】切换包 `docs/cutover-runbook.md`（部署命令 / 需重绑密钥 / KV 核对清单 / 预览与验证记录 / 回滚 / 发布后检查项 / 人工步骤 M1–M10 / 入库策略与提交点 /
+    风险）；旧入口归档 `legacy/index.html` + `legacy/README.md`；`build.js` 新增「根 index.html 不得存在」断言；`AGENTS.md` / `README.md` /
+    `DEPLOYMENT.md` / `docs/build-gates.md` 同步到 Worker 口径；`.gitignore` 定下 `.graph` 运行时缓存与 `.pi/` 的忽略策略。
+
+
+    【checkpoint】cp1=passed（切换包成文）；cp2=skipped（真预览部署因无凭据降级为人工步骤 M2，已做 dry-run + 本地 Worker 全通路取证，DoD#2
+    字面未满足，如实上报）；cp3=pending（verifier=human，人工清单已备好，等用户确认——不自签）。
+
+
+    【凭据缺口】`npx wrangler whoami` → "Not logged in. Your auth token has expired and could not be refreshed, and the
+    environment is non-interactive." → **真预览部署未执行**；改做 `npm run worker:dryrun`（EXIT=0）、`npx wrangler versions upload
+    --dry-run`（EXIT=0）、`npx wrangler deploy --dry-run --env preview`（EXIT=0），真预览部署写成人工步骤 M2（附完整命令）。
+
+
+    【预览等价验证（本地 Worker）】`dev:local`（wrangler dev × astro build 产物，`:8788`）：GET / 200/12041B，旧站指纹
+    0（`css/main.css`/`js/boot.js`/相对 favicon）、新站指纹在位，0 个内联脚本、3 个外链脚本；`GET /api/map/public` 200（`Vary:
+    Cookie`、`Cache-Control: no-store`）、`POST /api/auth/details` 200+Set-Cookie、错口令 401（remainingAttempts 9）、`GET
+    /api/map/details` 200（浙江 count=2）、匿名 401、`POST /api/auth/logout` 200 清
+    Cookie；`/.dev.vars`、`/js/data.js`、`/js/vendor/echarts.min.js` 全 404。
+
+
+    【dev 遮蔽（F-2）】`git mv index.html legacy/index.html`（`R100` 纯改名，sha256 `babad1aa…78feda` 与 `main:index.html`
+    逐字节相同）；`astro dev`（`:8985`，需 `--host 127.0.0.1`）与 `dev:local`（`:8788`）**都渲染新站**（两处指纹对照在切换包
+    §5.4）。`js/**`、`css/**`、`functions/**` 原地未动。
+
+
+    【生产未变更】未执行任何 `wrangler pages ...`、未改 Pages 项目/域名/路由、未写 KV 两键、未 `wrangler deploy`；只读只有 `whoami`，写面只有三个
+    `--dry-run`。`main` 未改、未 push。
+
+
+    【对照资产零改动】`git diff main --name-status -- js/ css/ DESIGN.md` 唯一差异是 `D js/vendor/echarts.min.js`（ADR-0002
+    授权退役，l3_gates
+    交付，非本节点引入）；`js/china.js`、`js/province/**`、`js/palette.js`、`js/map.js`、`js/geo.js`、`js/motion.js`、`css/**`、`DESIGN.md`
+    零 diff。
+
+
+    【提交】6 个逻辑提交：`a2cd64d`（迁移主体，含归档 R100 与 vendor 退役）→ `abc1d20`（上游文档）→ `28dbd54`（切换包）→
+    `0fdcfb8`（AGENTS/README/DEPLOYMENT 同步）→ `50c99c4`（图设计态入库）→ `06663b6`（回填 SHA）。`worker-configuration.d.ts` 在索引里（`git
+    ls-files --cached` 有输出、`wrangler types --check` 通过）；提交前自检 `git status` 干净、无 `js/data.js`、无 `.dev.vars`、两个真实密钥取值 0
+    命中。
+
+
+    【门禁】分支尖 `npm run build` → EXIT=0（静态断言 16 组 = l3_gates 15 + 新增「旧站入口已归档」1）；`worker:dryrun` EXIT=0；`dev:local`
+    提交后复跑读数逐字相同。
+
+
+    【如实上报的额外事实】① `--env preview` 的 dry-run 里 `CLASS_MAP_DATA` 仍解析为**生产 id** `e6c9c4ff…`（适配器产物不带 `env.preview` 块）→
+    预览前必须确认 namespace；② 适配器额外注入 `SESSION`（无 id，首次部署会创建 KV namespace）与 `IMAGES`；③ 首次复跑 build 曾因 dev:local 探针只杀端口占用者（启动器把
+    wrangler/workerd 重新拉起并持有 `dist/client`）报 EPERM，按进程树修复后 EXIT=0，已写进切换包 §5.5。
+
+
+    【受阻/停下位置】按 brief 停在 execution_report：不写 verdict、不流转 passed、cp3 交人工；真预览部署（DoD#2）与生产域名切换/Pages 下线（M2/M6/M7）为人工步骤。
+  started_at: '2026-10-12T16:01:14.228Z'
+  artifacts:
+    - docs/cutover-runbook.md
+    - legacy/README.md
+    - legacy/index.html
+    - docs/build-gates.md
+    - AGENTS.md
+    - README.md
+    - DEPLOYMENT.md
+    - build.js
+    - .gitignore
+  blockers:
+    - >-
+      凭据缺口（阻塞 DoD#2）：npx wrangler whoami → "Not logged in. Your auth token has expired and could not be refreshed, and
+      the environment is non-interactive." 非交互环境无法 wrangler login → 真预览部署（预览地址 + 首页/四路由在预览环境的可用记录）未执行，降级为人工步骤 M2；agent
+      只做了 dry-run 与本地 Worker 等价取证。
+    - >-
+      --env preview 的 KV 绑定需人工确认：wrangler deploy --dry-run --env preview 的 bindings 表里 CLASS_MAP_DATA 仍解析为生产 id
+      e6c9c4ff9bc84aa4979184515e713ecb（适配器生成的 dist/server/wrangler.json 不带 env.preview 块，只有 preview_id 与
+      definedEnvironments:["preview"]）→ 做预览前必须确认实际绑到哪个 namespace（切换包 §4）。
+    - 适配器注入的两个绑定未在 wrangler.jsonc 显式声明：env.SESSION（KV，无 id，首次部署会创建 namespace）与 env.IMAGES（Images）；新增云资源需人工知悉。
+  notes: >-
+    ## 逐条 DoD 核对（8 条）
+
+
+    1. **切换包 ✅** `docs/cutover-runbook.md`：部署命令（Worker 口径）、需重绑的密钥（DETAILS_PASSPHRASE / DETAILS_SESSION_SECRET）、KV
+    清单（CLASS_MAP_DATA id/preview_id + 两个键逐字不变）、预览与验证记录、回滚（wrangler rollback / versions deploy + 代码面）、发布后浏览器检查项 12 条。
+
+    2. **预览部署 ❌→人工** DoD 字面未满足：无凭据（见 blockers）。已做 `npm run worker:dryrun`（EXIT=0，日志
+    `.wrangler/probe-tmp/l4-dryrun.log`）、`npx wrangler versions upload --dry-run`（EXIT=0）、`npx wrangler deploy --dry-run
+    --env preview`（EXIT=0）；并把真预览部署写成人工步骤 M2（含完整命令）。等价验证走本地
+    Worker：`.wrangler/probe-tmp/l4-astrodev/devlocal-probe-out.txt`。
+
+    3. **生产未变更 ✅** 未执行任何 `wrangler pages ...`、未改 Pages 项目/域名/路由、未写 KV 两键、未 `wrangler deploy`；只读操作仅 `npx wrangler
+    whoami`，写面只有三个 `--dry-run`。`main` 未修改、未 push（`.git/refs` 读数见切换包 §9.1）。
+
+    4. **人工步骤清单 ✅** 切换包 §8：M1 登录/权限、M2 真预览部署+验证、M3 绑两个 Secret、M4 KV 核对、M5 确认 --env preview 实际 namespace、M6 域名切换、M7
+    观察期后下线 Pages、M8 发布后全量复跑+观察、M9 Worker Git 集成、M10 ADR accept。
+
+    5. **F-5 口径整改 ✅** 全仓 `grep -n "wrangler pages deploy\|wrangler pages secret put"` 只剩「不再使用 …」这类否定句（README
+    §部署、DEPLOYMENT §7 与头部说明、切换包 §intro）；`DEPLOYMENT.md` 原本的 `wrangler pages secret put` ×4 与 `wrangler pages deploy .`
+    已换成 `wrangler secret put` ×2 与 `wrangler deploy`；并注明 Pages 项目保留至人工确认（M7）。
+
+    6. **dev 遮蔽 ✅** `git mv index.html legacy/index.html`（`R100` 纯改名，sha256 `babad1aa…78feda` 与 `main:index.html`
+    逐字节相同）+ `legacy/README.md`；`build.js` Gate A 新增断言「仓库根不得出现 index.html」（存在即 fail 并提示 `git mv` 回归档位；legacy 缺失只
+    warning）。两处通路实测：`astro dev`（`:8985 --host 127.0.0.1`）GET / 200/81830B，旧站指纹 0（`css/main.css`/`js/boot.js`/相对
+    favicon），新站指纹在（绝对 favicon / map-frame 41 / region-table 24 / @vite/client），`/api/map/public` 走 Astro 路由
+    503；`dev:local`（`:8788`）GET / 200/12041B + 四路由全通。归档范围说明：DoD 提到的 `js/css/functions` **不在本节点边界**（红线②保护对照资产），保持原地零
+    diff，已写进 `legacy/README.md` 与切换包 §5.4。
+
+    7. **文档同步 ✅** AGENTS.md（vendor 链已退役/删除、build.js 单入口新口径、CI 步骤清单含 check:runtime、删掉「success message 仍说 Pages
+    Functions+KV」、补 legacy 归档与 astro dev IPv6 备注）、README.md（js/vendor 与 vendor:build 已删、npm run build 新口径、部署改 Worker
+    口径、指向切换包）、DEPLOYMENT.md（Pages→Worker 全量）、docs/build-gates.md（Gate A 新断言 + 静态断言 15→16）。全仓残留检索：`vendor:build` /
+    `build-vendor` / `Pages Functions + KV` / `non-blocking notice` 均为 0 命中。
+
+    8. **提交策略与 repo 侧读数 ✅** 6 个逻辑提交（见下），`worker-configuration.d.ts` 在索引里（`git ls-files --cached` 有输出；`wrangler types
+    --check` 通过）；入库策略：`docs/**` 提交、生成类型提交、`.graph/**` 只提交设计态（graph.yaml/nodes/edges/events.jsonl/schema.yaml/active）并
+    gitignore 运行时缓存（index/、**/snapshots/、**/.locks/）、`.pi/` gitignore；给出 5 个提交点 SHA 与各自回滚方式。提交前自检：`git status` 干净、无
+    `js/data.js`、无 `.dev.vars`、两个真实密钥取值 0 命中（`DETAILS_HINT` 是公开 var，命中 `wrangler.jsonc` 属预期）。
+
+
+    ## 提交点（分支 astro-migration，基线 main=90c182bc31b877ad1d9de16068d7fd2e8fa3c77c）
+
+    - C1 `a2cd64d` feat: 迁移到 Astro 6 SSR + Cloudflare Worker + Workers Assets（含旧入口归档 R100、vendor 退役、build.js 门禁重写）
+
+    - C2 `abc1d20` docs: 补齐迁移契约、构建门禁、验收记录与上下文/ADR
+
+    - C3 `28dbd54` docs: 补生产切换包与人工 gate 清单
+
+    - C4 `0fdcfb8` docs: 同步 AGENTS/README/DEPLOYMENT 到 Worker 口径
+
+    - C5 `50c99c4` chore: 纳入迁移图的设计态，忽略运行时缓存
+
+    - C6 `06663b6` docs: 在切换包里回填提交点 SHA 与进程卫生披露
+
+
+    **绿色保证在分支尖**：`TEMP/TMP=$PWD/.wrangler/probe-tmp npm run build` → EXIT=0（静态断言 16 组，日志
+    `.wrangler/probe-tmp/l4-build-tip.log`）；`npm run worker:dryrun` → EXIT=0；`npm run dev:local`
+    在提交后复跑读数与提交前逐字相同。中间提交不逐个保证可构建（`main` 的旧 build.js 把 `index.html` 与 `js/vendor/echarts.min.js` 列为必需文件，所以归档/vendor
+    退役必须与新门禁同提交）—— 已在切换包 §10.2 写明，回滚点是分支尖与 `main`。
+
+
+    ## 生产未改的 repo 侧读数
+
+    - `git diff main -- wrangler.jsonc` = 只有文件头部一处 hunk（`pages_build_output_dir` →
+    `main`/`compatibility_flags`/`assets`）；`kv_namespaces`（id/preview_id/remote）、`vars`、`env.preview` **零 diff**。
+
+    - `git diff main --name-status -- js/ css/ DESIGN.md` = 唯一 `D js/vendor/echarts.min.js`（ADR-0002 授权退役，l3_gates
+    交付，非本节点引入）；`js/china.js`、`js/province/**`、`js/palette.js`、`js/map.js`、`js/geo.js`、`js/motion.js`、`css/**`、`DESIGN.md`
+    全零 diff。
+
+    - `git show main:index.html` 与 `legacy/index.html` sha256 相同；`git status --short` 空；未 push。
+
+
+    ## 发现的额外事实（供裁决/人工，非本节点缺陷）
+
+    1. `--env preview` 的 dry-run bindings 表把 `CLASS_MAP_DATA` 解析成生产 id（适配器产物丢弃 `env.preview` 块）→ 预览前必须确认 namespace（人工 M5
+    / blocker 2）。
+
+    2. 适配器额外注入 `SESSION`（无 id，首次部署会创建 KV namespace）与 `IMAGES`；`wrangler.jsonc` 未显式声明。
+
+    3. 进程卫生事故（已披露并修复）：`dev:local` 探针收尾只杀端口占用者，启动器把 wrangler/workerd 重新拉起并持有 `dist/client` → 后续 `npm run build` 报 `EPERM
+    ...\dist\client`；按进程树杀启动器后复跑 EXIT=0。写入切换包 §5.5。
+
+    4. `astro dev` 默认只监听 `[::1]`；沙箱拒 IPv6 回环（connect EACCES）需 `--host 127.0.0.1`。写入 AGENTS.md 环境备注。
+  verification:
+    verdict: passed
+    checked_at: '2026-10-12T16:53:16.265Z'
+    note: >-
+      主控核验+用户裁定：切换包 docs/cutover-runbook.md(440行)含 Worker 部署命令/密钥与KV清单/回滚/发布后检查/M1-M10人工步骤；index.html 以 R100 归档
+      legacy/index.html(sha babad1aa.. 与 main 逐字相同)且 build.js 增「根不得有 index.html」断言；git diff main -- js/ css/ DESIGN.md 仅
+      D js/vendor/echarts.min.js(ADR-0002 授权)；wrangler.jsonc 的 kv_namespaces/vars/env.preview 零
+      diff；.dev.vars/js/data.js 未入库；HEAD 提交链 C1..C8 可回滚；npm run build EXIT=0(16组)、worker:dryrun EXIT=0。cp1 passed / cp2
+      skipped / cp3 passed(用户 2026-10-13 确认人工清单)。DoD 2 按用户裁定修订为人工步骤 M2(凭据缺口如实记录)。
+  completed_at: '2026-10-12T16:53:16.673Z'

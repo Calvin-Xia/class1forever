@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="金鹰 1 班蹭饭地图">
+    <!--
+        这是一枚「制图符号」，刻意不含任何地图几何 —— 不要改回国境线剪影。
+
+        用 js/china.js 画剪影看着更贴题，但 32px 放不下标准要求的南海诸岛插图，
+        而按面积阈值取舍必然把它们筛掉；简化地图一定会丢东西，所以这个图形就不该是地图。
+        改用图志本身的语汇：方环取印章的方形轮廓，环内是罗盘玫瑰，北点用朱砂。
+        纸面 / 墨绿 / 朱砂三色齐了，零地理内容。
+    -->
+    <rect width="32" height="32" rx="5" fill="#f7f4ec"/>
+    <rect x="0.5" y="0.5" width="31" height="31" rx="4.5" fill="none" stroke="#ddd6c6"/>
+    <rect x="4.4" y="4.4" width="23.2" height="23.2" rx="3.4" fill="none" stroke="#1f5245" stroke-width="1.7"/>
+    <path d="M16 6.6 L19.3 13.4 L25.4 16 L19.3 18.6 L16 25.4 L12.7 18.6 L6.6 16 L12.7 13.4 Z" fill="#1f5245"/>
+    <path d="M16 6.6 L19.3 13.4 L16 16 L12.7 13.4 Z" fill="#a63c31"/>
+</svg>
