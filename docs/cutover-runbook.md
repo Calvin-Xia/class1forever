@@ -60,6 +60,14 @@ npx wrangler deploy                 # 部署 Worker + Assets；输出里给 Vers
 npx wrangler deployments list       # 记录本次 Deployment / Version ID（回滚要用）
 ```
 
+或者交给 CI：仓库自带 `.github/workflows/deploy.yml`（推 `main` 或手动 `workflow_dispatch`），
+在仓库 Actions Secrets 放 `CLOUDFLARE_API_TOKEN`（可选 `CLOUDFLARE_ACCOUNT_ID`、`DETAILS_PASSPHRASE`、
+`DETAILS_SESSION_SECRET`）即可。步骤见 `DEPLOYMENT.md` §5.1。
+
+> **注意**：Cloudflare Pages 的自动部署来自 Cloudflare 上 `class1forever` Pages 项目的
+> Git 集成，不由仓库文件控制。想只走 Workers，先把它的 **Automatic deployments** 关掉
+> （Workers & Pages → 项目 → Settings → Builds & deployments），见 `DEPLOYMENT.md` §5.2 与 M7。
+
 ### 2.4 先预览、不切流量的两种做法（人工）
 
 ```bash
@@ -310,7 +318,7 @@ git mv legacy/index.html index.html  # 单独回滚 dev 遮蔽处置（会重新
 | **M4** | 核对 KV 绑定与两个键 | 部署页 bindings 表 / 控制台：`CLASS_MAP_DATA` = `e6c9c4ff…`；`students:raw:v1`、`students:public:v1` 存在且**未被改写** | 生产数据只读核对；agent 不碰生产 KV |
 | **M5** | 确认 `--env preview` 实际绑到的 namespace | 见 §4 的 ⚠️；必要时改 `env.preview` 或显式改绑 | 会决定预览读的是哪份数据 |
 | **M6** | 生产域名切换 | 在 Cloudflare 控制台把自定义域名/路由从 Pages 项目指到 Worker `class1forever` | 生产配置；不可逆度最高 |
-| **M7** | 观察期后下线 Pages 项目 | 控制台删除/停用 Pages 项目（**在确认线上稳定之后**） | 保留期就是回滚后路，不能提前砍 |
+| **M7** | 观察期后下线 Pages 项目 | 控制台删除/停用 Pages 项目（**在确认线上稳定之后**）；想**立刻**停止 Pages 触发可先在 Settings → Builds & deployments 关掉 Automatic deployments / 断开 Git | 保留期就是回滚后路，不能提前砍 |
 | **M8** | 发布后按 §7 全量复跑 + 观察期 | 浏览器逐条 + `npx wrangler tail` | 真实网络与真实数据下的人工确认 |
 | **M9** | 若走 Git 集成：把 Worker 的 Git 连接与 production branch 换成 `astro-migration` 合并后的 `main` | 控制台 Workers Builds | 属生产配置；且需要先决定合并策略 |
 | **M10** | ADR-0001..0004 的 accept（**已于 2026-10-13 完成，仅留档**） | `docs/adr/00*.md`（`**Status：**` 已为 `accepted`） | 无需再执行；留在这里是为了让交接清单完整可核 |

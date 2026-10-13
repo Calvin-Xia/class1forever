@@ -275,8 +275,40 @@ npx wrangler versions upload --preview-alias cutover-preview
 ```
 
 不落盘的部署面体检（不需要凭据）：`npm run worker:dryrun`。
-Git 集成与 production branch 属 Worker 侧配置（人工）；切换前 “推送 `main` → Pages 自动部署” 仍然有效，
-因为 Pages 项目未动。
+
+### 5.1 CI 部署（GitHub Actions → Workers）
+
+仓库自带 `.github/workflows/deploy.yml`：**推 `main`**（或手动 `workflow_dispatch`）时执行
+`npm ci` → `npm run build`（静态门禁 + 类型检查 + Astro 构建）→ `npx wrangler deploy`。
+构建不过就不部署，不会把失败产物推上生产。
+
+在 **Settings → Secrets and variables → Actions** 里配置：
+
+| Secret | 必填 | 说明 |
+|---|---|---|
+| `CLOUDFLARE_API_TOKEN` | ✅ | 需带 **Workers Scripts:Edit**（建议再加 KV 编辑、Account Settings:Read） |
+| `CLOUDFLARE_ACCOUNT_ID` | 可选 | 单账号可留空，wrangler 自行解析 |
+| `DETAILS_PASSPHRASE` | 可选 | 填了会在部署前 `wrangler secret put` 同步到 Worker；不填则要求 Worker 上已存在该 Secret |
+| `DETAILS_SESSION_SECRET` | 可选 | 同上 |
+
+> `wrangler.jsonc` 声明了 `secrets.required`，所以这两个应用密钥必须已在 Worker 上
+> （CI 同步，或手动 `npx wrangler secret put`），否则 `npx wrangler deploy` 会直接报错。
+
+**Cloudflare Pages 的自动部署不是这个 workflow 管的** —— 它来自 Cloudflare 上
+`class1forever` 这个 **Pages 项目**的 Git 集成。要停掉它、改成只走 Workers，见 5.2。
+
+### 5.2 停掉 Pages 自动部署，只走 Workers
+
+两套独立的“Pages”都要知道：
+
+1. **Cloudflare Pages**（`class1forever.pages.dev`）：Git 集成在 **Cloudflare Dashboard**
+   → Workers & Pages → `class1forever`(Pages) → **Settings → Builds & deployments**
+   → 关掉 **Automatic deployments**（或断开 Git 连接）。合并/上线稳定后再按 M7 删除整个项目
+   （观察期前留着当回滚后路）。
+2. **GitHub Pages**（`calvin-xia.github.io/class1forever`）：仓库 **Settings → Pages**
+   → Source 设为 **None**（它源码是 `main`，与本分支无关，但如果你想彻底只留 Workers 就一并关掉）。
+
+这两步都是**账号/仓库设置，仓库里的文件改不动它们**；属于人工 gate（`docs/cutover-runbook.md` §8 M6/M7/M9）。
 
 ## 6. Cloudflare 侧设置核对
 
@@ -343,10 +375,12 @@ npm run data:upload
 
 检查：
 
-1. Worker 的 Git 集成是否绑定当前仓库、production branch 是否是预期的分支
-2. 部署命令是不是 Worker 口径（`npm run build` + `npx wrangler deploy`）
-3. `wrangler.jsonc` 的 `main` / `assets` 是否被破坏（`npm run build` 会拦住大部分）
-4. 若还在看 Pages 的自动部署，注意：Pages 项目在人工确认前仍然存在，但它已不是目标部署面
+1. 仓库里是否有 `CLOUDFLARE_API_TOKEN`（Settings → Secrets and variables → Actions）；
+   deploy workflow 见 §5.1
+2. `wrangler.jsonc` 的 `main` / `assets` 是否被破坏（`npm run build` 会拦住大部分）
+3. `secrets.required` 的两个应用密钥是否已在 Worker 上（CI 同步或 `wrangler secret put`）
+4. 若还在看 Pages 的自动部署：那是 **Cloudflare Pages 项目**的 Git 集成，不是本 workflow；
+   停用步骤见 §5.2
 
 ### 9.3 本地详情功能一直拿不到数据
 
