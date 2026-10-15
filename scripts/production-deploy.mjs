@@ -28,6 +28,13 @@ export function validateManifest(manifest) {
     return manifest;
 }
 
+export function validatePreviousPage(html, previous) {
+    // Only actual markup references resources; comments may document placeholder URLs.
+    const markup = html.replace(/<!--[\s\S]*?-->/g, '');
+    for (const match of markup.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) check(/\bsrc="\/(?!\/)/.test(match[1]) && match[2].trim() === '', 'EXISTING_PAGE_SCRIPT_UNSAFE');
+    for (const match of markup.matchAll(/\/_astro\/([A-Za-z0-9_.-]+)/g)) check(previous.files.some(file => file.name === match[1]), 'EXISTING_PAGE_NOT_IN_PREVIOUS_MANIFEST');
+}
+
 export function deploymentCandidate(built, state, root = ROOT) {
     check(built.name === config.worker && /^[A-Za-z0-9_]{1,64}$/.test(state.release || '') && state.sessionNamespace === config.sessionNamespace && state.dataNamespace === config.dataNamespace, 'PRODUCTION_BINDINGS_MISMATCH');
     check(state.workersDev === true && state.previews === true, 'EXISTING_WORKER_ENTRY_DISABLED');
@@ -159,9 +166,7 @@ async function prepare() {
     write('assets.json', manifest);
     const oldPage = await request('edgeone', '/');
     check(oldPage.status === 200 && /<html\b/i.test(oldPage.bytes.toString()), 'EXISTING_EDGEONE_PAGE_MISSING');
-    const html = oldPage.bytes.toString();
-    for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) check(/\bsrc="\/(?!\/)/.test(match[1]) && match[2].trim() === '', 'EXISTING_PAGE_SCRIPT_UNSAFE');
-    for (const match of html.matchAll(/\/_astro\/([A-Za-z0-9_.-]+)/g)) check(previous.files.some(file => file.name === match[1]), 'EXISTING_PAGE_NOT_IN_PREVIOUS_MANIFEST');
+    validatePreviousPage(oldPage.bytes.toString(), previous);
     fs.writeFileSync(path.join(WORK, 'previous-index.html'), oldPage.bytes);
     write('before.json', { cloudflare: state, edgeoneProjectId: project.ProjectId, public: cfPublic, previousFiles: previous.files.length, retainedFiles: manifest.files.length });
     console.log(JSON.stringify({ prepared: true, release: state.release, previousFiles: previous.files.length, retainedFiles: manifest.files.length, cloudWrites: false }));

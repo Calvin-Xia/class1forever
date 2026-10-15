@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import fs from 'node:fs';
-import { coordinatedDeploy, deploymentCandidate, validateManifest, responseDiagnostic } from '../scripts/production-deploy.mjs';
+import { coordinatedDeploy, deploymentCandidate, validateManifest, validatePreviousPage, responseDiagnostic } from '../scripts/production-deploy.mjs';
 
 const config = JSON.parse(fs.readFileSync(new URL('../config/production.json', import.meta.url), 'utf8'));
 const state = () => ({ release: 'prod_20261015_01', sessionNamespace: config.sessionNamespace, dataNamespace: config.dataNamespace, workersDev: true, previews: true, routes: [...config.routes.map(pattern => ({ pattern, script: config.worker })), { pattern: 'other.example/*', script: 'other-worker' }] });
@@ -14,6 +14,17 @@ test('transport diagnostics expose challenge classification without response bod
     assert.equal(result.errorCode, '1010');
     assert.equal(result.challenge, 'challenge');
     assert.doesNotMatch(JSON.stringify(result), /private-cookie|private-body/);
+});
+
+test('previous page ignores documented placeholders but requires all live chunk references', () => {
+    const manifest = { files: [{ name: 'app.hash.js' }, { name: 'app.hash.css' }] };
+    const html = '<!-- documented /_astro/motion.<hash>.js -->' +
+        '<link href="/_astro/app.hash.css" rel="stylesheet">' +
+        '<script type="module" src="/_astro/app.hash.js"></script>';
+    assert.doesNotThrow(() => validatePreviousPage(html, manifest));
+    assert.throws(() => validatePreviousPage(html + '<astro-island component-url="/_astro/missing.hash.js">', manifest), /NOT_IN_PREVIOUS_MANIFEST/);
+    assert.throws(() => validatePreviousPage(html + '<script>unsafe()</script>', manifest), /SCRIPT_UNSAFE/);
+    assert.throws(() => validatePreviousPage('<script src="https://external.example/app.js"></script>', manifest), /SCRIPT_UNSAFE/);
 });
 
 test('candidate preserves active release, both existing routes, SESSION and entry flags', () => {
