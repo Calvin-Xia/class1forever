@@ -1,11 +1,31 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import fs from 'node:fs';
-import { coordinatedDeploy, deploymentCandidate, validateManifest, validatePreviousPage, responseDiagnostic } from '../scripts/production-deploy.mjs';
+import os from 'node:os';
+import path from 'node:path';
+import { coordinatedDeploy, deploymentCandidate, validateManifest, validatePreviousPage, responseDiagnostic, stageCompatibility } from '../scripts/production-deploy.mjs';
 
 const config = JSON.parse(fs.readFileSync(new URL('../config/production.json', import.meta.url), 'utf8'));
 const state = () => ({ release: 'prod_20261015_01', sessionNamespace: config.sessionNamespace, dataNamespace: config.dataNamespace, workersDev: true, previews: true, routes: [...config.routes.map(pattern => ({ pattern, script: config.worker })), { pattern: 'other.example/*', script: 'other-worker' }] });
 const built = () => ({ name: config.worker, main: './entry.mjs', assets: { binding: 'ASSETS', directory: '../client' }, kv_namespaces: [{ binding: 'SESSION' }, { binding: 'CLASS_MAP_DATA', id: config.dataNamespace }], vars: { DETAILS_HINT: 'public hint' } });
+
+test('compatibility retains the literal .edgeone basename required by Makers CLI', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'classmap-package-'));
+    try {
+        fs.mkdirSync(path.join(root, 'dist-edgeone/.edgeone/assets'), { recursive: true });
+        fs.mkdirSync(path.join(root, 'dist-edgeone/.edgeone/edge-functions'), { recursive: true });
+        fs.mkdirSync(path.join(root, '.wrangler/production'), { recursive: true });
+        fs.writeFileSync(path.join(root, 'dist-edgeone/.edgeone/assets/index.html'), 'new HTML');
+        fs.writeFileSync(path.join(root, 'dist-edgeone/.edgeone/edge-functions/index.js'), 'compiled API');
+        fs.writeFileSync(path.join(root, '.wrangler/production/previous-index.html'), 'previous HTML');
+        stageCompatibility(root);
+        const directory = path.join(root, '.wrangler/production/edgeone-compatibility');
+        assert.deepEqual(fs.readdirSync(directory), ['.edgeone']);
+        assert.equal(fs.readFileSync(path.join(directory, '.edgeone/assets/index.html'), 'utf8'), 'previous HTML');
+        assert.equal(fs.readFileSync(path.join(directory, '.edgeone/edge-functions/index.js'), 'utf8'), 'compiled API');
+        assert.throws(() => stageCompatibility(root), /ALREADY_EXISTS/);
+    } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
 
 test('transport diagnostics expose challenge classification without response bodies or cookies', () => {
     const result = responseDiagnostic('cloudflare', { status: 403,

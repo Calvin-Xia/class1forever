@@ -172,11 +172,13 @@ async function prepare() {
     console.log(JSON.stringify({ prepared: true, release: state.release, previousFiles: previous.files.length, retainedFiles: manifest.files.length, cloudWrites: false }));
 }
 
-function stageCompatibility() {
-    const compatibility = path.join(WORK, 'edgeone-compatibility');
+export function stageCompatibility(root = ROOT) {
+    const work = path.join(root, '.wrangler/production');
+    // The CLI recognizes precompiled output by the literal .edgeone basename.
+    const compatibility = path.join(work, 'edgeone-compatibility/.edgeone');
     check(!fs.existsSync(compatibility), 'COMPATIBILITY_PACKAGE_ALREADY_EXISTS');
-    fs.cpSync(path.join(ROOT, 'dist-edgeone/.edgeone'), compatibility, { recursive: true });
-    fs.copyFileSync(path.join(WORK, 'previous-index.html'), path.join(compatibility, 'assets/index.html'));
+    fs.cpSync(path.join(root, 'dist-edgeone/.edgeone'), compatibility, { recursive: true });
+    fs.copyFileSync(path.join(work, 'previous-index.html'), path.join(compatibility, 'assets/index.html'));
     check(fs.existsSync(path.join(compatibility, 'edge-functions/index.js')), 'COMPATIBILITY_API_MISSING');
     console.log('Compatibility package prepared with previous public HTML and retained/new public chunks.');
 }
@@ -191,15 +193,43 @@ function runCli(script, args, extraEnvironment, label) {
     check(child.status === 0, label.toUpperCase().replaceAll('-', '_') + '_FAILED'); return output;
 }
 
-async function deployEdgeone(directory, label) {
+async function deployEdgeone(directory, label, environment = 'production') {
     await edgeoneProject(); // Never allow CLI's implicit project creation.
     check(process.env.EDGEONE_CLI_ENTRY && fs.existsSync(process.env.EDGEONE_CLI_ENTRY), 'EDGEONE_CLI_MISSING');
     console.log(JSON.stringify({ phase: label, status: 'publishing', projectId: config.edgeoneProjectId }));
-    const output = runCli(process.env.EDGEONE_CLI_ENTRY, ['makers', 'deploy', directory, '--name', config.edgeoneProject, '--token', process.env.EDGEONE_API_TOKEN, '--env', 'production', '--skip-ai-gateway-sync', '--json'], {}, label);
+    check(path.basename(directory) === '.edgeone', 'EDGEONE_PRECOMPILED_DIRECTORY_REQUIRED');
+    const output = runCli(process.env.EDGEONE_CLI_ENTRY, ['makers', 'deploy', directory, '--name', config.edgeoneProject, '--token', process.env.EDGEONE_API_TOKEN, '--env', environment, '--skip-ai-gateway-sync', '--json'], {}, label);
     const id = output.match(/"deploymentId":"([a-z0-9]+)"/)?.[1]; check(id, 'EDGEONE_DEPLOYMENT_ID_MISSING');
     const live = await eoApi('DescribePagesDeployments', { ProjectId: config.edgeoneProjectId, Offset: 0, Limit: 5, OrderBy: 'CreatedOn', Order: 'Desc' });
-    check(live.Deployments.some(x => x.DeploymentId === id && x.Status === 'Success'), 'EDGEONE_DEPLOYMENT_NOT_SUCCESS');
-    console.log(JSON.stringify({ phase: label, deploymentId: id, projectId: config.edgeoneProjectId })); return id;
+    check(live.Deployments.some(x => x.DeploymentId === id && x.Status === 'Success' && x.Env === (environment === 'preview' ? 'Preview' : 'Production')), 'EDGEONE_DEPLOYMENT_NOT_SUCCESS');
+    console.log(JSON.stringify({ phase: label, deploymentId: id, projectId: config.edgeoneProjectId }));
+    if (environment === 'preview') {
+        const result = output.split(/\r?\n/).filter(line => line.startsWith('{')).map(line => { try { return JSON.parse(line); } catch { return {}; } }).find(x => x.deploymentId === id);
+        check(result?.url, 'EDGEONE_PREVIEW_URL_MISSING');
+        return { id, url: result.url };
+    }
+    return id;
+}
+
+async function verifyPreview() {
+    const deployment = await deployEdgeone(path.join(ROOT, 'dist-edgeone/.edgeone'), 'edgeone-preview', 'preview');
+    const base = new URL(deployment.url);
+    check(base.protocol === 'https:' && base.hostname === `classmap-cn-${deployment.id}.edgeone.cool`, 'EDGEONE_PREVIEW_HOST_MISMATCH');
+    const get = pathname => new Promise((resolve, reject) => {
+        const url = new URL(base); url.pathname = pathname;
+        const req = https.get(url, { headers: probeHeaders, agent: false, rejectUnauthorized: true }, response => {
+            const buffers = []; response.on('data', b => buffers.push(b));
+            response.on('end', () => resolve({ status: response.statusCode, headers: response.headers, bytes: Buffer.concat(buffers) }));
+        });
+        req.setTimeout(20000, () => req.destroy(new Error('PREVIEW_REQUEST_TIMEOUT'))); req.on('error', reject);
+    });
+    const before = read('before.json');
+    const response = await get('/api/map/public');
+    check(response.status === 200 && response.headers['cache-control'] === 'no-store' && response.headers['x-data-release'] === before.public.release && isDeepStrictEqual(JSON.parse(response.bytes), before.public.data), 'PREVIEW_PUBLIC_API_MISMATCH');
+    check((await get('/')).status === 200, 'PREVIEW_PAGE_UNAVAILABLE');
+    const manifest = await get('/deployment-assets.json');
+    check(manifest.status === 200 && isDeepStrictEqual(JSON.parse(manifest.bytes), read('assets.json')), 'PREVIEW_MANIFEST_MISMATCH');
+    console.log(JSON.stringify({ phase: 'edgeone-preview', deploymentId: deployment.id, runtimeVerified: true }));
 }
 
 async function verifyAssets(platform) {
@@ -217,8 +247,13 @@ async function deploy() {
     const result = { sha: process.env.GITHUB_SHA, release: before.cloudflare.release, phases: [] }; write('result.json', result);
     const record = (phase, fields = {}) => { result.phases.push({ phase, ...fields }); write('result.json', result); };
     await coordinatedDeploy({
-        async edgeoneCompatibility() { record('edgeone-compatibility', { deploymentId: await deployEdgeone(path.join(WORK, 'edgeone-compatibility'), 'edgeone-compatibility') }); },
-        async verifyEdgeoneAssets() { await verifyAssets('edgeone'); record('edgeone-assets-verified'); },
+        async edgeoneCompatibility() { record('edgeone-compatibility', { deploymentId: await deployEdgeone(path.join(WORK, 'edgeone-compatibility/.edgeone'), 'edgeone-compatibility') }); },
+        async verifyEdgeoneAssets() {
+            await verifyAssets('edgeone');
+            check(isDeepStrictEqual(await publicData('edgeone'), before.public), 'COMPATIBILITY_PUBLIC_API_CHANGED');
+            check((await request('edgeone', '/')).status === 200, 'COMPATIBILITY_PAGE_UNAVAILABLE');
+            record('edgeone-assets-and-runtime-verified');
+        },
         async cloudflare() {
             console.log(JSON.stringify({ phase: 'cloudflare', status: 'publishing', worker: config.worker }));
             const output = runCli(path.join(ROOT, 'node_modules/wrangler/bin/wrangler.js'), ['deploy', '--config', path.join(WORK, 'wrangler.json'), '--keep-vars'], { CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID: config.accountId }, 'cloudflare');
@@ -243,7 +278,7 @@ async function deploy() {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-    const commands = { diagnose: diagnoseTransport, prepare, 'stage-compatibility': stageCompatibility, deploy };
+    const commands = { diagnose: diagnoseTransport, prepare, 'stage-compatibility': stageCompatibility, 'verify-preview': verifyPreview, deploy };
     Promise.resolve().then(() => { check(process.argv.length === 3 && Object.hasOwn(commands, process.argv[2]), 'INVALID_PRODUCTION_COMMAND'); return commands[process.argv[2]](); }).catch(error => {
         console.error(JSON.stringify({ error: /^[A-Z0-9_]+$/.test(error.message) ? error.message : 'PRODUCTION_DEPLOY_FAILED' })); process.exitCode = 1;
     });

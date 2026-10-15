@@ -29,7 +29,7 @@ jobs:
       - name: Diagnose public transport from this runner
         run: node scripts/production-deploy.mjs diagnose
       - run: npm ci
-      # Credentials are scoped to the two connected release steps below.
+      # Build/test/package steps never receive deployment credentials.
       - name: Verify both platforms and shared public chunks
         run: npm run check:dual
       - name: Install pinned Makers CLI
@@ -59,7 +59,14 @@ jobs:
           node build.js --artifacts-only
           export EDGEONE_CLI_ENTRY="$PWD/.edgeone-build/cli/node_modules/edgeone/edgeone-dist/cli.js"
           node scripts/build-edgeone.mjs --artifacts-only --package-cli
+          node --test tests/edgeone-package.test.mjs
           node scripts/production-deploy.mjs stage-compatibility
+      - name: Verify the real Makers preview before changing production
+        if: steps.current.outputs.deploy == 'true'
+        env:
+          EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
+          EDGEONE_CLI_ENTRY: ${{ github.workspace }}/.edgeone-build/cli/node_modules/edgeone/edgeone-dist/cli.js
+        run: node scripts/production-deploy.mjs verify-preview
       - name: Publish compatibility assets, CF Worker, then final EO production
         if: steps.current.outputs.deploy == 'true'
         env:
