@@ -105,6 +105,7 @@ async function request(platform, pathname) {
 
 async function publicData(platform) {
     const r = await request(platform, '/api/map/public');
+    console.log(JSON.stringify({ phase: 'public-api-preflight', platform, status: r.status, server: r.headers.server, cache: r.headers['cache-control'] }));
     check(r.status === 200 && r.headers['cache-control'] === 'no-store', 'PUBLIC_API_UNAVAILABLE');
     const data = JSON.parse(r.bytes); check(data.detailModeAvailable === true, 'DETAIL_AUTH_UNAVAILABLE');
     return { release: r.headers['x-data-release'], data };
