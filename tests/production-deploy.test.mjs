@@ -1,11 +1,20 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import fs from 'node:fs';
-import { coordinatedDeploy, deploymentCandidate, validateManifest } from '../scripts/production-deploy.mjs';
+import { coordinatedDeploy, deploymentCandidate, validateManifest, responseDiagnostic } from '../scripts/production-deploy.mjs';
 
 const config = JSON.parse(fs.readFileSync(new URL('../config/production.json', import.meta.url), 'utf8'));
 const state = () => ({ release: 'prod_20261015_01', sessionNamespace: config.sessionNamespace, dataNamespace: config.dataNamespace, workersDev: true, previews: true, routes: [...config.routes.map(pattern => ({ pattern, script: config.worker })), { pattern: 'other.example/*', script: 'other-worker' }] });
 const built = () => ({ name: config.worker, main: './entry.mjs', assets: { binding: 'ASSETS', directory: '../client' }, kv_namespaces: [{ binding: 'SESSION' }, { binding: 'CLASS_MAP_DATA', id: config.dataNamespace }], vars: { DETAILS_HINT: 'public hint' } });
+
+test('transport diagnostics expose challenge classification without response bodies or cookies', () => {
+    const result = responseDiagnostic('cloudflare', { status: 403,
+        headers: { server: 'cloudflare', 'cf-mitigated': 'challenge', 'set-cookie': 'private-cookie' },
+        bytes: Buffer.from('<span class="cf-error-code">1010</span> private-body') });
+    assert.equal(result.errorCode, '1010');
+    assert.equal(result.challenge, 'challenge');
+    assert.doesNotMatch(JSON.stringify(result), /private-cookie|private-body/);
+});
 
 test('candidate preserves active release, both existing routes, SESSION and entry flags', () => {
     const result = deploymentCandidate(built(), state());

@@ -26,6 +26,8 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - name: Diagnose public transport from this runner
+        run: node scripts/production-deploy.mjs diagnose
       - run: npm ci
       # Credentials are scoped to the two connected release steps below.
       - name: Verify both platforms and shared public chunks

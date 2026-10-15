@@ -84,7 +84,17 @@ async function edgeoneProject() {
     check(project?.Name === config.edgeoneProject && project.Area === 'global', 'EXISTING_EDGEONE_PROJECT_MISMATCH'); return project;
 }
 
-async function request(platform, pathname) {
+const probeHeaders = { 'User-Agent': 'classmap-production-ci/1.0', Accept: '*/*' };
+
+export function responseDiagnostic(platform, response) {
+    const html = response.bytes.toString('utf8');
+    return { platform, status: response.status, server: response.headers.server,
+        cache: response.headers['cache-control'], contentType: response.headers['content-type'],
+        challenge: response.headers['cf-mitigated'], ray: response.headers['cf-ray'],
+        errorCode: html.match(/(?:error code:|error-code">)\s*(\d{4})/i)?.[1] };
+}
+
+async function request(platform, pathname, headers = probeHeaders) {
     const target = platform === 'cloudflare' ? config.cloudflareTarget : config.edgeoneTarget;
     if (!transportAddresses.has(target)) {
         const dns = await queryDns('google', target, 'A');
@@ -94,7 +104,7 @@ async function request(platform, pathname) {
     }
     const address = transportAddresses.get(target);
     return new Promise((resolve, reject) => {
-        const req = https.get({ hostname: config.host, servername: config.host, path: pathname, agent: false, rejectUnauthorized: true,
+        const req = https.get({ hostname: config.host, servername: config.host, path: pathname, headers, agent: false, rejectUnauthorized: true,
             lookup: (_h, options, cb) => options.all ? cb(null, [{ address, family: 4 }]) : cb(null, address, 4) }, response => {
             const buffers = []; response.on('data', bytes => buffers.push(bytes));
             response.on('end', () => resolve({ status: response.statusCode, headers: response.headers, bytes: Buffer.concat(buffers) }));
@@ -105,10 +115,17 @@ async function request(platform, pathname) {
 
 async function publicData(platform) {
     const r = await request(platform, '/api/map/public');
-    console.log(JSON.stringify({ phase: 'public-api-preflight', platform, status: r.status, server: r.headers.server, cache: r.headers['cache-control'] }));
+    console.log(JSON.stringify({ phase: 'public-api-preflight', ...responseDiagnostic(platform, r) }));
     check(r.status === 200 && r.headers['cache-control'] === 'no-store', 'PUBLIC_API_UNAVAILABLE');
     const data = JSON.parse(r.bytes); check(data.detailModeAvailable === true, 'DETAIL_AUTH_UNAVAILABLE');
     return { release: r.headers['x-data-release'], data };
+}
+
+async function diagnoseTransport() {
+    for (const [platform, headers, caller] of [['cloudflare', {}, 'missing-user-agent'], ['cloudflare', probeHeaders, 'identified-ci'], ['edgeone', probeHeaders, 'identified-ci']]) {
+        const response = await request(platform, '/api/map/public', headers);
+        console.log(JSON.stringify({ phase: 'transport-diagnostic', caller, ...responseDiagnostic(platform, response) }));
+    }
 }
 
 async function parallelFiles(files, operation) {
@@ -221,7 +238,7 @@ async function deploy() {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-    const commands = { prepare, 'stage-compatibility': stageCompatibility, deploy };
+    const commands = { diagnose: diagnoseTransport, prepare, 'stage-compatibility': stageCompatibility, deploy };
     Promise.resolve().then(() => { check(process.argv.length === 3 && Object.hasOwn(commands, process.argv[2]), 'INVALID_PRODUCTION_COMMAND'); return commands[process.argv[2]](); }).catch(error => {
         console.error(JSON.stringify({ error: /^[A-Z0-9_]+$/.test(error.message) ? error.message : 'PRODUCTION_DEPLOY_FAILED' })); process.exitCode = 1;
     });
