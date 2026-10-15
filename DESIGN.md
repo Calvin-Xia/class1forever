@@ -113,15 +113,11 @@
 
 **中文必须由中文字族承担**，英文字族只做拉丁字符的补充 —— 中文字族写在前面，靠 `font-family` 链自动分流。
 
-### Google Fonts
+### 自托管字体
 
-```html
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
-```
+两平台使用同源 `public/fonts/` WOFF2；`src/styles/fonts.css` 声明完整字族和字重。保留官方 OFL 许可证，固定上游提交、内容哈希和完整字集证据见 `public/fonts/manifest.json`。页面不再请求 Google Fonts。
 
-> 思源系列按 unicode-range 分片加载，只会下载实际用到的字集。
+完整字体源约 18.8MB，保存在非静态目录 `font-sources/`。当前两套 Noto 按完整 cmap 的 Unicode 顺序分片，通过 `unicode-range` 按需下载；DM Serif 保留完整哈希文件。分片库总大小约 23.5MB，优化对象是页面实际下载量，非字库总量。字体使用 `font-display: swap`；ECharts 首次测量地名与分享图绘字前显式等待对应字体。保留完整字集、字重轴、OFL 与可复现生成，不能只裁固定页面文案或依赖真实名单。覆盖、重建与浏览器实测见 [字体说明](docs/font-subsets.md) 和 [实施记录](docs/local-continuation-20261015.md)。
 
 ### 字号层级
 
@@ -580,7 +576,7 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
 | `check-contrast.js` 12 个必需变量 | §2 全部提供，且都在首个 `:root` 块内 |
 | `check-contrast.js` 37 条断言 | 全部色值已按 WCAG 2.2 AA 核算通过（含「弱化墨/次级墨 × 衬纸」两对） |
 | 11 对 CSS ↔ palette 同值 | §2 与 `js/palette.js` `tokens` 一一对应 |
-| `_headers` CSP | 字体走 `fonts.googleapis.com`/`fonts.gstatic.com`（已在 `style-src`/`font-src` 白名单）；纸纹用 `data:`（在 `img-src` 白名单） |
+| `_headers` CSP | 字体走同源 `/fonts/`（`font-src 'self'`）；纸纹用 `data:`（在 `img-src` 白名单） |
 | `favicon.svg` 不含地图几何 | 32px 放不下中国地图规范要求的南海诸岛插图，任何按面积简化的国境线剪影都会把那些岛礁当碎点筛掉（早期版本确实丢了）。改用图志语汇：纸面 + 印章形方环 + 罗盘玫瑰，北点朱砂。手写 SVG，约 700 字节 |
 | `js/map.js` 不可 `import` | 画布色与字体仍从 `window.CMapPalette` 读 |
 | 几何数据不可手改 | 本规范不触碰 `js/china.js` 与 `js/province/*.js` |

@@ -37,6 +37,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const checkContrast = require('./scripts/check-contrast.js');
+const { localToolEnvironment } = require('./scripts/local-tool-env.cjs');
 
 const rootDirectory = __dirname;
 const argv = new Set(process.argv.slice(2));
@@ -216,6 +217,7 @@ const CLIENT_SURFACE_PREFIXES = [
 /** 明确属于服务端的源码：数据层、鉴权、安全头、中间件与 API 路由。 */
 const SERVER_ONLY_FILES = new Set([
     'src/lib/data.ts',
+    'src/lib/api-handlers.ts',
     'src/lib/auth.ts',
     'src/lib/http.ts',
     'src/lib/types.ts',
@@ -600,7 +602,7 @@ function runWranglerTypesCheck() {
     const result = spawnSync(process.execPath, [absolute(wranglerBin), 'types', '--check'], {
         cwd: rootDirectory,
         stdio: 'inherit',
-        env: { ...process.env, WRANGLER_SEND_METRICS: 'false' }
+        env: localToolEnvironment()
     });
     if (result.error) {
         fail(`wrangler types --check 启动失败：${result.error.message}`);
@@ -620,6 +622,14 @@ function runWranglerTypesCheck() {
 if (exists(TYPES_FILE)) {
     runWranglerTypesCheck();
 }
+
+function checkFonts(directory) {
+    const result = spawnSync(process.execPath, [absolute('scripts/check-font-subsets.mjs'),
+        '--assets-root', absolute(directory)], { cwd: rootDirectory, stdio: 'inherit', env: localToolEnvironment() });
+    if (result.status !== 0) fail(`完整字体分片/哈希/OFL 门禁失败：${directory}`);
+    else pass(`完整字体分片/哈希/OFL：${directory}`);
+}
+checkFonts('public');
 
 if (failures.length > 0) {
     reportFailures();
@@ -653,7 +663,7 @@ function runAstro(command) {
     const result = spawnSync(process.execPath, [absolute(astroBin), command], {
         cwd: rootDirectory,
         stdio: 'inherit',
-        env: { ...process.env, ASTRO_TELEMETRY_DISABLED: '1' }
+        env: localToolEnvironment()
     });
     if (result.error) {
         fail(`astro ${command} 启动失败：${result.error.message}`);
@@ -669,6 +679,7 @@ function runAstro(command) {
 
 const typeCheckOk = artifactsOnly ? true : runAstro('check');
 const buildOk = artifactsOnly ? true : runAstro('build');
+if (buildOk) checkFonts('dist/client');
 if (artifactsOnly) {
     console.log('\n▶ --artifacts-only：跳过 astro check / astro build，直接对现有 dist/ 跑产物断言。');
 }
@@ -743,6 +754,7 @@ if (exists('dist/client/_headers') && buildOk) {
 /** 客户端面向产物：不许出现明细键、密钥名、明细数据文件与 vendor 引用。 */
 const clientForbidden = [
     [RAW_KEY, '明细 KV 键'],
+    ['students_raw_', '版本化明细 KV 键'],
     [DETAIL_DATA_FILE, '完整名单文件'],
     ['DETAILS_PASSPHRASE', '口令变量名'],
     ['DETAILS_SESSION_SECRET', '会话密钥变量名'],

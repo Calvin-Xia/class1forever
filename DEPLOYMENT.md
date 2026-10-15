@@ -1,13 +1,17 @@
 # 部署与开发指南
 
+**当前正式更新入口：推送 main，由 Actions 串行发布 CF Worker 与 EO Makers 正式项目。** 保留线上版本、数据、密钥、路由及 DNS；新旧脚本协调发布以支持同 Host 切线。完整步骤见 [CI 发布协议](docs/ci-deployment.md)，实际接入状态见 [正式分流验收](docs/production-readiness-20261015.md)。下文单 Worker 命令为历史迁移/首次初始化参考，不应直接用于当前双端生产更新。
+
 这份文档对应当前仓库的部署模型：**Astro 6 SSR + Cloudflare Worker + Workers Assets + KV**。站点仍然是公开站点，但完整学生数据不再进入任何静态产物；公开页面只读聚合数据，姓名和学校信息在口令验证后按地区读取。
 
 > 部署口径已从 Cloudflare Pages 改成 **Worker**：`wrangler.jsonc` 的 `main` 指向适配器统一入口
 > （`@astrojs/cloudflare/entrypoints/server`），静态资产走 `ASSETS` 绑定（目录 `./dist`）。
 > 本文所有命令都是 Worker 口径（`wrangler deploy` / `wrangler secret put`），**不再有** `wrangler pages ...`。
 > 生产域名切换与 Pages 下线是人工 gate：完整清单（密钥、KV 核对、回滚、发布后检查项、人工步骤 M1–M10）
-> 见 `docs/cutover-runbook.md`。切换前 `main` 分支的 Pages 站点仍在线上服务；
+> 见 `docs/cutover-runbook.md`（历史迁移记录；当前已合并 Worker 迁移）；
 > **Pages 项目保留到人工确认后才下线**（它就是回滚后路）。
+
+当前双平台域名方向优先评估 `map.calvin-xia.cn` 的 DNSPod GeoDNS + CF for SaaS，原 302/独立域名作为备选。根域留在 CF，父区 map NS 已存在；SaaS 官方 CDN 不兼容风险、子区回答、证书续期与同 Host Cookie 门禁仍需实测，不能仅添加 CNAME 宣布完成。用户 CF 支付资料已确认存在。具体状态/人工上线步骤见 [双平台方案](docs/edgeone-cloudflare-dual-deployment-plan.md)、[运行手册](docs/dual-deployment-runbook.md) 和 [最新本地实施记录](docs/local-continuation-20261015.md)。本轮实施本地可验证部分，不执行下面的部署/密钥/数据命令。
 
 ## 1. 部署模型
 
@@ -276,23 +280,20 @@ npx wrangler versions upload --preview-alias cutover-preview
 
 不落盘的部署面体检（不需要凭据）：`npm run worker:dryrun`。
 
-### 5.1 CI 部署（GitHub Actions → Workers）
+### 5.1 CI 部署（GitHub Actions → Workers + Makers）
 
 仓库自带 `.github/workflows/deploy.yml`：**推 `main`**（或手动 `workflow_dispatch`）时执行
-`npm ci` → `npm run build`（静态门禁 + 类型检查 + Astro 构建）→ `npx wrangler deploy`。
-构建不过就不部署，不会把失败产物推上生产。
+`npm ci` → `npm run check:dual` → 只读线上预检/保留旧公开脚本 → EO 兼容部署 → CF 正式部署 → EO 最终正式部署 → 双端读回验收。完整协议与失败语义见 [CI 发布说明](docs/ci-deployment.md)。构建或预检失败不触碰生产。
 
 在 **Settings → Secrets and variables → Actions** 里配置：
 
 | Secret | 必填 | 说明 |
 |---|---|---|
-| `CLOUDFLARE_API_TOKEN` | ✅ | 需带 **Workers Scripts:Edit**（建议再加 KV 编辑、Account Settings:Read） |
-| `CLOUDFLARE_ACCOUNT_ID` | 可选 | 单账号可留空，wrangler 自行解析 |
-| `DETAILS_PASSPHRASE` | 可选 | 填了会在部署前 `wrangler secret put` 同步到 Worker；不填则要求 Worker 上已存在该 Secret |
-| `DETAILS_SESSION_SECRET` | 可选 | 同上 |
+| `CLOUDFLARE_API_TOKEN` | ✅ | Worker 读写及对应 zone Worker routes 的读取/保留权限 |
+| `CLOUDFLARE_ACCOUNT_ID` | 可选 | 若设置，必须与固定生产账号一致 |
+| `EDGEONE_API_TOKEN` | ✅ | 该 Makers 正式项目的读取与 production 部署权限 |
 
-> `wrangler.jsonc` 声明了 `secrets.required`，所以这两个应用密钥必须已在 Worker 上
-> （CI 同步，或手动 `npx wrangler secret put`），否则 `npx wrangler deploy` 会直接报错。
+> 两项 `DETAILS_*` 应用密钥必须已在 Worker 上；CI 沿用线上值，不再从仓库 Secret 自动覆盖。EO 私有 KV 配置同样保留。数据上传、版本激活、密钥轮换与 DNS 变更不属于此自动发布流程。
 
 **Cloudflare Pages 的自动部署不是这个 workflow 管的** —— 它来自 Cloudflare 上
 `class1forever` 这个 **Pages 项目**的 Git 集成。要停掉它、改成只走 Workers，见 5.2。

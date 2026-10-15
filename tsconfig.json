@@ -15,7 +15,8 @@
         // CLASS_MAP_DATA: KVNamespace）。改了 wrangler.jsonc 的绑定后必须重跑 `npm run cf:types`。
         "worker-configuration.d.ts",
         "src/**/*",
+        "edge-functions/**/*",
         "tests/**/*"
     ],
-    "exclude": ["dist", ".wrangler-dryrun", "node_modules"]
+    "exclude": ["dist-edgeone", ".edgeone-build", ".edgeone", "dist", ".wrangler-dryrun", "node_modules"]
 }

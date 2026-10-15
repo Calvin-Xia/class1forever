@@ -24,6 +24,9 @@ import {
     resetLocalState,
     startLocalServer
 } from '../scripts/local-runtime.mjs';
+import { startEdgeoneFixture } from '../scripts/edgeone-local.mjs';
+const edgeoneTarget = process.env.API_TARGET === 'edgeone';
+
 import { normalizeStudents, sortPeople } from '../shared/data-model.mjs';
 
 // 端口避开 8788（`npm run dev:local` 默认）与 8790–8799（同一批次里别的节点会用）；
@@ -58,6 +61,11 @@ async function readJson(response) {
 before(async () => {
     // 用独立的 state-test 目录：与 `npm run dev:local` 的默认目录（.wrangler/local/state）分开，
     // 并发时不会两个进程抢同一个本地 KV（miniflare 的 SQLite）。
+    if (edgeoneTarget) {
+        server = await startEdgeoneFixture({ port: PORT });
+        base = server.url;
+        return;
+    }
     const { configPath, persistTo } = await prepareLocalRuntime({
         reset: true,
         stateDir: LOCAL_TEST_STATE_DIR
@@ -94,7 +102,7 @@ describe('GET /api/map/public', () => {
         // 用一份独立的空 KV 持久化目录再起一个 Worker：不靠「运行中删键」
         // （另一个进程写本地 KV 不一定立刻被已启动的 miniflare 看到，会变成 flaky）。
         resetLocalState(LOCAL_EMPTY_STATE_DIR);
-        const empty = await startLocalServer({
+        const empty = edgeoneTarget ? await startEdgeoneFixture({ port: PORT + 1, empty: true }) : await startLocalServer({
             port: PORT + 1,
             configPath: LOCAL_CONFIG_PATH,
             persistTo: LOCAL_EMPTY_STATE_DIR

@@ -1,10 +1,14 @@
 ---
 /**
- * 页脚：只承载读屏播报位（`role=status` + `aria-live`）。
- * 播报文案由 l2_share 按当前视野写入；这里保持空容器。
+ * 页脚：当前视野的读屏播报位与用户提供的备案信息。
+ * 播报文案由地图模块写入，备案链接独立于动态播报区。
  */
 ---
 
 <footer class="page__footer">
     <div class="note-container" id="interaction-note" aria-live="polite" role="status"></div>
+    <nav class="site-registration" aria-label="网站备案信息">
+        <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">渝ICP备2026000319号</a>
+        <a href="https://beian.mps.gov.cn/#/query/webSearch?code=50010102001439" target="_blank" rel="noopener noreferrer">渝公网安备50010102001439号</a>
+    </nav>
 </footer>

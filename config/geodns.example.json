@@ -1,0 +1,12 @@
+{
+    "host": "map.calvin-xia.cn",
+    "parentZone": "calvin-xia.cn",
+    "childZone": "map.calvin-xia.cn",
+    "recordName": "@",
+    "nameservers": ["ns1.huaweicloud-dns.com", "ns1.huaweicloud-dns.cn", "ns1.huaweicloud-dns.net", "ns1.huaweicloud-dns.org"],
+    "workerName": "class1forever",
+    "workerRoute": "map.calvin-xia.cn/*",
+    "cloudflareTarget": null,
+    "edgeoneTarget": null,
+    "fallbackOrigin": null
+}

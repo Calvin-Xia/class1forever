@@ -4,14 +4,14 @@
  *
  * 与旧首页（`index.html`）逐条对齐的部分：
  * - `lang="zh-CN"`、`charset`、`viewport`、`description`、`theme-color`、`title`、`favicon`；
- * - Google Fonts 的 preconnect 与样式表链接 —— `_headers` 的 `style-src` / `font-src`
- *   本来就为这两个源留了口子（`script-src` 仍是 `'self'`，字体不属于脚本）。
+ * - 原有字体族由同源 WOFF2 提供，两平台无需连接外部字体服务。
  *
  * 页面结构（页头 / 地图 / 地区一览 / 底部抽屉 / 口令弹窗）全部由 `index.astro` 经 slot 装配，
  * 这里刻意不预置任何业务区块。
  *
- * 样式：本节点只建占位 `src/styles/main.css`，真正的样式表迁移归 l2_visual。
+ * 字体来源、完整字集检查及许可证见 public/fonts/README.md。
  */
+import '../styles/fonts.css';
 import '../styles/main.css';
 
 interface Props {
@@ -33,12 +33,6 @@ const { title, description } = Astro.props;
         <meta name="theme-color" content="#f7f4ec" />
         <title>{title}</title>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link
-            href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600&display=swap"
-            rel="stylesheet"
-        />
     </head>
     <body>
         <slot />

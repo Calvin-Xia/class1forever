@@ -1162,6 +1162,22 @@ button.chip:active {
     padding: 0 var(--space-2);
 }
 
+.site-registration {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-2) var(--space-4);
+    margin: var(--space-4) 0;
+    color: var(--color-text-muted);
+    font-size: 0.9375rem;
+    line-height: 1.7;
+}
+
+.site-registration a {
+    color: inherit;
+    text-underline-offset: 3px;
+}
+
 .note-container {
     position: relative;
     width: fit-content;

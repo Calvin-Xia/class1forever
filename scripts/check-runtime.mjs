@@ -20,6 +20,7 @@
  * 前置：先 `npm run build`（本地配置由 `dist/server/wrangler.json` 派生）。
  */
 import path from 'node:path';
+import { checkFontHttp } from './check-font-http.mjs';
 import { startLocalServer, writeLocalConfig, LOCAL_DIR } from './local-runtime.mjs';
 
 const failures = [];
@@ -78,6 +79,8 @@ try {
     /* ── 文档响应 ─────────────────────────────────────────────────────────── */
     const response = await fetch(`${server.url}/`);
     const html = await response.text();
+    if (response.headers.get('cache-control') !== 'no-cache') fail('首页 HTML 必须 no-cache。');
+    else pass('首页 HTML no-cache');
     console.log(`▶ GET / → ${response.status} ${response.headers.get('content-type')}（${html.length} 字节）`);
 
     const scriptTags = [...html.matchAll(/<script\b[^>]*>/gi)].map((match) => match[0]);
@@ -119,9 +122,8 @@ try {
         .map((match) => (match[0].match(/\shref\s*=\s*["']([^"']+)["']/i) || [])[1])
         .filter(Boolean);
     const externalStyles = styleSources.filter((source) => !source.startsWith('/'));
-    if (externalStyles.length > 0) {
-        console.log(`    （外部样式表 ${externalStyles.length} 个：${externalStyles.join(', ')} —— 字体服务在 CSP style-src 白名单里，只记录不请求）`);
-    }
+    if (externalStyles.length > 0) fail('页面不得依赖外部字体/样式服务。');
+    else pass('页面字体/样式入口全部同源');
     for (const source of styleSources.filter((source) => source.startsWith('/'))) {
         const asset = await fetch(`${server.url}${source}`, { method: 'HEAD' });
         if (asset.status !== 200) {
@@ -177,6 +179,10 @@ try {
     if (headerMismatch === 0) {
         pass(`文档响应与静态资产的 ${SECURITY_HEADERS.length} 条安全头逐条一致`);
     }
+
+    try {
+        pass(`同源哈希字体 HTTP 缓存头（${await checkFontHttp(server.url)} 个边界资源）与完整源不可达`);
+    } catch (error) { fail(`字体 HTTP 门禁失败：${error.message}`); }
 
     /* ── 部署面不得可请求的路径 ───────────────────────────────────────────── */
     for (const [probePath, label] of [

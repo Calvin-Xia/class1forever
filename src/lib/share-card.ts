@@ -249,6 +249,30 @@ export function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
     });
 }
 
+/** 按冻结后的实际文字与字重加载分享图所需的全部字体分片。 */
+export async function loadShareFonts(stats: ShareStats, heatMax: number): Promise<void> {
+    // unicode-range 按实际文本选择分片。ready 只等待已触发的下载，不能替代完整文本的 load。
+    // 不读取 DOM/当前地图视野：所有动态文字均来自已经冻结的分享参数。
+    const bodyText = [
+        stats.scope,
+        ' · 数据更新于 ',
+        formatLocalDate(stats.generatedAt),
+        '万州二中 · 金鹰 1 班',
+        stats.emptyText,
+        ...(stats.columns || []).map((column) => column.label)
+    ].join('');
+    const boldText = [
+        `0 人 ${heatMax} 人`,
+        ...(stats.columns || []).map((column) => String(column.value))
+    ].join('');
+    await Promise.all([
+        document.fonts.load('600 42px "Noto Serif SC"', '金鹰 1 班蹭饭地图'),
+        document.fonts.load('400 18px "Noto Sans SC"', bodyText),
+        document.fonts.load('700 36px "Noto Sans SC"', boldText)
+    ]);
+    await document.fonts.ready;
+}
+
 /**
  * 把快照与统计合成分享图。
  *
@@ -257,6 +281,8 @@ export function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
  * 图例刻度与文件名三者同源，之后（包括 `Image` 解码期间）按 Esc 切视野都影响不了它。
  */
 export async function composeShareImage(stats: ShareStats, snapshot: MapSnapshot): Promise<Blob> {
+    // stats/snapshot 已由调用方冻结；等待自托管字体后再画字，避免首次导出字体漂移。
+    await loadShareFonts(stats, snapshot.heatMax);
     const mapImage = await loadImage(snapshot.dataUrl);
 
     const source = snapshot.crop || {

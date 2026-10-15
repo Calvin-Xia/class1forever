@@ -1,0 +1,34 @@
+# main 自动发布：CF Workers + EdgeOne Makers
+
+`.github/workflows/ci.yml` 检查 push/PR；`.github/workflows/deploy.yml` 在 push main 或 main 上手动触发时重新运行完整门禁，再串行发布现有生产资源。原独立 EO preview workflow 已合并，避免同次提交只更新一端或误发预览项目。
+
+固定对象在 `config/production.json`：CF `class1forever`、EO `classmap-cn` / `makers-tow3ibjic9wk`。预检必须读到现有项目及正确 KV/SESSION/路由，CLI 不能隐式创建项目。非 main 不发布；并发组不取消正在执行的生产流程，写云前跳过已被新 main 取代的提交。
+
+## 发布顺序
+
+1. `npm ci` → `npm run check:dual`，全程不注入部署 Token、真实名单或应用密钥。检查包含 CF/EO API、会话、字体、GeoDNS 负例、双端公开脚本合并与发布顺序测试。
+2. 只读查询 CF 当前配置、两端公开 API、EO 正式项目；两端激活版本和公开聚合必须完全一致。读取当前公开 `/deployment-assets.json`，下载并校验上一版所有公开 `_astro` 脚本，和本次两端构建取并集。
+3. 重跑两端产物泄漏扫描，再用固定 Makers CLI 1.6.41 打包。生成新的公开资源清单，只有公开 JS/CSS 文件名和 SHA-256；不包含学生数据、私有版本 manifest 或凭据。
+4. **EO 兼容部署**：发布旧 EO 公开 HTML、本次 API 和全部新旧公开脚本；读回每个脚本字节。此时 CF 的旧页面和 EO 的旧页面都能继续运行。
+5. **CF 正式部署**：从构建产物派生候选，显式保留两条本站路由、既有 SESSION namespace、workers.dev/preview 标志及当前 `DATA_RELEASE_ID`，用 `--keep-vars` 发布。两项应用 Secrets 沿用 Worker 原值，不再从仓库 Secret 自动覆盖。读回每个脚本字节。
+6. **EO 最终正式部署**：更新为本次新 HTML；再次核对公开 API、版本、资源清单和脚本字节。CF 路由集合、KV、入口标志与激活版本必须保持不变。
+
+这样在 CF 更新前，EO 已能提供 CF 新页面引用的脚本；EO 新页面出现前，CF 也已具备 EO 新脚本。旧脚本继续保留，避免浏览器缓存或打开很久的标签页在切线后失效。本流程不改 DNS，不写真实数据/私有配置，不轮换密钥。API 仍须保持现有前端契约；破坏契约或数据模型变更需另行设计迁移。
+
+首次 CI 使用 `config/production-assets-bootstrap.json`：只记录已上线公开脚本及其哈希，并钉住已验证的 CF/EO 部署 ID。线上没有公开资源清单时，若部署 ID 已变化，拒绝猜测或覆盖。首次成功后均从线上新清单延续。保留集合超过 10,000 个公开脚本时拒绝发布，需要单独评估清理策略，不会自动删旧文件。
+
+## Actions Secret 与权限
+
+| Secret | 用途 |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | 读取/更新该 Worker，读取 zone Worker routes 并保留本站路由；需对应 Workers Scripts、Worker Routes 权限。使用现有 KV，不上传名单。 |
+| `CLOUDFLARE_ACCOUNT_ID` | 若设置，必须与固定生产账号相符；不符则停止。 |
+| `EDGEONE_API_TOKEN` | 读取该现有 Makers 项目/部署，并对该项目执行 production 部署。不能用会过期的本机 CLI 登录状态替代长期 Actions 凭据。 |
+
+两项旧仓库 `DETAILS_*` Secret 不被本流程读取或同步；线上 CF Secrets、EO 私有 KV 配置继续由各平台保管。部署凭据仅注入 prepare/deploy 两步，构建/测试/打包不继承。供应商输出在工作区私有日志中脱敏；Actions artifact 只保存 `result.json` 的提交 SHA、发布阶段、部署 ID、公开统计等最小证据，不上传供应商日志、旧页面、配置或整个构建目录。
+
+## 失败处理与验收
+
+预检或兼容部署/资源验收失败，不发布 CF。CF 发布后若 EO 最终发布失败，EO 的兼容页面仍可使用，两端新旧脚本均存在；workflow 会失败，不将半完成过程标绿。每阶段结果保存到 `production-deployment-result` artifact。检查当前状态后再修复并重跑，不盲目轮换 Secrets 或退回缺数据的旧 EO 部署。
+
+`result.success: true` 才表示本次生产流程全部完成；完整 CI 成功还需 Actions 两个工作流在同一提交上通过。固定入口与严格 TLS 的运行验收不证明真实大陆终端的选路或跨 CDN 自动续期；这些仍见 [实际分流记录](production-readiness-20261015.md)。

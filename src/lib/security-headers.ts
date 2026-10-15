@@ -24,7 +24,7 @@ export const DOCUMENT_SECURITY_HEADERS: ReadonlyArray<readonly [name: string, va
     ['Permissions-Policy', 'camera=(), microphone=(), geolocation=()'],
     [
         'Content-Security-Policy',
-        "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
     ]
 ];
 
@@ -44,6 +44,10 @@ export function withDocumentSecurityHeaders(response: Response): Response {
 
     const headers = new Headers(response.headers);
     let changed = false;
+    if (!headers.has('Cache-Control')) {
+        headers.set('Cache-Control', 'no-cache');
+        changed = true;
+    }
     for (const [name, value] of DOCUMENT_SECURITY_HEADERS) {
         if (!headers.has(name)) {
             headers.set(name, value);

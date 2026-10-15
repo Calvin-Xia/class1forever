@@ -41,10 +41,19 @@ jobs:
       - name: API contract tests
         run: npm run test:api
 
+      - name: EdgeOne static target and application contracts
+        run: npm run check:edgeone
+
+      - name: Same-host sessions and GeoDNS preflight negative controls
+        run: npm run test:geodns && npm run test:session
+
+      - name: Production ordering, retained chunks and artifact scans
+        run: npm run check:dual:assets && npm run test:production
+
       - name: Syntax check
         run: |
           set -e
-          for file in $(find js shared scripts tests -type f \( -name '*.js' -o -name '*.mjs' \) ! -path 'js/vendor/*'); do
+          for file in $(find js shared scripts tests -type f \( -name '*.js' -o -name '*.mjs' -o -name '*.cjs' \) ! -path 'js/vendor/*'); do
             node --check "$file"
           done
           for file in $(find functions -type f \( -name '*.js' -o -name '*.mjs' \)); do

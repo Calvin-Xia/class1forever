@@ -3,17 +3,20 @@
 ## Project Overview
 Static classmate-distribution map ("蹭饭地图"). The page shows public province/city aggregate counts; names and schools are returned per-region only after a passphrase-authenticated session, served by four `/api/*` routes backed by a `CLASS_MAP_DATA` KV namespace.
 
-This branch (`astro-migration`) moves the site to **Astro 6 SSR on a single Cloudflare Worker + Workers Assets**: `output: 'server'` in `astro.config.mjs`, `wrangler.jsonc` with `main: "@astrojs/cloudflare/entrypoints/server"` and `assets: { binding: "ASSETS", directory: "./dist" }`. The KV binding keeps the same name (`CLASS_MAP_DATA`) and the same `id` / `preview_id`. `main` still serves the pre-migration Pages site; production cutover is a human gate — the deployment commands, the secrets to rebind, the KV checklist, the rollback steps and the manual-step list live in `docs/cutover-runbook.md` (node `l4_cutover`). Student data is never shipped as a static asset.
+The merged migration (main baseline d488775) runs **Astro 6 SSR on a single Cloudflare Worker + Workers Assets**: `output: 'server'` in `astro.config.mjs`, `wrangler.jsonc` with `main: "@astrojs/cloudflare/entrypoints/server"` and `assets: { binding: "ASSETS", directory: "./dist" }`. The KV binding keeps the same name (`CLASS_MAP_DATA`) and the same `id` / `preview_id`. The existing Cloudflare Worker is the global service; EdgeOne production onboarding and DNS cutover remain a human gate — the deployment commands, the secrets to rebind, the KV checklist, the rollback steps and the manual-step list live in `docs/cutover-runbook.md` (node `l4_cutover`). Student data is never shipped as a static asset.
 
 ## Project Structure & Module Organization
 
-Migration status: `src/**` is the new site (Astro routes + React islands); everything listed below as `js/**` / `css/main.css` / `functions/**` is the **pre-migration implementation**, kept as the equivalence baseline and still what `main` serves. On this branch those are reference assets, not the running entry point.
+Migration status: `src/**` is the new site (Astro routes + React islands); everything listed below as `js/**` / `css/main.css` / `functions/**` is the **pre-migration implementation**, kept as the equivalence baseline and is reference material, not the current main entry point.
 
 The pre-migration **entry point** `index.html` is archived at `legacy/index.html` (byte-identical to `main:index.html`, see `legacy/README.md`): a root `index.html` is hit by Vite's static middleware before Astro's routes, so `astro dev`'s `GET /` would have served the old site instead of the new one (F-2). `build.js` asserts the root file stays absent — revert with `git mv legacy/index.html index.html`.
 
 - `src/pages/index.astro`, `src/layouts/BaseLayout.astro`, `src/components/*.astro`: the new page shell.
 - `src/pages/api/{map/public,map/details,auth/details,auth/logout}.ts`: the four API routes (Astro endpoints), with shared logic in `src/lib/{http,data,auth,types}.ts`.
 - `src/styles/main.css`: the migrated stylesheet (the parity contract for it is `docs/migration-parity.md` §3 + `DESIGN.md`).
+- `astro.edgeone.config.mjs`, `scripts/build-edgeone.mjs`, `edge-functions/**`, `edgeone.json`: isolated static shell + Makers API target. `npm run check:edgeone` includes built-bundle Node HTTP fixtures, not proof of the real Makers runtime. KV approval, trusted IP, Crypto, area, TLS and CDN gates remain in `docs/dual-deployment-runbook.md`.
+- `src/lib/api-handlers.ts`, `src/platform/**`: shared business handlers and thin runtime adapters. Makers secrets/version come from private `classmap_runtime_config` KV, not build-time context.env; CF continues native env/Secrets.
+- `scripts/data-release.mjs`: offline prepare/verify/verify-readback plus imported coordination protocol; no connected production publishing CLI.
 - `astro.config.mjs`, `tsconfig.json`, `worker-configuration.d.ts`: Astro/adapter/React config, the `astro/tsconfigs/strict` preset, and the wrangler-generated binding types (`npm run cf:types`).
 - `scripts/local-runtime.mjs`: the credential-free local path — derives a local Worker config from `dist/`, seeds local KV fixtures, runs `wrangler dev` (`npm run dev:local` / `seed:local`).
 - `tests/api-contract.test.mjs`: the four-route contract assertions (`npm run test:api`, node:test, no extra deps).
@@ -42,6 +45,7 @@ The pre-migration **entry point** `index.html` is archived at `legacy/index.html
 ## Build, Test, and Development Commands
 - `npm install`: install dependencies (Node >= 22.12 — astro 6's `engines`).
 - `npm run build`: the single gate — `node build.js`, which runs the static safety assertions (incl. `wrangler types --check`), then `astro check`, then `astro build`, then the artifact scan; it emits `dist/` (Worker entry + `dist/client` assets). `--static-only` / `--artifacts-only` are the diagnostic switches.
+- `npm run check:dual`: existing Cloudflare full gates followed by EdgeOne build/contracts/fixture runtime and data release negative tests; no deployment or student upload.
 - `npm run astro:check`: Astro + TypeScript type check over `src/**` and the generated types.
 - `npm run dev:local`: the full local path with **no Cloudflare credentials**. It derives a local Worker config from `dist/`, seeds `students:public:v1` / `students:raw:v1` into a local KV, then runs `wrangler dev` on http://127.0.0.1:8788 with the demo passphrase `demo`. Requires `npm run build` first. Flags: `--port <n>`, `--reset`, `--state-dir <dir>`, `--public-file <path>`, `--raw-file <path>` (or the `STUDENTS_PUBLIC_FILE` / `STUDENTS_RAW_FILE` env vars).
 - `npm run seed:local`: write the local KV fixtures only (pair it with `npm run dev` / `npm run cf:dev`).

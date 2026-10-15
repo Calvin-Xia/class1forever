@@ -14,6 +14,8 @@
  * 3. `initTapFallback(chart, …)` **必须在 chart 实例赋值之后**调用。
  */
 import { echarts } from './echarts';
+import { readSessionRevision } from './session-sync';
+import { loadMapFonts } from './map-fonts';
 import type { EChartsType } from './echarts';
 import {
     CHINA_MAP_ID,
@@ -218,7 +220,7 @@ function readPublicCache(): PublicMapPayload | null {
         if (!(cached as { provinces?: unknown }).provinces || !(cached as { stats?: unknown }).stats) {
             return null;
         }
-        return cached as PublicMapPayload;
+        return { ...cached as PublicMapPayload, detailAccess: false };
     } catch (_error) {
         return null;
     }
@@ -226,7 +228,7 @@ function readPublicCache(): PublicMapPayload | null {
 
 function writePublicCache(data: PublicMapPayload): void {
     try {
-        localStorage.setItem(PUBLIC_CACHE_KEY, JSON.stringify(data));
+        localStorage.setItem(PUBLIC_CACHE_KEY, JSON.stringify({ ...data, detailAccess: false }));
     } catch (_error) {
         // 存储不可用（隐私模式 / 配额）时缓存只是尽力而为。
     }
@@ -513,7 +515,10 @@ async function drillIntoProvince(point: RegionPoint): Promise<void> {
     showProvinceLoading(point.name);
 
     try {
+        const generation = bootGeneration;
         const geoJson = await loadProvinceGeo(filename);
+        await loadMapFonts(geoJson);
+        if (generation !== bootGeneration) return;
         const mapId = PROVINCE_MAP_PREFIX + filename;
         echarts.registerMap(mapId, geoJson as unknown as Parameters<typeof echarts.registerMap>[1]);
         hideMapLoading();
@@ -765,6 +770,7 @@ async function loadApp(generation: number): Promise<void> {
     }
 
     try {
+        const sessionRevision = readSessionRevision();
         const fresh = await fetchJson('/api/map/public');
         if (generation !== bootGeneration) {
             return;
@@ -772,7 +778,9 @@ async function loadApp(generation: number): Promise<void> {
         writePublicCache(fresh);
         const cacheIsStale = !renderedFromCache || !cached || cached.generatedAt !== fresh.generatedAt;
 
-        applyPublicData(fresh);
+        // 登录/退出发生在公开请求等待期间时，只更新聚合，不以旧响应覆盖新会话状态。
+        applyPublicData(sessionRevision === readSessionRevision() ? fresh :
+            { ...fresh, detailAccess: getDetailModeState().access });
 
         if (!renderedFromCache) {
             renderMapFromData();
@@ -807,6 +815,7 @@ export function bootMapIsland(): Promise<void> {
     const generation = ++bootGeneration;
     bootPromise = (async () => {
         const chinaGeo = await loadChinaGeo();
+        await loadMapFonts(chinaGeo);
         if (generation !== bootGeneration) {
             return;
         }

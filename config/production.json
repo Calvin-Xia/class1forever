@@ -1,0 +1,13 @@
+{
+    "accountId": "f68a5f5a5c1e603903328817e35e382b",
+    "zoneId": "684f036938469887acfeaedfe511a0c3",
+    "worker": "class1forever",
+    "cloudflareTarget": "map-fallback.calvin-xia.cn",
+    "host": "map.calvin-xia.cn",
+    "edgeoneTarget": "map.calvin-xia.cn.pages.dnsoe4.com",
+    "edgeoneProject": "classmap-cn",
+    "edgeoneProjectId": "makers-tow3ibjic9wk",
+    "dataNamespace": "e6c9c4ff9bc84aa4979184515e713ecb",
+    "sessionNamespace": "e13fd679f28949d286fb4f9de6614b57",
+    "routes": ["class1forever.calvin-xia.cn/*", "map.calvin-xia.cn/*"]
+}

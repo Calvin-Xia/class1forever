@@ -33,6 +33,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { localToolEnvironment } from './local-tool-env.cjs';
 
 import { buildPublicDataset, normalizeStudents } from '../shared/data-model.mjs';
 
@@ -229,6 +230,7 @@ function runWrangler(args, options = {}) {
         let output = '';
         const child = spawn(process.execPath, [WRANGLER_BIN, ...args], {
             cwd: REPO_ROOT,
+            env: localToolEnvironment(),
             stdio: ['ignore', 'pipe', 'pipe']
         });
 
@@ -425,7 +427,7 @@ export async function startLocalServer(options = {}) {
     const child = spawn(
         process.execPath,
         [WRANGLER_BIN, 'dev', '--config', configPath, '--persist-to', persistTo, '--port', String(port), '--ip', '127.0.0.1'],
-        { cwd: REPO_ROOT, stdio: ['ignore', 'pipe', 'pipe'] }
+        { cwd: REPO_ROOT, env: localToolEnvironment(), stdio: ['ignore', 'pipe', 'pipe'] }
     );
 
     let output = '';

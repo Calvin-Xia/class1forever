@@ -10,7 +10,22 @@
  * 运行时绑定与变量：由 wrangler types 生成在仓库根 worker-configuration.d.ts，
  * 这里只做一层别名，避免每个模块各自 `Cloudflare.Env`。
  */
-export type Env = Cloudflare.Env;
+export interface DataStore {
+    get(key: string): Promise<string | null>;
+    get<T = unknown>(key: string, type: 'json'): Promise<T | null>;
+    put(key: string, value: string, options?: { expirationTtl?: number }): Promise<unknown>;
+    delete(key: string): Promise<unknown>;
+}
+
+/** 平台只注入存储、变量和可信 IP；业务模块不依赖平台运行时。 */
+export interface Env {
+    CLASS_MAP_DATA: DataStore;
+    DETAILS_PASSPHRASE?: string;
+    DETAILS_SESSION_SECRET?: string;
+    DETAILS_HINT?: string;
+    DATA_RELEASE_ID?: string;
+    trustedClientIp?: string;
+}
 
 /** 公开聚合里的计数（students:public:v1 的 stats）。 */
 export interface PublicDatasetStats {

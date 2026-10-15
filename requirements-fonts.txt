@@ -1,0 +1,3 @@
+# Optional offline generation/outline validation only; serving/building uses committed WOFF2.
+fonttools[woff]==4.62.1
+Brotli==1.2.0

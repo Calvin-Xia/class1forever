@@ -1,0 +1,1697 @@
+{
+    "schemaVersion": 2,
+    "repository": "https://github.com/google/fonts",
+    "commit": "e9678a5385322c63730122ba464765baad83cfd8",
+    "tools": {
+        "fontTools": "4.62.1",
+        "brotli": "1.2.0"
+    },
+    "partition": "Unicode ascending; < U+3000 core; remaining groups of 256 code points",
+    "families": [
+        {
+            "family": "Noto Sans SC",
+            "sourceFile": "noto-sans-sc.aef8c34277af.woff2",
+            "sourceSha256": "aef8c34277afad81ecd0227138a830263c0caea65b7aea66d1195395f097b55a",
+            "sourceBytes": 7782072,
+            "unicodeCharacters": 30890,
+            "axes": [
+                {
+                    "tag": "wght",
+                    "minimum": 100.0,
+                    "maximum": 900.0,
+                    "default": 100.0
+                }
+            ],
+            "variationSequences": 25,
+            "shards": [
+                {
+                    "file": "subsets/noto-sans-sc-000.8c6dff26ff2f.woff2",
+                    "sha256": "8c6dff26ff2f9f0ba52d42cb349187b0cdae82418f99387b82bbe4f85225763e",
+                    "bytes": 190224,
+                    "unicodeCharacters": 1473,
+                    "unicodeRange": "U+20-7E,U+A0-103,U+110-113,U+11A-11B,U+128-12B,U+143-144,U+147-148,U+14C-14F,U+152-153,U+168-16D,U+192,U+1A0-1A1,U+1AF-1B0,U+1CD-1DC,U+1F8-1F9,U+251,U+261,U+2BB,U+2C7,U+2C9-2CB,U+2D9,U+2EA-2EB,U+300-301,U+304,U+307,U+30C,U+391-3A1,U+3A3-3A9,U+3B1-3C9,U+401,U+410-44F,U+451,U+1E3E-1E3F,U+1EA0-1EF9,U+2002-2003,U+2010-2016,U+2018-201A,U+201C-201E,U+2020-2022,U+2025-2027,U+2030,U+2032-2033,U+2035,U+2039-203C,U+2042,U+2047-2049,U+2051,U+2074,U+20A9,U+20AB-20AC,U+20DD-20DE,U+2100,U+2103,U+2105,U+2109-210A,U+210F,U+2113,U+2116,U+2121-2122,U+2126-2127,U+212B,U+212E,U+2135,U+213B,U+2160-216B,U+2170-217B,U+2190-2199,U+21B8-21B9,U+21C4-21C6,U+21CB-21CC,U+21D0,U+21D2,U+21D4,U+21E6-21E9,U+21F5,U+2200,U+2202-2203,U+2205-220B,U+220F,U+2211-2213,U+2215,U+221A,U+221D-2220,U+2223,U+2225-222E,U+2234-2237,U+223D,U+2243,U+2245,U+2248,U+224C,U+2260-2262,U+2264-2267,U+226A-226B,U+226E-226F,U+2272-2273,U+2276-2277,U+2282-2287,U+228A-228B,U+2295-2299,U+22A0,U+22A5,U+22BF,U+22DA-22DB,U+22EF,U+2305-2307,U+2312,U+2318,U+2329-232A,U+23B0-23B1,U+23BE-23CC,U+23CE,U+23DA-23DB,U+2423,U+2460-25AB,U+25B1-25B3,U+25B6-25B7,U+25BC-25BD,U+25C0-25C1,U+25C6-25C7,U+25C9-25CC,U+25CE-25D3,U+25E2-25E6,U+25EF,U+2600-2603,U+2605-2606,U+2609,U+260E-260F,U+2616-2617,U+261C-261F,U+262F,U+2640-2642,U+2660-266F,U+2672-267D,U+26A0,U+26BD-26BE,U+2702,U+2713,U+271A,U+273D,U+273F-2740,U+2756,U+2776-2793,U+27A1,U+2934-2935,U+29BF,U+29FA-29FB,U+2B05-2B07,U+2B1A,U+2B95,U+2E3A-2E3B,U+2E80-2E99,U+2E9B-2EF3,U+2F00-2FD5,U+2FF0-2FFB"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-001.d1f70f6cada3.woff2",
+                    "sha256": "d1f70f6cada3e94446c5ab4370c2c1a9b4b4a83c0cf4b486b0b336c01b2f7411",
+                    "bytes": 139912,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+3000-303F,U+3041-3096,U+3099-30FF,U+3105-3107"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-002.86f3cd19c678.woff2",
+                    "sha256": "86f3cd19c678759288c21bedda44776bed4550dd4eb7252768b778be687fa101",
+                    "bytes": 34104,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+3108-312F,U+3131-3163,U+3165-318E,U+3190-31BB,U+31C0-31E3,U+31F0-321A"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-003.c7bcbd5b0481.woff2",
+                    "sha256": "c7bcbd5b048193c5d6fc8d79eed9ca01669e9d170ca5779efd2d987b135df99d",
+                    "bytes": 60936,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+321B-321E,U+3220-331B"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-004.aa18944774a5.woff2",
+                    "sha256": "aa18944774a583b375210b57dc0c0efbb7a106e23ac0287b5b39e7b85fb9ad29",
+                    "bytes": 64484,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+331C-332B,U+332D-341C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-005.9aca721e484d.woff2",
+                    "sha256": "9aca721e484da18f76adf4af988147e2b7a8f3c2e97b9539882b290e0c4cde8d",
+                    "bytes": 81408,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+341D-351C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-006.21aaa7d401ae.woff2",
+                    "sha256": "21aaa7d401ae31ceade30c8449d9a9e3006b34ac313c522edd3236f500eb280f",
+                    "bytes": 79792,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+351D-361C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-007.cf5762dc4968.woff2",
+                    "sha256": "cf5762dc496827e7f496f6d9c18d748fbc1851031d957243717e9681b41ba1c2",
+                    "bytes": 84476,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+361D-371C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-008.91075be5bd57.woff2",
+                    "sha256": "91075be5bd5767d17b9b0e152474d3cf6d49d5694453c0690b509f1f739af4ed",
+                    "bytes": 82764,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+371D-381C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-009.25b460915006.woff2",
+                    "sha256": "25b4609150061bfc1d5dc9d003224e2125d0b0d28281905cbb4f3b993376a6d5",
+                    "bytes": 83052,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+381D-391C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-010.6ead75881f31.woff2",
+                    "sha256": "6ead75881f312b90d4c15a4ef963324a91d6a36d93bc2e0803631fe7350b97ed",
+                    "bytes": 87676,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+391D-3A1C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-011.173c996852d7.woff2",
+                    "sha256": "173c996852d7c38661096148e84fbad1d2b64465bbdc644fae15f43490972f05",
+                    "bytes": 87400,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+3A1D-3B1C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-012.30984285653b.woff2",
+                    "sha256": "30984285653b78f4072cf520fae3daee54e505688bed90f2db8320f977168b76",
+                    "bytes": 98480,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+3B1D-3C1C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-013.f374e13c9adf.woff2",
+                    "sha256": "f374e13c9adf71eb57d9e2e9359ef9a63f60499f497bba22370cf05b3a2b91c4",
+                    "bytes": 89264,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+3C1D-3D1C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-014.715c8cf2330a.woff2",
+                    "sha256": "715c8cf2330a3b0f342fe0c80bf241525c1a0c0a1c71e4b2cb652209bfa1606b",
+                    "bytes": 103196,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+3D1D-3E1C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-015.8fe4b61c3828.woff2",
+                    "sha256": "8fe4b61c3828c5d0fd6fb3ec897b217603ea2abff85e3685f87bde99e2db366f",
+                    "bytes": 87412,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+3E1D-3F1C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-016.5bb517238375.woff2",
+                    "sha256": "5bb517238375519371d2032a9257506678dbd3bf6d7a90813f7d125b074c3018",
+                    "bytes": 90848,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+3F1D-401C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-017.88740858433a.woff2",
+                    "sha256": "88740858433ae19331334918f5db30369512861baba381a2e728108956227be7",
+                    "bytes": 81324,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+401D-411C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-018.cf2f7abe38b9.woff2",
+                    "sha256": "cf2f7abe38b9a3bf8f4a1c140b47dbb7fbebb1b4e2d26ddafecb0cfdf3cc818a",
+                    "bytes": 90676,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+411D-421C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-019.3c0e3eb42081.woff2",
+                    "sha256": "3c0e3eb420819a9c6f68d0be780c28ccc7a947af220d9b3f26b9519b6858d509",
+                    "bytes": 111416,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+421D-431C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-020.b01722e12b3e.woff2",
+                    "sha256": "b01722e12b3e476cd75b3720b6fa65062d045c070c06efe9d3c8a5b0e317c2c3",
+                    "bytes": 90264,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+431D-441C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-021.9f9b61a4ea73.woff2",
+                    "sha256": "9f9b61a4ea73622c4e8f601bb0516ffed6d5117d09f62373a6a700a3d295a8c7",
+                    "bytes": 81080,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+441D-451C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-022.cc204d5f4652.woff2",
+                    "sha256": "cc204d5f4652ed0f4900a8d9e6e03924008523f63e7c9761a38241b1ea22c312",
+                    "bytes": 103776,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+451D-461C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-023.760d35a772e5.woff2",
+                    "sha256": "760d35a772e5cdd0c05318c38ffd205a48ed89df6f7f132e2b1cb2ca9a8d2aad",
+                    "bytes": 88788,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+461D-471C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-024.3ee45df268b5.woff2",
+                    "sha256": "3ee45df268b587abc7eace9757166cbe2530084be9b3cefa1720f31fe1bf3aad",
+                    "bytes": 91448,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+471D-481C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-025.dd78f71c8547.woff2",
+                    "sha256": "dd78f71c854700b521199270ce491e1b385d154c04887c3c459933c689df0cb3",
+                    "bytes": 88432,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+481D-491C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-026.360302ca1612.woff2",
+                    "sha256": "360302ca1612983ff5c6f37ae671433df670803dc4eaef2dbb47a506b6b7fd01",
+                    "bytes": 94204,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+491D-4A1C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-027.3053165b92c3.woff2",
+                    "sha256": "3053165b92c303a7151f2d603d9e27ebfb7d4d1d04a4f9218e240cb85fa4692d",
+                    "bytes": 93408,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+4A1D-4B1C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-028.938893e7f17a.woff2",
+                    "sha256": "938893e7f17a8fb1a684d19ed540a7c2f4e5a2a86476dd2ceadcdbfae939f0e3",
+                    "bytes": 104560,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+4B1D-4C1C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-029.30c0c37a60be.woff2",
+                    "sha256": "30c0c37a60bef8194f56c35cec112b778b23eab7043177260a76c994efbf3f6a",
+                    "bytes": 108928,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+4C1D-4D1C"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-030.5861175e8b88.woff2",
+                    "sha256": "5861175e8b88dddb9c18c917fe9d9e52bdfd6260b58658aab101cfe417e1d56c",
+                    "bytes": 86364,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+4D1D-4DB5,U+4E00-4E66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-031.8b0af651eb5d.woff2",
+                    "sha256": "8b0af651eb5def5b13e488410d277c4047934ed67b72a2b4709c7769c34609ef",
+                    "bytes": 56232,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+4E67-4F66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-032.bbbd58e6966d.woff2",
+                    "sha256": "bbbd58e6966d5db5693ad6c083740fec1a0a647789180cf016514f8be4efefad",
+                    "bytes": 66492,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+4F67-5066"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-033.b19300cb779e.woff2",
+                    "sha256": "b19300cb779e9b654a1612a20472c9db8649b8868fc186b6f91c7a843bd1a1ff",
+                    "bytes": 89140,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5067-5166"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-034.aaefd0473a56.woff2",
+                    "sha256": "aaefd0473a56ff3b07146b3b37607ee1328bd4c7a142799f1a921cc457a60cff",
+                    "bytes": 66420,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5167-5266"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-035.fd4986928556.woff2",
+                    "sha256": "fd498692855649876fd5b1262752b59f8090dc5267af2bc59cf1576404909e48",
+                    "bytes": 79368,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5267-5366"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-036.a36741d8bbbf.woff2",
+                    "sha256": "a36741d8bbbf0b7d2d319f76bbb7995f87a97f8ad6db7b1031eab52d8a01a974",
+                    "bytes": 62556,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5367-5466"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-037.e03cee241b48.woff2",
+                    "sha256": "e03cee241b48a9f76765bbfae3aef8f98e34e96557055f69ff77f1878d1bcc5d",
+                    "bytes": 62192,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5467-5566"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-038.d885c63f17ac.woff2",
+                    "sha256": "d885c63f17ac8a07acc1a1f04412b2289049ac80aa45e23db5141f1c60bec7f8",
+                    "bytes": 79420,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5567-5666"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-039.21ead9ae3c33.woff2",
+                    "sha256": "21ead9ae3c330c7f505b5f5ff0f43a4fe9c2b3ea6aa416d61ea7567de8e5687f",
+                    "bytes": 75524,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5667-5766"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-040.dcbc3478bcb4.woff2",
+                    "sha256": "dcbc3478bcb4f02a99764d6da29e1c74aca989e44889be356891b607fd35046b",
+                    "bytes": 69160,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5767-5866"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-041.8c77a25a7328.woff2",
+                    "sha256": "8c77a25a7328d75d0cf21157bc1a96f77facc59f21ad6c602be31f05f21f31bc",
+                    "bytes": 81368,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5867-5966"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-042.6981ace57440.woff2",
+                    "sha256": "6981ace574403070c823cea6864e6d5d08769bf215d20af7bdd7aaeef6829145",
+                    "bytes": 77924,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5967-5A66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-043.e78436cf627b.woff2",
+                    "sha256": "e78436cf627b55086419b2b67d5557a9436fa45e04b1fe951481ac2e0b307f50",
+                    "bytes": 96708,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5A67-5B66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-044.21b4e8193caf.woff2",
+                    "sha256": "21b4e8193caf39440151fd2c19129cc38c7a5c16fdc7a9c917d67302ad465c3b",
+                    "bytes": 75376,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5B67-5C66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-045.00fddefd0cb5.woff2",
+                    "sha256": "00fddefd0cb5c60555ce6c43817ee7ba1769904f68555560c989885579e2ce2b",
+                    "bytes": 66008,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5C67-5D66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-046.6addfc3135fb.woff2",
+                    "sha256": "6addfc3135fb901bb0c3910d02bf8ff04a930dba0f2d6ebd4f9bc46333f99cfc",
+                    "bytes": 82144,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5D67-5E66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-047.54d88d76f4c5.woff2",
+                    "sha256": "54d88d76f4c5c899121a40188cb789e006ae81b3f2ecb33648b18fae061c43ae",
+                    "bytes": 81296,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5E67-5F66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-048.afa1ce8d3ff4.woff2",
+                    "sha256": "afa1ce8d3ff4774bec990a3622decdb3178e831530f24eff8e1f0eb9dcffb927",
+                    "bytes": 71824,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5F67-6066"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-049.c66afe5ae3c5.woff2",
+                    "sha256": "c66afe5ae3c50732179edfa8c1e913a5e0cbe3f093409e99da1216c27721d6ca",
+                    "bytes": 84600,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6067-6166"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-050.8812fc523c8f.woff2",
+                    "sha256": "8812fc523c8f41b9ff12b1b03f826592803bf1bf263cf164722c5d41f114de2d",
+                    "bytes": 94120,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6167-6266"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-051.d4b3425b550a.woff2",
+                    "sha256": "d4b3425b550a8b0493aa30d5faedb7a0ba544316f6d1197a949ecdfc67fa6bba",
+                    "bytes": 67124,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6267-6366"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-052.1900d8383383.woff2",
+                    "sha256": "1900d8383383350287a0653378ff1c6c76ea5a7c5d63d15d05e2ff3deb54a8f3",
+                    "bytes": 83136,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6367-6466"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-053.4ed0423a611c.woff2",
+                    "sha256": "4ed0423a611c59a070036d800871db54ec8980f181d984bd991aef1693f84f57",
+                    "bytes": 100464,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6467-6566"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-054.efbfbea94a73.woff2",
+                    "sha256": "efbfbea94a731da9ed2c58d464cad2c4606cb037799dd291d102a08a210d28fd",
+                    "bytes": 76552,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6567-6666"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-055.95a8aa499ddc.woff2",
+                    "sha256": "95a8aa499ddc153271c8e3c6971ad88515ecb39ec1ca7d21e8db9c4c819acd1f",
+                    "bytes": 73396,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6667-6766"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-056.cf01182bc61c.woff2",
+                    "sha256": "cf01182bc61c124c23bdbbe1a7f4a6b44a00ac42d70c3618b830beafa14d2809",
+                    "bytes": 69088,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6767-6866"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-057.bd4965ea299f.woff2",
+                    "sha256": "bd4965ea299f927eab4f20af13a9ffd6c070f9944584304195222140ccb6b5fb",
+                    "bytes": 82196,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6867-6966"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-058.68dcea442222.woff2",
+                    "sha256": "68dcea44222248bf5cc088c6f484d8ed194a6d0438a45eae6cbe222770b2b424",
+                    "bytes": 93956,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6967-6A66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-059.94da75f99c26.woff2",
+                    "sha256": "94da75f99c261aec22a0ff015f357c5a522d7ea29915bf8ce9f1f74c0d2451d1",
+                    "bytes": 107600,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6A67-6B66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-060.3472df589503.woff2",
+                    "sha256": "3472df5895036a0b8848e94f3f44910e9b3c61f826cd32c8f3e6d52f2201ea12",
+                    "bytes": 82292,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6B67-6C66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-061.92bc684c6d20.woff2",
+                    "sha256": "92bc684c6d206a0830bd80ad96454629e6b0b91db7bce650ea5b060a6548e284",
+                    "bytes": 68908,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6C67-6D66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-062.250f26a2a8f7.woff2",
+                    "sha256": "250f26a2a8f77bd6acc476c2a4f19d908c17d8a789e7a357e900e67bba66cf84",
+                    "bytes": 77396,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6D67-6E66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-063.36bb01c157d8.woff2",
+                    "sha256": "36bb01c157d8bbe27fd04d62e123fddbc5f962de0f814d2899a8ed3bb74f5bf8",
+                    "bytes": 96472,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6E67-6F66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-064.c43d66d4ae9b.woff2",
+                    "sha256": "c43d66d4ae9b17e590a6098af9fd63e42700617ab0cf899220d71cf5a52bad0b",
+                    "bytes": 109444,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6F67-7066"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-065.1eb5dc39e2bd.woff2",
+                    "sha256": "1eb5dc39e2bd10a7e2d85dc22e1084e59ee153ad8140eb10885dd6e1eeba06f3",
+                    "bytes": 81324,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7067-7166"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-066.8cc656adb216.woff2",
+                    "sha256": "8cc656adb216a73ca544c7717846db1ac78663d2b014ac3b78cd3630d6ad9728",
+                    "bytes": 100960,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7167-7266"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-067.b0e77e80fc4f.woff2",
+                    "sha256": "b0e77e80fc4f510ac9977839caa6da9d55aa5c7b1997d380a44825650ca1f181",
+                    "bytes": 83608,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7267-7366"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-068.934615338aad.woff2",
+                    "sha256": "934615338aad81ede460e364ef798503f7f3c9d67f2f39b5005bcd9305049827",
+                    "bytes": 76340,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7367-7466"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-069.022852272950.woff2",
+                    "sha256": "02285227295072311e51434024219b1c78c8eb289ea5b38f97dbab5e64595689",
+                    "bytes": 90600,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7467-7566"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-070.9503477b2531.woff2",
+                    "sha256": "9503477b25314a021de6b62f97ae41a4c2580afa2af5ea4a635d2fe21fe1a8a3",
+                    "bytes": 86864,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7567-7666"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-071.b95e01984b35.woff2",
+                    "sha256": "b95e01984b35aa4a899b2d59b5bba5011f43455fe96e866030edbf22581fe3c4",
+                    "bytes": 73328,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7667-7766"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-072.b9019f3a6e01.woff2",
+                    "sha256": "b9019f3a6e0160865240e9a483843849fa300a9c42a971d58eed87bffeed0d3a",
+                    "bytes": 74340,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7767-7866"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-073.e57479ec4242.woff2",
+                    "sha256": "e57479ec4242eb7a5ab9e9da0269d26c99bbcd3fc3d4669495bc205a24ec2387",
+                    "bytes": 85316,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7867-7966"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-074.9be833daaa6b.woff2",
+                    "sha256": "9be833daaa6bf129c005bb37bb85868236e656d351167b195df85a3a08d9ac5d",
+                    "bytes": 83948,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7967-7A66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-075.a35f1ce03b4f.woff2",
+                    "sha256": "a35f1ce03b4f15e7176344fad2b683afc13d7882a0a869cac0b6ab50e050e3cb",
+                    "bytes": 88624,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7A67-7B66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-076.86b96678e1a3.woff2",
+                    "sha256": "86b96678e1a30ca7954cd4a331bf8b40c0804d572b2984e290418d826453fb75",
+                    "bytes": 102316,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7B67-7C66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-077.de2398cdee86.woff2",
+                    "sha256": "de2398cdee86a3110ccce98f54882c039dd50f3312939ef566d47075c386c9cf",
+                    "bytes": 92828,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7C67-7D66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-078.f4a856861db8.woff2",
+                    "sha256": "f4a856861db8053f6a99edf12d86e9ea3d0e5df710e32b15486cdf1fd846fe03",
+                    "bytes": 111900,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7D67-7E66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-079.c65287084bfa.woff2",
+                    "sha256": "c65287084bfa313bfe0581ad12c76c21060cd3d5d07da5b979c77e1ffa35c596",
+                    "bytes": 103104,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7E67-7F66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-080.d00f846141dc.woff2",
+                    "sha256": "d00f846141dc0077d991ecf92bc9fe8d513e80fedd746ab7b5e2a2d063b94717",
+                    "bytes": 86296,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7F67-8066"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-081.01783105d3d1.woff2",
+                    "sha256": "01783105d3d15dc60d7677a11d591f3ce3c68bcf0c2d4b18148defae84fbb2fd",
+                    "bytes": 78548,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8067-8166"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-082.7174919b35f4.woff2",
+                    "sha256": "7174919b35f4e0971c2e74dc271f268f18aa6f1f44f69f5e1a15d6501c56d61c",
+                    "bytes": 90984,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8167-8266"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-083.7cabae9e8567.woff2",
+                    "sha256": "7cabae9e8567b00ba8862ba13b320d1a74f686c0cdd64207fa11515d19e483f1",
+                    "bytes": 61244,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8267-8366"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-084.e85211d3f990.woff2",
+                    "sha256": "e85211d3f9907f1aafaf6184d3ae77d640d4433ce4228a4d8363cceabcc874f5",
+                    "bytes": 71200,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8367-8466"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-085.b965b639eb39.woff2",
+                    "sha256": "b965b639eb39acc6736b6f474189a74303a0d47f0c2b9be390baeb0a32fc34bc",
+                    "bytes": 88152,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8467-8566"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-086.a70640635c16.woff2",
+                    "sha256": "a70640635c167745100ed7b2e441ef71505a5cea5ce3b18350cc7faff8499e52",
+                    "bytes": 105104,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8567-8666"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-087.11c27ca3df70.woff2",
+                    "sha256": "11c27ca3df70042a339c2e94570de62840a64d7a2d6e529813930c83da445058",
+                    "bytes": 78364,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8667-8766"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-088.e6927f971a36.woff2",
+                    "sha256": "e6927f971a36e76f7d7788b5667929c36b45e9282db1f948129bd2a860d455cb",
+                    "bytes": 99212,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8767-8866"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-089.7bc8656d73a6.woff2",
+                    "sha256": "7bc8656d73a662c0216814f135fe2e012be5231dba38ab7c2a245744023eb37c",
+                    "bytes": 93048,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8867-8966"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-090.a5569328e578.woff2",
+                    "sha256": "a5569328e578c9255ddfebac511f48bc194003debf63c0321373f8af55aab9d1",
+                    "bytes": 83284,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8967-8A66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-091.176ac2b404f7.woff2",
+                    "sha256": "176ac2b404f75db560b322040f47e5821f39a65e438b990f1d71df63923e1cd1",
+                    "bytes": 79076,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8A67-8B66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-092.df6f5a106971.woff2",
+                    "sha256": "df6f5a106971d55602e2c2ae41745a41ba6434960b4a2683ae3ba647be48c24f",
+                    "bytes": 91384,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8B67-8C66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-093.ebe5dc1f41ed.woff2",
+                    "sha256": "ebe5dc1f41ed8a0c3af113469f4ffc2e6544223c2163270c20c642193111b53b",
+                    "bytes": 84308,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8C67-8D66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-094.c1fc9dac3252.woff2",
+                    "sha256": "c1fc9dac325298890507dfe15e5d4dfd0a911994f6cb03cfdacb31f1336b1516",
+                    "bytes": 77404,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8D67-8E66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-095.d820635fa3c1.woff2",
+                    "sha256": "d820635fa3c1257f7e433378e9edd162ee83755c382141bd6adf6f2caae39ef5",
+                    "bytes": 84676,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8E67-8F66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-096.f802fc3c810a.woff2",
+                    "sha256": "f802fc3c810ab6f7813574b00f85a35fc8177ec1934822245ae60ddf93ad23c0",
+                    "bytes": 74984,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8F67-9066"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-097.8bfd4d993760.woff2",
+                    "sha256": "8bfd4d993760b9f5537a659ef6495ec5f1bd41f1f23d7f5caf0f7e2198337833",
+                    "bytes": 89488,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9067-9166"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-098.75240b047645.woff2",
+                    "sha256": "75240b0476459beb7b013c2568e88aa6162582a05c8ee3634ba1435aa3dde9b5",
+                    "bytes": 79624,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9167-9266"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-099.1e4b7dc930d4.woff2",
+                    "sha256": "1e4b7dc930d462a175081cd06805fff1c9f4c32f006d0d60097a1ab9deb3d9af",
+                    "bytes": 83484,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9267-9366"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-100.e76cf1ea2ee4.woff2",
+                    "sha256": "e76cf1ea2ee4b6ba1476ce37c5537cf5115636c648518ed1b1b393faa5fc5c0e",
+                    "bytes": 107196,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9367-9466"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-101.30f65872ef1c.woff2",
+                    "sha256": "30f65872ef1cffad76eee0d0e98e6159b067dbb4b01d0118daad318c4b5dfa5f",
+                    "bytes": 89108,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9467-9566"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-102.16fca1977356.woff2",
+                    "sha256": "16fca19773568c42859a765d6cacc886acb195eea055f28b46541abb6ff1d6df",
+                    "bytes": 73804,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9567-9666"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-103.152af13551b2.woff2",
+                    "sha256": "152af13551b22bc379176d075c52be5d0483391f8b2c9bed52b9528c573a43d2",
+                    "bytes": 87928,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9667-9766"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-104.6064b3e30703.woff2",
+                    "sha256": "6064b3e307031e4ad3d744322bfa342ee9ae89d568bb8d9f97e74d180c3df9ff",
+                    "bytes": 80492,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9767-9866"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-105.18791bf9abd0.woff2",
+                    "sha256": "18791bf9abd0b941df90871cd897c4474a265d4fea2dfc9b3482603e5cb56956",
+                    "bytes": 101252,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9867-9966"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-106.d7f37d6730d7.woff2",
+                    "sha256": "d7f37d6730d79da6002327c9f59c07bdba06b999794322710736d7cec96f01d4",
+                    "bytes": 95288,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9967-9A66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-107.afa9657797b5.woff2",
+                    "sha256": "afa9657797b5faed85517684c927163a0810b79afb2023a5edb91fa06de53dc0",
+                    "bytes": 106564,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9A67-9B66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-108.fdaa9e79534a.woff2",
+                    "sha256": "fdaa9e79534ae52533bda297502cb3e5ea8fba620e7e90a0fa2a7584e2ae5c96",
+                    "bytes": 91628,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9B67-9C66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-109.baf7d95f4570.woff2",
+                    "sha256": "baf7d95f457030f17ae7fbd1327fb2654a237c759c6c96ff8518c58855cd6977",
+                    "bytes": 92980,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9C67-9D66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-110.36c42c8e7051.woff2",
+                    "sha256": "36c42c8e70515fe756d6d86ce8b2e2e4e7e88a3742aece965526331ab5e04414",
+                    "bytes": 111772,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9D67-9E66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-111.93622a9d32e2.woff2",
+                    "sha256": "93622a9d32e21a4704df0cc5596169b9868cdd4c2dc6c99ab97a621722a17828",
+                    "bytes": 110484,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9E67-9F66"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-112.48a1011ef31b.woff2",
+                    "sha256": "48a1011ef31bea40a7b28922d7a729b79083c8353f3ffa05a678361d5aba6887",
+                    "bytes": 90752,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9F67-9FEF,U+F900-F903,U+F905-F906,U+F90B-F90C,U+F915,U+F917-F91A,U+F921,U+F92C-F92D,U+F92F,U+F931-F935,U+F937-F93A,U+F943,U+F947-F94A,U+F94E,U+F952-F953,U+F95E,U+F962-F967,U+F96E,U+F972,U+F974,U+F976,U+F979-F97B,U+F97E-F980,U+F984-F985,U+F98A-F98C,U+F98E,U+F993,U+F995,U+F998,U+F9AE,U+F9B3,U+F9B7,U+F9BB,U+F9BD-F9BE,U+F9C0,U+F9C5-F9C6,U+F9D0,U+F9D8-F9D9,U+F9DC-F9E0,U+F9E2-F9E4,U+F9E7,U+F9E9,U+F9F1,U+F9F4-F9F5,U+F9FA,U+F9FD,U+F9FF,U+FA02,U+FA05-FA08,U+FA0A,U+FA0C-FA0F,U+FA11,U+FA13-FA14,U+FA18,U+FA1F-FA21,U+FA23-FA24,U+FA27-FA29,U+FA2F,U+FA33-FA35,U+FA37-FA38,U+FA3A,U+FA47,U+FA49"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-113.516b24132659.woff2",
+                    "sha256": "516b24132659d0b982347a749666534cf6aa78fa23228c3b3b7950f1e4a4f533",
+                    "bytes": 63156,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+FA4B,U+FA5D-FA5E,U+FB00-FB04,U+FE10-FE19,U+FE30-FE52,U+FE54-FE66,U+FE68-FE6B,U+FF01-FF9F,U+FFA1-FFB5"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-114.64d2bdc13584.woff2",
+                    "sha256": "64d2bdc13584fda02a7d9c9f8aebf06ae42c69f72168ea9446123bcb1b66c9c2",
+                    "bytes": 36176,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+FFB6-FFBE,U+FFC2-FFC7,U+FFCA-FFCF,U+FFD2-FFD7,U+FFDA-FFDC,U+FFE0-FFE6,U+FFE8-FFEE,U+1F100-1F10C,U+1F110-1F16C,U+1F170-1F1AC,U+1F200-1F202,U+1F210-1F239"
+                },
+                {
+                    "file": "subsets/noto-sans-sc-115.69d4a27949a3.woff2",
+                    "sha256": "69d4a27949a3f635498d15fd3b287f760069c627384921f0f41e910f8e1b047a",
+                    "bytes": 82608,
+                    "unicodeCharacters": 233,
+                    "unicodeRange": "U+1F23A-1F23B,U+1F240-1F248,U+1F250-1F251,U+20087,U+20089,U+200CC,U+20164,U+20628,U+20676,U+20CD0,U+2139A,U+21413,U+215D7,U+2298F,U+235CB,U+23C97-23C98,U+23E23,U+241FE,U+2420E,U+248E9,U+249DB,U+24A01,U+24A7D,U+24AC9,U+25532,U+25562,U+255A8,U+25AD7,U+25ED7,U+26221,U+2648D,U+26676,U+2677C,U+26951,U+26B5C,U+26C21,U+278B2,U+27EAF,U+27FB7,U+27FF9,U+28408,U+28678,U+28695,U+287E0,U+28B49,U+28C47,U+28C4F,U+28C51,U+28C54,U+28E0F,U+28E99,U+2967F,U+29810,U+29F7E,U+29F83,U+29F8C,U+2A7DD,U+2A8FB,U+2A917,U+2AA30,U+2AA36,U+2AA58,U+2AFA2,U+2B127-2B128,U+2B137-2B138,U+2B1ED,U+2B300,U+2B363,U+2B36F,U+2B372,U+2B37D,U+2B404,U+2B410,U+2B413,U+2B461,U+2B4E7,U+2B4EF,U+2B4F6,U+2B4F9,U+2B50D-2B50E,U+2B536,U+2B5AE-2B5AF,U+2B5B3,U+2B5E7,U+2B5F4,U+2B61C-2B61D,U+2B626-2B628,U+2B62A,U+2B62C,U+2B695-2B696,U+2B6AD,U+2B6ED,U+2B7A9,U+2B7C5,U+2B7E6,U+2B7F9,U+2B7FC,U+2B806,U+2B80A,U+2B81C,U+2B8B8,U+2BAC7,U+2BB5F,U+2BB62,U+2BB7C,U+2BB83,U+2BC1B,U+2BD77,U+2BD87,U+2BDF7,U+2BE29,U+2C029-2C02A,U+2C0A9,U+2C0CA,U+2C1D5,U+2C1D9,U+2C1F9,U+2C27C,U+2C288,U+2C2A4,U+2C317,U+2C35B,U+2C361,U+2C364,U+2C488,U+2C494,U+2C497,U+2C542,U+2C613,U+2C618,U+2C621,U+2C629,U+2C62B-2C62D,U+2C62F,U+2C642,U+2C64A-2C64B,U+2C72C,U+2C72F,U+2C79F,U+2C7C1,U+2C7FD,U+2C8D9,U+2C8DE,U+2C8E1,U+2C8F3,U+2C907,U+2C90A,U+2C91D,U+2CA02,U+2CA0E,U+2CA7D,U+2CAA9,U+2CB29,U+2CB2D-2CB2E,U+2CB31,U+2CB38-2CB39,U+2CB3B,U+2CB3F,U+2CB41,U+2CB4A,U+2CB4E,U+2CB5A-2CB5B,U+2CB64,U+2CB69,U+2CB6C,U+2CB6F,U+2CB73,U+2CB76,U+2CB78,U+2CB7C,U+2CBB1,U+2CBBF-2CBC0,U+2CBCE,U+2CC56,U+2CC5F,U+2CCF5-2CCF6,U+2CCFD,U+2CCFF,U+2CD02-2CD03,U+2CD0A,U+2CD8B,U+2CD8D,U+2CD8F-2CD90,U+2CD9F-2CDA0,U+2CDA8,U+2CDAD-2CDAE,U+2CDD5,U+2CE18,U+2CE1A,U+2CE23,U+2CE26,U+2CE2A,U+2CE7C,U+2CE88,U+2CE93,U+2D544,U+2F884,U+2F8B6,U+30EDD-30EDE,U+3106C"
+                }
+            ]
+        },
+        {
+            "family": "Noto Serif SC",
+            "sourceFile": "noto-serif-sc.4ee9b0921ec9.woff2",
+            "sourceSha256": "4ee9b0921ec9bd3f8b04587c7bc66c62731045e89d74eec054f37fc7a2d26383",
+            "sourceBytes": 11032420,
+            "unicodeCharacters": 30928,
+            "axes": [
+                {
+                    "tag": "wght",
+                    "minimum": 200.0,
+                    "maximum": 900.0,
+                    "default": 200.0
+                }
+            ],
+            "variationSequences": 25,
+            "shards": [
+                {
+                    "file": "subsets/noto-serif-sc-000.607341912f74.woff2",
+                    "sha256": "607341912f74abbcbe03c92f7b910faf5ee2d6518ee242db0536752341b32630",
+                    "bytes": 245992,
+                    "unicodeCharacters": 1473,
+                    "unicodeRange": "U+20-7E,U+A0-103,U+110-113,U+11A-11B,U+128-12B,U+143-144,U+147-148,U+14C-14F,U+152-153,U+168-16D,U+192,U+1A0-1A1,U+1AF-1B0,U+1CD-1DC,U+1F8-1F9,U+251,U+261,U+2BB,U+2C7,U+2C9-2CB,U+2D9,U+2EA-2EB,U+300-301,U+304,U+307,U+30C,U+391-3A1,U+3A3-3A9,U+3B1-3C9,U+401,U+410-44F,U+451,U+1E3E-1E3F,U+1EA0-1EF9,U+2002-2003,U+2010-2016,U+2018-201A,U+201C-201E,U+2020-2022,U+2025-2027,U+2030,U+2032-2033,U+2035,U+2039-203C,U+2042,U+2047-2049,U+2051,U+2074,U+20A9,U+20AB-20AC,U+20DD-20DE,U+2100,U+2103,U+2105,U+2109-210A,U+210F,U+2113,U+2116,U+2121-2122,U+2126-2127,U+212B,U+212E,U+2135,U+213B,U+2160-216B,U+2170-217B,U+2190-2199,U+21B8-21B9,U+21C4-21C6,U+21CB-21CC,U+21D0,U+21D2,U+21D4,U+21E6-21E9,U+21F5,U+2200,U+2202-2203,U+2205-220B,U+220F,U+2211-2213,U+2215,U+221A,U+221D-2220,U+2223,U+2225-222E,U+2234-2237,U+223D,U+2243,U+2245,U+2248,U+224C,U+2260-2262,U+2264-2267,U+226A-226B,U+226E-226F,U+2272-2273,U+2276-2277,U+2282-2287,U+228A-228B,U+2295-2299,U+22A0,U+22A5,U+22BF,U+22DA-22DB,U+22EF,U+2305-2307,U+2312,U+2318,U+2329-232A,U+23B0-23B1,U+23BE-23CC,U+23CE,U+23DA-23DB,U+2423,U+2460-25AB,U+25B1-25B3,U+25B6-25B7,U+25BC-25BD,U+25C0-25C1,U+25C6-25C7,U+25C9-25CC,U+25CE-25D3,U+25E2-25E6,U+25EF,U+2600-2603,U+2605-2606,U+2609,U+260E-260F,U+2616-2617,U+261C-261F,U+262F,U+2640-2642,U+2660-266F,U+2672-267D,U+26A0,U+26BD-26BE,U+2702,U+2713,U+271A,U+273D,U+273F-2740,U+2756,U+2776-2793,U+27A1,U+2934-2935,U+29BF,U+29FA-29FB,U+2B05-2B07,U+2B1A,U+2B95,U+2E3A-2E3B,U+2E80-2E99,U+2E9B-2EF3,U+2F00-2FD5,U+2FF0-2FFB"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-001.fcb59c20f2fe.woff2",
+                    "sha256": "fcb59c20f2feb6af1b301d668081f4adb8d678b94426d05c8bbda7712bfd8965",
+                    "bytes": 207972,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+3000-303F,U+3041-3096,U+3099-30FF,U+3105-3107"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-002.3802ee62e664.woff2",
+                    "sha256": "3802ee62e6649be51e004eb2cd98e2bdd36f7631f8c536da09d89ca563b96e2b",
+                    "bytes": 61636,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+3108-312F,U+3131-3163,U+3165-318E,U+3190-31BB,U+31C0-31E3,U+31F0-321A"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-003.c7131c5fcddf.woff2",
+                    "sha256": "c7131c5fcddfecfc26bbe4e541a1773495fba297aeab6848a7cdcf1ff7cb1af4",
+                    "bytes": 86936,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+321B-321E,U+3220-331B"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-004.17ce8edaaf71.woff2",
+                    "sha256": "17ce8edaaf7110c531e671029649a6088347d61130c09cb25397dd15518fb8df",
+                    "bytes": 98264,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+331C-332B,U+332D-341C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-005.fe0568ab5f3d.woff2",
+                    "sha256": "fe0568ab5f3da941fbe3052bd7efa2908f65603f1e8c9238df579e0717f2b43e",
+                    "bytes": 106760,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+341D-351C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-006.3df29ccc8282.woff2",
+                    "sha256": "3df29ccc8282c8fbc8f6fc7d1fd454a990c04e8deedf51cf81303c789e446cce",
+                    "bytes": 107772,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+351D-361C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-007.080a22b311bc.woff2",
+                    "sha256": "080a22b311bc37d612d8433151f901059034f5e24ec1a896dcb1eaf934401918",
+                    "bytes": 105012,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+361D-371C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-008.e46536868d4c.woff2",
+                    "sha256": "e46536868d4c79687e74f945256f204e3cd72bdd62a3d5705fabf641d9c2f282",
+                    "bytes": 110744,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+371D-381C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-009.c74c79ab7b86.woff2",
+                    "sha256": "c74c79ab7b8661c15958085d755e9f34ba2c5bef1e128650afb60375ee64c01b",
+                    "bytes": 105392,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+381D-391C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-010.df88e7169c24.woff2",
+                    "sha256": "df88e7169c24fd767ba0b006939ade77a99b79c37ad1dd77db7a2f5f482b795b",
+                    "bytes": 107940,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+391D-3A1C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-011.8bb6fdc18bbd.woff2",
+                    "sha256": "8bb6fdc18bbd326551d24e4923fe89e74f9f8e2f811740d2e249a6b1cef36ddf",
+                    "bytes": 114284,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+3A1D-3B1C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-012.a562cb7b2542.woff2",
+                    "sha256": "a562cb7b25429dcd92b5b528cb5e5d803bcecd3044757259206ec7b59ae87f67",
+                    "bytes": 122364,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+3B1D-3C1C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-013.8a10f5f97baa.woff2",
+                    "sha256": "8a10f5f97baa4ec6d5f152c21f5f52639a8b4159991187713d4af9f12539a361",
+                    "bytes": 115388,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+3C1D-3D1C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-014.99df496f33d1.woff2",
+                    "sha256": "99df496f33d11f6d2f4d92eab90876e37aceb02deaaf0b95a21b4257294c665e",
+                    "bytes": 140244,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+3D1D-3E1C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-015.d14247781860.woff2",
+                    "sha256": "d142477818609f3970586ecaae10de1da091b884af243ed5b24466d1e4cd6da1",
+                    "bytes": 108124,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+3E1D-3F1C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-016.f63f03e03b9c.woff2",
+                    "sha256": "f63f03e03b9c356ed339dd9bf86b01e18c68499e9c75604f995f66aac5cc93d8",
+                    "bytes": 110748,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+3F1D-401C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-017.3a9a283542b2.woff2",
+                    "sha256": "3a9a283542b21868f1e23fe85d6e8e5da33e596a301bb42b0d81f69217af21d1",
+                    "bytes": 106924,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+401D-411C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-018.67dd24253631.woff2",
+                    "sha256": "67dd2425363118953b89a229f365bc6e3b344805e6ada2d5205b297e8e62de81",
+                    "bytes": 111572,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+411D-421C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-019.c4d9b9e28f27.woff2",
+                    "sha256": "c4d9b9e28f275e636c60f9d1211515990e1baa6de1eabb02caeac30bc09da63c",
+                    "bytes": 132144,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+421D-431C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-020.045be5c819d4.woff2",
+                    "sha256": "045be5c819d4c35aa3f1e706f84a051b4f586a93ec8aa76c67fa41e3a577e825",
+                    "bytes": 112884,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+431D-441C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-021.609f09c82e53.woff2",
+                    "sha256": "609f09c82e53ad1122cb7a6eabcc2d05dea0abb8c7014cb3ccefc5f699fd0ad7",
+                    "bytes": 108088,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+441D-451C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-022.fa8a734a15e6.woff2",
+                    "sha256": "fa8a734a15e6178cbdf3c494083bb24d1f5c85ae4091ddec8ab1013b570543de",
+                    "bytes": 136524,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+451D-461C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-023.83e435cbcd34.woff2",
+                    "sha256": "83e435cbcd34263681557a3d621f8c5ec1fd2273d224c38b93cc74cda1426779",
+                    "bytes": 113544,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+461D-471C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-024.9b813895eb73.woff2",
+                    "sha256": "9b813895eb7363b00d118a7f44d69c21f3cf305707435b29669db003c8a14ee2",
+                    "bytes": 114132,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+471D-481C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-025.b4fe1b6412a6.woff2",
+                    "sha256": "b4fe1b6412a6ba1ceabd54887b6b8ad20f5006a499ce3607fa3ccf9581baac36",
+                    "bytes": 115780,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+481D-491C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-026.196ccdab884b.woff2",
+                    "sha256": "196ccdab884be5fc3074ed84111fb1219a3235326582831ccabb2ff17894439f",
+                    "bytes": 121620,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+491D-4A1C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-027.f8c001dba08e.woff2",
+                    "sha256": "f8c001dba08e0332e564c1500816ca904b0954c8e44fb604ce9b0f86109f7985",
+                    "bytes": 121296,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+4A1D-4B1C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-028.faf03c4840ef.woff2",
+                    "sha256": "faf03c4840ef1b78bb6d42dec28ac12a677be5a9b08a3db15ff14503147b8e94",
+                    "bytes": 135280,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+4B1D-4C1C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-029.7a1ac30e01c3.woff2",
+                    "sha256": "7a1ac30e01c331c9379da27b64b45d46cae9e8887029c7603ef2212a6fdc77cd",
+                    "bytes": 132864,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+4C1D-4D1C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-030.9abb793d4cd4.woff2",
+                    "sha256": "9abb793d4cd4c48bf667e4bd15965f406a669cbaea0c1b4cb797ea0f216503db",
+                    "bytes": 112144,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+4D1D-4DBF,U+4E00-4E5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-031.145222244523.woff2",
+                    "sha256": "1452222445236e91d610bb4597e5289d99f86493d38cbe6e3cef523b6ff7f874",
+                    "bytes": 71840,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+4E5D-4F5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-032.98ed6f526c10.woff2",
+                    "sha256": "98ed6f526c109bd9f1e439620a6a33dc9f794e0f99a87778400a4e57d4334ad9",
+                    "bytes": 87116,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+4F5D-505C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-033.a719d39071e9.woff2",
+                    "sha256": "a719d39071e98cf50a8d94d17697b05fce0435a1fe9a055efbceeb3a7d14b4a0",
+                    "bytes": 120032,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+505D-515C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-034.a18642f9df09.woff2",
+                    "sha256": "a18642f9df0951570bd575fc930d08862888fc02208206a7b541453b7b956eea",
+                    "bytes": 89680,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+515D-525C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-035.11863ca10f37.woff2",
+                    "sha256": "11863ca10f376b3a727f3ab8fe9c20a41cbfbcea97af7b0afaedb9ab26487aec",
+                    "bytes": 105088,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+525D-535C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-036.4b2e18c02a4f.woff2",
+                    "sha256": "4b2e18c02a4fa9fcc48bea8639c65a823448fdf9a2336c2fc3c1b1610be59d61",
+                    "bytes": 79960,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+535D-545C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-037.b5372d45d85f.woff2",
+                    "sha256": "b5372d45d85f1fec32cc56253631fb9fc0c5b3d624d6505cfad64c23bba8b7a5",
+                    "bytes": 88180,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+545D-555C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-038.3844a7b5ba9b.woff2",
+                    "sha256": "3844a7b5ba9b12e3e50a215e1632770db29f42a9c12dbd4d88d97a9921ebb0a5",
+                    "bytes": 113096,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+555D-565C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-039.885bb8468a7c.woff2",
+                    "sha256": "885bb8468a7c8c0b594a64101596e3374925190b465c20cd899362bcbfcf3daf",
+                    "bytes": 110952,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+565D-575C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-040.4d073d10f147.woff2",
+                    "sha256": "4d073d10f1471a1ace6ce5ce5256cf75bfc92e56d0e21cb00de50f2b890362d6",
+                    "bytes": 96216,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+575D-585C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-041.8ba2f1fa8be8.woff2",
+                    "sha256": "8ba2f1fa8be897c97bb2a52682d3789330cbe4e2dadd2ffc9957f629d0ed3b60",
+                    "bytes": 112856,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+585D-595C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-042.217c3f0030b9.woff2",
+                    "sha256": "217c3f0030b9b12ac40f8ccd6ec5bd68d23e25e0ad94f6194a9206d623945c1d",
+                    "bytes": 101024,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+595D-5A5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-043.af1b6f794e0c.woff2",
+                    "sha256": "af1b6f794e0c2c4d5f5ce6102aef1a172d8ecc00a1cb13d8b6d93382ad81eb7a",
+                    "bytes": 129852,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5A5D-5B5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-044.3b0169ef401a.woff2",
+                    "sha256": "3b0169ef401aa1b2048b9565d1204eeb865293edd955c799eabf1516ada0e6e3",
+                    "bytes": 102656,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5B5D-5C5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-045.1c6535a344a4.woff2",
+                    "sha256": "1c6535a344a4686ae72380b29a9a0f89e2abcfaebc217230f73bf234e35ab4e8",
+                    "bytes": 96104,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5C5D-5D5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-046.5ac8cc41a8cb.woff2",
+                    "sha256": "5ac8cc41a8cb783550a97c4fee54e6e65fd393b326b0b2ad11a0bf7d2d33e5ab",
+                    "bytes": 118128,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5D5D-5E5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-047.8e726e677b21.woff2",
+                    "sha256": "8e726e677b2142648aac2c59baeb8797b589bfda07bac8624d88ea0436f95d59",
+                    "bytes": 105780,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5E5D-5F5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-048.cec4b7ebf28b.woff2",
+                    "sha256": "cec4b7ebf28b03af86a43aca723e073264aa1e7bb9a424bbf40a9cbb8b109707",
+                    "bytes": 93204,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+5F5D-605C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-049.6c58fe5bc752.woff2",
+                    "sha256": "6c58fe5bc7527478cb6035b08d6154574b8ba16dfb7cc59a14be37c65b17a7aa",
+                    "bytes": 108008,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+605D-615C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-050.51c5be7ab178.woff2",
+                    "sha256": "51c5be7ab178a907ae85a48328addf2e272552a1c0f15d23e49bf20f0463aed5",
+                    "bytes": 127796,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+615D-625C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-051.c9626de8535d.woff2",
+                    "sha256": "c9626de8535d53f81f6724c1f9a9ae0a088356ba8cee4739cafdc6436bcfecf8",
+                    "bytes": 85124,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+625D-635C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-052.ee06b619daef.woff2",
+                    "sha256": "ee06b619daef56e588c7f208de22666a4ad72de679ffbc6c173b6d843012f004",
+                    "bytes": 111320,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+635D-645C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-053.562af75b3505.woff2",
+                    "sha256": "562af75b350527a17d4f92b8000b5ad9d2828ae8286837f01e5787edc817a9d5",
+                    "bytes": 137056,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+645D-655C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-054.94a327338478.woff2",
+                    "sha256": "94a327338478b8bd7d40d6248a190be56112f6e130ff3275ab16c133eaab29ab",
+                    "bytes": 102464,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+655D-665C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-055.9ebcfaa0520d.woff2",
+                    "sha256": "9ebcfaa0520dbbb5757c90202a1a2ef12b3ce2f157b26981c4be19f7938082bc",
+                    "bytes": 103976,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+665D-675C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-056.b5ced6d2fd75.woff2",
+                    "sha256": "b5ced6d2fd7575d871e80c7cc0cb060e21d24601e97112945d6853611e9172fc",
+                    "bytes": 83800,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+675D-685C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-057.dcf152f1ecef.woff2",
+                    "sha256": "dcf152f1ecefca1046e76f784288ed145c468a8bbe82cf9169d59fbe1489afb1",
+                    "bytes": 103172,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+685D-695C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-058.5811b3ad8536.woff2",
+                    "sha256": "5811b3ad8536f7cf1ba0993068a654bf49d26ea47ebf062cc10fc420e0fea611",
+                    "bytes": 122584,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+695D-6A5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-059.3b87f97dad84.woff2",
+                    "sha256": "3b87f97dad848e383d55abaf7369a0b012a6fa8306ee169663f8018d99286e67",
+                    "bytes": 146272,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6A5D-6B5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-060.f7c527298d15.woff2",
+                    "sha256": "f7c527298d1580307cdd0860c47e20e52d8dd12b06b28d252c194844a307f271",
+                    "bytes": 111640,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6B5D-6C5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-061.b9ed164fde7d.woff2",
+                    "sha256": "b9ed164fde7dd4685ce2704ae55ac1fb52a323fe7b8a34f5909e4ac96806e4ff",
+                    "bytes": 96328,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6C5D-6D5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-062.270a99b3d4a2.woff2",
+                    "sha256": "270a99b3d4a2001582bd033769f3cc24f1844c4ec42e7fc150483a121634223a",
+                    "bytes": 114112,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6D5D-6E5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-063.f627c2924d17.woff2",
+                    "sha256": "f627c2924d17295bcced19856924da48c127ea58027ac281db168874f68446e7",
+                    "bytes": 136216,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6E5D-6F5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-064.f7092a5d3413.woff2",
+                    "sha256": "f7092a5d34135a0505b214bf0c70d978c8e06697a56963d6ee578e45bd57a714",
+                    "bytes": 156212,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+6F5D-705C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-065.2461c47a6978.woff2",
+                    "sha256": "2461c47a6978c638e5bbc30c63e033a175b97b34b8b0cb2df74d149a841c24a0",
+                    "bytes": 106860,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+705D-715C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-066.a3fd8af18074.woff2",
+                    "sha256": "a3fd8af180740bbf990ed0838d772514b9728c388e0ea42b62370c1612a37e33",
+                    "bytes": 134816,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+715D-725C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-067.2e098830df72.woff2",
+                    "sha256": "2e098830df7256aaafb394abd27008dbb5ef25f159acca5cdb3c5e78184170af",
+                    "bytes": 104116,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+725D-735C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-068.fc3a909953a7.woff2",
+                    "sha256": "fc3a909953a7b4b3c6a2323bb7b7e72bde5c5c7a1fea2e13f7b3447c56848087",
+                    "bytes": 103864,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+735D-745C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-069.f7b15440c084.woff2",
+                    "sha256": "f7b15440c0846eecd6d056784f4e0bbe0ff7da886b4f6b988fa33ca4ba743509",
+                    "bytes": 120852,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+745D-755C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-070.6f6dce63c95c.woff2",
+                    "sha256": "6f6dce63c95cec1049eecfb703068f18a266e09e95c35a1579943d62754bba25",
+                    "bytes": 105696,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+755D-765C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-071.c43e774467e5.woff2",
+                    "sha256": "c43e774467e5758794685df35e3d5849a5624ed2b9dfc2debf62e2115d2c8b8c",
+                    "bytes": 104372,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+765D-775C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-072.96f166317aed.woff2",
+                    "sha256": "96f166317aed5bae678e53af429cb4291eb72af1f53172e8151d40514755f912",
+                    "bytes": 105416,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+775D-785C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-073.ccc7ed6f0bb9.woff2",
+                    "sha256": "ccc7ed6f0bb9ba4d233d001bea7e720eb1278dd0e0d095c3cc1bb948873920f0",
+                    "bytes": 118348,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+785D-795C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-074.e290362d2d8f.woff2",
+                    "sha256": "e290362d2d8ff643247457378eeff36aa8d7083e99277b571bbe8171b3d80433",
+                    "bytes": 110332,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+795D-7A5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-075.d0e0db11fa3a.woff2",
+                    "sha256": "d0e0db11fa3abf296291c87741d9178fc531f3347829240d687b034f31e8efa3",
+                    "bytes": 117088,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7A5D-7B5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-076.946a8bf4c89c.woff2",
+                    "sha256": "946a8bf4c89c86e11a278aaf8cbba9077c378b5383e839fc61e9abf28670bf2e",
+                    "bytes": 133552,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7B5D-7C5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-077.8e8e066c7665.woff2",
+                    "sha256": "8e8e066c7665ec8ba8d284ce80f71b616d0a9c0efaa3f116e64edc94991fed92",
+                    "bytes": 124936,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7C5D-7D5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-078.dd8d215d1771.woff2",
+                    "sha256": "dd8d215d177177c06c1a49ff4b882bd44e70914039902240739ae05e98182193",
+                    "bytes": 156352,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7D5D-7E5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-079.db1161f3f335.woff2",
+                    "sha256": "db1161f3f33548bc9fd66f9024c13cad70f9ca5fe3db078ff22cf86f6a8ca9ee",
+                    "bytes": 138560,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7E5D-7F5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-080.3a2a0eef1ef4.woff2",
+                    "sha256": "3a2a0eef1ef41b79d955b4005d635764a4b1e4d588b03da25385b47c88215b7a",
+                    "bytes": 117352,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+7F5D-805C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-081.0ccc7ed4ce2c.woff2",
+                    "sha256": "0ccc7ed4ce2c4f66e8119582aad50f415b4a7305fb2b0dbb2d46a6686950b8a4",
+                    "bytes": 97516,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+805D-815C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-082.82c6ff531a8c.woff2",
+                    "sha256": "82c6ff531a8ce10d6c775880ef12414e182110d388ae63acf76dd8620b932032",
+                    "bytes": 122976,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+815D-825C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-083.3bd1ab1c5510.woff2",
+                    "sha256": "3bd1ab1c551043b6e3b86b5c9719fd2f4ec4e22260d99c097bdb252592615937",
+                    "bytes": 87876,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+825D-835C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-084.e221e159fe08.woff2",
+                    "sha256": "e221e159fe08eff6c82dae7a6812e04be907ab26e8022b56c89601f4e896760d",
+                    "bytes": 99588,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+835D-845C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-085.27e570183195.woff2",
+                    "sha256": "27e570183195fa995a8acbf0d84dacb9c14fc33c25c900e670d17f32dec6e00a",
+                    "bytes": 121680,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+845D-855C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-086.cd797bd36fff.woff2",
+                    "sha256": "cd797bd36fff09fa55467cc9a4072a515785264e6f7344e507fa405a2c45c00d",
+                    "bytes": 148368,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+855D-865C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-087.e100015764fd.woff2",
+                    "sha256": "e100015764fde8d8c0b4c799941008d5d9f1c3bf971cb72b06d2c506d096e738",
+                    "bytes": 108360,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+865D-875C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-088.1d8edd8ba448.woff2",
+                    "sha256": "1d8edd8ba448321d619b6fdd3bea7fed10214229fc0f9b0863c8fd88af2e3394",
+                    "bytes": 140248,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+875D-885C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-089.6c280cefe7b2.woff2",
+                    "sha256": "6c280cefe7b2a3f36b320101cf55ec1935a719f353b7e4154f0e23af550d782f",
+                    "bytes": 116224,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+885D-895C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-090.814c0ae7ccd7.woff2",
+                    "sha256": "814c0ae7ccd79c35e711bbbb37ee56f9ba63494161d9e392f07c357c8b9e9699",
+                    "bytes": 113444,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+895D-8A5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-091.28209c3e4de2.woff2",
+                    "sha256": "28209c3e4de2f5b342bc6ca7a9cd1c2ec9cbde867bbbc2cc58c425a6d862ffa9",
+                    "bytes": 106520,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8A5D-8B5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-092.ba508ba2e182.woff2",
+                    "sha256": "ba508ba2e1829e924a0ff20a7ecc90417948233caf48f1c4764961bd293997fe",
+                    "bytes": 118420,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8B5D-8C5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-093.64c73e04f63b.woff2",
+                    "sha256": "64c73e04f63b6bd31c127248e1f66333d97774d7961c0eadcd4c7b638361cd3b",
+                    "bytes": 115316,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8C5D-8D5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-094.4006c90bb437.woff2",
+                    "sha256": "4006c90bb437df28a218d18f1beaf575c146387c8bf05ed0586e4acddc575c10",
+                    "bytes": 107200,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8D5D-8E5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-095.0d9f84a84296.woff2",
+                    "sha256": "0d9f84a84296f738e020a6b1e8348aaf340fc4294beff60a67d2b48e705617fe",
+                    "bytes": 122364,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8E5D-8F5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-096.4229687591e6.woff2",
+                    "sha256": "4229687591e61a54c5fa500f541b35512f04b790dd5c1b1de56fa86fe0a73819",
+                    "bytes": 98008,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+8F5D-905C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-097.9a7d4244751f.woff2",
+                    "sha256": "9a7d4244751fe8ea11e714957688fe7658da76814996ec44275b4cf59fb9fb6e",
+                    "bytes": 120648,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+905D-915C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-098.f08c93107339.woff2",
+                    "sha256": "f08c931073399df0acbfe8a75ed6d08ba183466098a3b7d2dffe58f6e259c89f",
+                    "bytes": 111320,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+915D-925C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-099.f2cb7eda8b0a.woff2",
+                    "sha256": "f2cb7eda8b0a81c975f5e364924c0d474bbbbdf27d720f75e1010d3f3089bf8d",
+                    "bytes": 114540,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+925D-935C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-100.7f8734302e89.woff2",
+                    "sha256": "7f8734302e89cc9cbe6e62724f36b5e5a71a22885d68a541abb66cfc444c84ab",
+                    "bytes": 148300,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+935D-945C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-101.909ef381436e.woff2",
+                    "sha256": "909ef381436e6e918d905aeb96d092f8ebeb370d802d615e7ac9b030955b476d",
+                    "bytes": 122920,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+945D-955C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-102.379e7d6f6b44.woff2",
+                    "sha256": "379e7d6f6b446f168d5d1dc0c748be9d12995c6718eb771c1ddbc33ba4da04bf",
+                    "bytes": 101540,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+955D-965C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-103.4c022f2583bd.woff2",
+                    "sha256": "4c022f2583bda20227bd72df6388617a7fc9e394c38240504b39db42e1113c61",
+                    "bytes": 125224,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+965D-975C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-104.a529c882fa4a.woff2",
+                    "sha256": "a529c882fa4a6a9a97428dc5c1846c90c1aa127fbba6f6491718da2784d57dff",
+                    "bytes": 118340,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+975D-985C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-105.00fddd80cb19.woff2",
+                    "sha256": "00fddd80cb19c5e09de4402860db266bcc82e2cd27952ca246a2ca3ba0271841",
+                    "bytes": 139060,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+985D-995C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-106.c15625d0f046.woff2",
+                    "sha256": "c15625d0f0469d2269978461e03cc87e735cb29eca0c132da3d3e9353eb3bee7",
+                    "bytes": 129916,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+995D-9A5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-107.608b249ea5c9.woff2",
+                    "sha256": "608b249ea5c9f539d39d23d34c6cb8898881f6459bc32bfd9eaa05ae5cbb310d",
+                    "bytes": 145984,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9A5D-9B5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-108.ed14c875b994.woff2",
+                    "sha256": "ed14c875b99430a8824eb148ccf7e2e061a3b30f17f767979e15f7500d236e74",
+                    "bytes": 128444,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9B5D-9C5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-109.0ddbb5f01210.woff2",
+                    "sha256": "0ddbb5f012107138a128ad86f61c22b64ba91a44ef0509e7eb54f74bbc7cf375",
+                    "bytes": 124048,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9C5D-9D5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-110.61088cbe5ffd.woff2",
+                    "sha256": "61088cbe5ffdc83319b71dd547895612520e09ce3bd1c8620120212064b95d97",
+                    "bytes": 146100,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9D5D-9E5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-111.1bba1bd17f0c.woff2",
+                    "sha256": "1bba1bd17f0c3f0c6a83d14aabf604244ad0a4d879eb46aa254f0a1cb40eebb9",
+                    "bytes": 154916,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9E5D-9F5C"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-112.0119df0bc46c.woff2",
+                    "sha256": "0119df0bc46c1d59fadbeec28210019ecf18ce24b294058d2e26ded56e345269",
+                    "bytes": 130748,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+9F5D-9FFF,U+F901-F903,U+F905-F906,U+F90A-F90C,U+F915-F91A,U+F91D-F91F,U+F92C-F92D,U+F92F,U+F931-F935,U+F937,U+F939-F93A,U+F943,U+F947-F948,U+F94A,U+F94E,U+F952-F953,U+F95E,U+F962-F968,U+F96E,U+F972-F974,U+F976,U+F979-F97B,U+F97E-F980,U+F984-F985,U+F98A-F98C,U+F98E,U+F991,U+F993,U+F995,U+F998,U+F99B-F99C,U+F99E-F99F,U+F9A5,U+F9AE,U+F9B5,U+F9B7-F9B8,U+F9BA-F9BB,U+F9BD-F9BE,U+F9C0,U+F9C5-F9C6,U+F9D0,U+F9D8-F9DA,U+F9DC-F9E4"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-113.4bf340c8f0b6.woff2",
+                    "sha256": "4bf340c8f0b6bad3fa4dcca6e7babb6b5cbe81857ab33bea8f88ee82073be956",
+                    "bytes": 102716,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+F9E7,U+F9E9,U+F9F1,U+F9F4-F9F5,U+F9FA-F9FB,U+F9FD,U+F9FF,U+FA02,U+FA05-FA08,U+FA0A,U+FA0C-FA0F,U+FA11,U+FA13-FA14,U+FA18,U+FA1F-FA21,U+FA23-FA24,U+FA27-FA29,U+FA2F,U+FA33-FA35,U+FA37-FA38,U+FA3A,U+FA47,U+FA49,U+FA4B,U+FA5C-FA5E,U+FB00-FB04,U+FE10-FE19,U+FE30-FE52,U+FE54-FE66,U+FE68-FE6B,U+FF01-FF8B"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-114.86c328ce5ae7.woff2",
+                    "sha256": "86c328ce5ae706b48d77f1a7f53b1b35ac7c3d4ea46465fa8fe500df1678c5f4",
+                    "bytes": 47928,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+FF8C-FF9F,U+FFA1-FFBE,U+FFC2-FFC7,U+FFCA-FFCF,U+FFD2-FFD7,U+FFDA-FFDC,U+FFE0-FFE6,U+FFE8-FFEE,U+1F100-1F10C,U+1F110-1F16C,U+1F170-1F1AC,U+1F200-1F202,U+1F210"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-115.af868387e776.woff2",
+                    "sha256": "af868387e776cb3f4609c8858578f54b5dcf1b95366b2c163d2c509de0bd18bd",
+                    "bytes": 107432,
+                    "unicodeCharacters": 256,
+                    "unicodeRange": "U+1F211-1F23B,U+1F240-1F248,U+1F250-1F251,U+20087,U+20089,U+200CC,U+20164,U+20628,U+20676,U+20CD0,U+2139A,U+21413,U+215D7,U+2298F,U+235CB,U+23C97-23C98,U+23E23,U+241FE,U+2420E,U+248E9,U+249DB,U+24A01,U+24A7D,U+24AC9,U+25532,U+25562,U+255A8,U+25ED7,U+26221,U+2648D,U+26676,U+2677C,U+26951,U+26B5C,U+26C21,U+278B2,U+27EAF,U+27FF9,U+28408,U+28678,U+28695,U+287E0,U+28B49,U+28C47,U+28C4F,U+28C51,U+28C54,U+28E0F,U+28E99,U+2967F,U+29810,U+29F7E,U+29F83,U+29F8C,U+2A7DD,U+2A8FB,U+2A917,U+2AA30,U+2AA36,U+2AA58,U+2AFA2,U+2B127-2B128,U+2B137-2B138,U+2B1ED,U+2B300,U+2B363,U+2B36F,U+2B372,U+2B37D,U+2B404,U+2B410,U+2B413,U+2B461,U+2B4E7,U+2B4EF,U+2B4F6,U+2B4F9,U+2B50D-2B50E,U+2B536,U+2B5AE-2B5AF,U+2B5B3,U+2B5E7,U+2B5F4,U+2B61C-2B61D,U+2B626-2B628,U+2B62A,U+2B62C,U+2B695-2B696,U+2B6AD,U+2B6ED,U+2B7A9,U+2B7C5,U+2B7E6,U+2B7F9,U+2B7FC,U+2B806,U+2B80A,U+2B81C,U+2B8B8,U+2BAC7,U+2BB5F,U+2BB62,U+2BB7C,U+2BB83,U+2BC1B,U+2BD77,U+2BD87,U+2BDF7,U+2BE29,U+2C029-2C02A,U+2C0A9,U+2C0CA,U+2C1D5,U+2C1D9,U+2C1F9,U+2C27C,U+2C288,U+2C2A4,U+2C317,U+2C35B,U+2C361,U+2C364,U+2C488,U+2C494,U+2C497,U+2C542,U+2C613,U+2C618,U+2C621,U+2C629,U+2C62B-2C62D,U+2C62F,U+2C642,U+2C64A-2C64B,U+2C72C,U+2C72F,U+2C79F,U+2C7C1,U+2C7FD,U+2C8D9,U+2C8DE,U+2C8E1,U+2C8F3,U+2C907,U+2C90A,U+2C91D,U+2CA02,U+2CA0E,U+2CA7D,U+2CAA9,U+2CB29,U+2CB2D-2CB2E,U+2CB31,U+2CB38-2CB39,U+2CB3B,U+2CB3F,U+2CB41,U+2CB4A,U+2CB4E,U+2CB5A-2CB5B,U+2CB64,U+2CB69,U+2CB6C,U+2CB6F,U+2CB73,U+2CB76,U+2CB78,U+2CB7C,U+2CBB1,U+2CBBF-2CBC0,U+2CBCE,U+2CC56,U+2CC5F,U+2CCF5-2CCF6,U+2CCFD,U+2CCFF,U+2CD02-2CD03,U+2CD0A,U+2CD8B,U+2CD8D,U+2CD8F-2CD90,U+2CD9F-2CDA0,U+2CDA8,U+2CDAD"
+                },
+                {
+                    "file": "subsets/noto-serif-sc-116.c609b6deb7c2.woff2",
+                    "sha256": "c609b6deb7c226db1a0bc55a319ef77225c69a0b35803a03b2b946d6b6764984",
+                    "bytes": 10252,
+                    "unicodeCharacters": 15,
+                    "unicodeRange": "U+2CDAE,U+2CDD5,U+2CE18,U+2CE1A,U+2CE23,U+2CE26,U+2CE2A,U+2CE7C,U+2CE88,U+2CE93,U+2D544,U+2F878,U+2F884,U+2F8B6,U+2F920"
+                }
+            ]
+        },
+        {
+            "family": "DM Serif Display",
+            "sourceFile": "dm-serif-display.7e6679d41e35.woff2",
+            "sourceSha256": "7e6679d41e35437090560e0367e6546f10b71c5792fa168b177e302cf009b66c",
+            "sourceBytes": 32024,
+            "unicodeCharacters": 333,
+            "axes": [],
+            "variationSequences": 0,
+            "shards": [
+                {
+                    "file": "dm-serif-display.7e6679d41e35.woff2",
+                    "sha256": "7e6679d41e35437090560e0367e6546f10b71c5792fa168b177e302cf009b66c",
+                    "bytes": 32024,
+                    "unicodeCharacters": 333,
+                    "unicodeRange": "U+D,U+20-7E,U+A0-107,U+10C-113,U+116-11B,U+11E-11F,U+122-123,U+12A-12B,U+12E-131,U+136-137,U+139-148,U+14C-14D,U+150-15B,U+15E-165,U+16A-16B,U+16E-173,U+178-17E,U+218-21B,U+2C6-2C7,U+2D8-2DD,U+300-304,U+306-308,U+30A-30C,U+326-328,U+2013-2014,U+2018-201A,U+201C-201E,U+2020-2022,U+2026,U+2030,U+2039-203A,U+2044,U+2074,U+20AC,U+20BD,U+2122,U+212E,U+2212,U+2215,U+2219,U+2248,U+2260,U+2264-2265"
+                }
+            ]
+        }
+    ]
+}

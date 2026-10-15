@@ -24,3 +24,10 @@ output/
 
 # pi 运行态（目标池 / 运行账本），不是项目源码
 .pi/
+
+# 双平台隔离构建与本地演示缓存
+dist-edgeone/
+.edgeone-build/
+.edgeone/
+.edgeone-local/
+.data-release-test/

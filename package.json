@@ -2,7 +2,7 @@
   "name": "class1forever.github.io",
   "version": "1.0.0",
   "description": "蹭饭地图",
-  "//": "本地开发与测试：`npm run dev` = astro dev（Astro 开发服务器，绑定走本地模拟，KV 是本地数据；注意仓库根的旧 index.html 会遮蔽它，前端核对请走 dev:local）；`npm run dev:local` = 无 Cloudflare 凭据的完整通路（先由 dist 派生本地配置 + 写入本地 KV 夹具，再起 wrangler dev，演示口令 demo，需先 npm run build）；`npm run seed:local` 只写本地 KV；`npm run test:api` 用同一个本地通路跑四路由契约断言（也需先 npm run build）。门禁：`npm run build` = node build.js（静态安全断言 + astro check + astro build + 产物扫描，单入口）；`npm run check:runtime` = 起一次本地 Worker，断言渲染页无内联脚本、文档响应与静态资产的安全头逐条一致、.dev.vars 等路径不可请求；`npm run check` = build + check:runtime + test:api 全套。`npm run cf:dev` = wrangler dev（读 wrangler.jsonc 的 KV remote:true → 连远端 KV，需要 Cloudflare 凭据），`npm run preview` = 先构建再用 Worker 运行时预览产物。改动 wrangler.jsonc 的绑定后请重跑 `npm run cf:types`（= wrangler types）刷新 worker-configuration.d.ts。",
+  "//": "Cloudflare: check = build + runtime + API; dev:local uses local demo KV and passphrase demo, never remote credentials. EdgeOne: build:edgeone emits isolated static/function inputs; check:edgeone uses built-bundle Node HTTP fixtures, not real Makers runtime. check:dual runs both. data:publish is offline prepare/verify/verify-readback only. Production deploy/data/secrets/DNS remain separate approval gates; see docs/dual-deployment-runbook.md.",
   "engines": {
     "node": ">=22.12.0"
   },
@@ -21,7 +21,21 @@
     "cf:types": "wrangler types",
     "cf:types:check": "wrangler types --check",
     "data:upload": "node scripts/upload-kv-data.mjs",
-    "data:upload:preview": "node scripts/upload-kv-data.mjs --env preview"
+    "data:upload:preview": "node scripts/upload-kv-data.mjs --env preview",
+    "build:edgeone": "node scripts/build-edgeone.mjs",
+    "dev:edgeone:fixture": "node scripts/edgeone-local.mjs",
+    "test:api:edgeone": "node scripts/test-edgeone.mjs",
+    "check:edgeone": "npm run build:edgeone && npm run test:api:edgeone && node scripts/check-edgeone-runtime.mjs && node --test tests/edgeone-adapter.test.mjs tests/data-release.test.mjs tests/font-subsets.test.mjs",
+    "data:publish": "node scripts/data-release.mjs",
+    "test:geodns": "node --test tests/geodns-preflight.test.mjs",
+    "test:session": "node --test tests/same-host-session.test.mjs",
+    "dev:same-host:fixture": "node scripts/same-host-local.mjs",
+    "preflight:geodns": "node scripts/geodns-preflight.mjs",
+    "fonts:check": "node scripts/check-font-subsets.mjs",
+    "fonts:generate": "python scripts/font-subsets.py generate",
+    "check:dual:assets": "node --test tests/dual-assets.test.mjs && node scripts/sync-dual-assets.mjs && node build.js --artifacts-only && node scripts/build-edgeone.mjs --artifacts-only",
+    "test:production": "node --test tests/production-deploy.test.mjs",
+    "check:dual": "npm run check && npm run check:edgeone && npm run test:geodns && npm run test:session && npm run check:dual:assets && npm run test:production"
   },
   "author": "",
   "license": "MIT",

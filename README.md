@@ -1,14 +1,20 @@
 # class1forever
 
-班级同学分布地图。公开页面只展示省市聚合统计；姓名和学校信息通过 Cloudflare Worker + KV 在口令验证后按地区读取。
+班级同学分布地图。公开页面只展示省市聚合统计；姓名和学校信息在口令验证后按地区读取。生产使用 Cloudflare Worker + KV 与 EdgeOne Makers + 私有 KV，通过华为云地域 DNS 共用 `map.calvin-xia.cn`。
+
+双平台命令：`npm run check:dual`、`npm run build:edgeone`、`npm run dev:edgeone:fixture`。状态、上线确认与回滚见 [双平台实施操作包](docs/dual-deployment-runbook.md)，数据工具见 [数据发布操作包](docs/data-release-runbook.md)。
+
+最新线上状态见 [正式分流验收](docs/production-readiness-20261015.md)。推送 main 自动串行发布 CF Worker 与 EO 正式项目，保留数据、密钥和 DNS，并协调新旧公开脚本；见 [CI 发布协议](docs/ci-deployment.md)。`npm run dev:same-host:fixture`、[GeoDNS 预检](docs/geodns-preflight.md) 与 [完整字体分片](docs/font-subsets.md) 提供本地验证路径。
 
 Forked from [lvris/map](https://github.com/lvris/map)
 
 ## 访问地址
 
-- Cloudflare Pages（切换前的线上形态）: https://class1forever.pages.dev/
+- 当前 Cloudflare Worker：[蹭饭地图](https://class1forever.calvin-xia.workers.dev/)
+- 正式地址：[map.calvin-xia.cn](https://map.calvin-xia.cn/)，华为云中国大陆线路 → EO，全网默认 → CF。两端 TLS/正式 API 已验收，部分 ECS 选路与长期续期仍待观察。
+- 原 `class1forever.calvin-xia.cn` 已有 CNAME，保留不改；国家 302 与独立 cn/global 为备选/回滚，未因文档调整自动启用。
 
-本分支已经把部署面改成 **Cloudflare Worker + Workers Assets**。生产域名切换与 Pages 下线由人工执行，
+已合并的迁移将部署面改成 **Cloudflare Worker + Workers Assets**。原 Pages 资源保留，本次双平台域名切换由用户确认后执行；历史迁移
 命令、密钥、KV 核对、回滚与人工步骤见 `docs/cutover-runbook.md`。
 
 ## 当前架构
@@ -241,8 +247,7 @@ KV 绑定沿用 `CLASS_MAP_DATA` 的同一个 `id` / `preview_id`，两个数据
 **Pages 项目保留到人工确认后再下线**。完整的切换包（密钥清单、KV 核对、回滚、发布后检查项、
 人工步骤 M1–M10）见 `docs/cutover-runbook.md`。
 
-切换前的线上形态仍是 `main` 分支的 Pages 站点：推送到 `main` 会触发 Pages 的自动部署；
-Worker 的 Git 集成/production branch 属人工配置项。
+上方命令保留为早期单 Worker 迁移参考；当前双端生产更新使用 [main 协调发布](docs/ci-deployment.md)，不要用裸 `wrangler deploy` 覆盖已上线的路由/激活配置。
 
 ## 推送前检查
 

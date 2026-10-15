@@ -45,9 +45,17 @@ function normalizeQueryCity(city: unknown): string | null {
     return normalized;
 }
 
+/** 未激活版本时保留旧键回滚；坏配置不静默退回旧版。 */
+export function datasetKey(env: Env, kind: 'raw' | 'public'): string {
+    const release = env.DATA_RELEASE_ID;
+    if (release === undefined || release === '') return DATA_KEYS[kind];
+    if (!/^[A-Za-z0-9_]{1,64}$/.test(release)) throw new Error('Invalid data release configuration.');
+    return `students_${kind}_${release}`;
+}
+
 /** 读公开聚合（students:public:v1）。 */
 export async function loadPublicDataset(env: Env): Promise<PublicDataset> {
-    const dataset = await env.CLASS_MAP_DATA.get<PublicDataset>(DATA_KEYS.public, 'json');
+    const dataset = await env.CLASS_MAP_DATA.get<PublicDataset>(datasetKey(env, 'public'), 'json');
     if (!dataset || typeof dataset !== 'object') {
         throw new Error('Public map dataset is not configured in KV.');
     }
@@ -57,7 +65,7 @@ export async function loadPublicDataset(env: Env): Promise<PublicDataset> {
 
 /** 读明细并归一化（students:raw:v1）。 */
 export async function loadRawStudents(env: Env): Promise<Student[]> {
-    const students = await env.CLASS_MAP_DATA.get(DATA_KEYS.raw, 'json');
+    const students = await env.CLASS_MAP_DATA.get(datasetKey(env, 'raw'), 'json');
     if (!students) {
         throw new Error('Raw student dataset is not configured in KV.');
     }

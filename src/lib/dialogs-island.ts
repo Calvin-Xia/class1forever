@@ -22,14 +22,15 @@
 import { closeFocusScope, focusScopeDepth, openFocusScope } from './focus-scope';
 import type { FocusScopeEntry } from './focus-scope';
 import { renderDetailCard, renderLoadingCard } from './dialog-cards';
-import { fetchRegionDetails, normalizeApiErrorMessage, postLogout, postPassphrase, regionCacheKey } from './dialog-api';
+import { fetchJson, fetchRegionDetails, normalizeApiErrorMessage, postLogout, postPassphrase } from './dialog-api';
+import { advanceSessionRevision, watchSessionChanges } from './session-sync';
 import { renderPublicCardHtml } from './tooltip-card';
 import { getPointRegion } from './map-model';
 import type { RegionPoint } from './map-model';
 import { getMapState, MAP_EVENT_NAMES, onMapEvent, setDetailModeState, setOverlayOpenProbe } from './map-bridge';
 import type { DetailModeState, RegionActivationDetail } from './map-bridge';
 import { activateRegion } from './map-island';
-import type { DetailsPayload } from './types';
+import type { DetailsPayload, PublicMapPayload } from './types';
 import { initRegionLedger } from './region-ledger';
 import type { RegionLedgerController } from './region-ledger';
 
@@ -86,8 +87,9 @@ const state = {
     sheetScope: null as FocusScopeEntry | null,
     authScope: null as FocusScopeEntry | null,
     pendingPoint: null as RegionPoint | null,
-    detailsCache: new Map<string, DetailsPayload>(),
     detailRequestVersion: 0,
+    sessionVersion: 0,
+    sessionSync: null as ReturnType<typeof watchSessionChanges> | null,
     /** 上一次视野的省名：只有真正换视野（下钻/返回）才关抽屉，同视野刷新数据不关。 */
     lastProvince: null as string | null,
     disposers: [] as Array<() => void>,
@@ -208,7 +210,9 @@ function closeSheet(): void {
 
     dom.sheet.classList.remove('active');
     dom.overlay.classList.remove('active');
+    if (state.currentMode !== 'public' && dom.content) dom.content.textContent = '';
     state.currentMode = 'public';
+    state.detailRequestVersion += 1;
     // 收起后立刻把按钮移出焦点序列，不能等到下次打开才处理。
     updateSheetButtons();
 
@@ -410,8 +414,12 @@ async function handleAuthSubmit(event: Event): Promise<void> {
     }
     setAuthFeedback('正在确认口令...', null);
 
+    invalidateDetailAccess();
+    const sessionVersion = state.sessionVersion;
     try {
         await postPassphrase(passphrase);
+        state.sessionSync?.notify();
+        if (sessionVersion !== state.sessionVersion) return;
 
         const pendingPoint = state.pendingPoint;
         setDetailModeState({ access: true, enabled: true });
@@ -419,9 +427,10 @@ async function handleAuthSubmit(event: Event): Promise<void> {
         closeAuthModal();
 
         if (pendingPoint) {
-            await showDetailSheetForPoint(pendingPoint, true);
+            await showDetailSheetForPoint(pendingPoint);
         }
     } catch (error) {
+        if (sessionVersion !== state.sessionVersion) return;
         let message = normalizeApiErrorMessage(error, '暂时无法确认口令，请稍后再试。');
         const apiError = error as { status?: number; payload?: { remainingAttempts?: unknown } };
         if (apiError && apiError.payload && typeof apiError.payload.remainingAttempts === 'number' && apiError.status === 401) {
@@ -443,15 +452,18 @@ async function clearDetailSession(): Promise<void> {
     }
 }
 
-function revokeDetailAccess(message?: string): void {
+function invalidateDetailAccess(): void {
+    advanceSessionRevision();
+    state.sessionVersion += 1;
+    state.detailRequestVersion += 1;
     setDetailModeState({ access: false, enabled: false });
-    state.detailsCache.clear();
     updateDetailsButton();
     hideSensitive();
+}
 
-    clearDetailSession().catch((error: unknown) => {
-        console.warn('Failed to clear detail session:', error);
-    });
+function revokeDetailAccess(message?: string): void {
+    // 401/切线只使本页失效，不发 logout：迟到的 401 不应删除另一标签刚登录的 Cookie。
+    invalidateDetailAccess();
 
     if (message) {
         state.pendingPoint = state.currentPoint;
@@ -463,22 +475,20 @@ function revokeDetailAccess(message?: string): void {
  * 详情拉取
  * ------------------------------------------------------------------ */
 
-async function showDetailSheetForPoint(point: RegionPoint, forceRefresh: boolean): Promise<void> {
+async function showDetailSheetForPoint(point: RegionPoint): Promise<void> {
     state.detailRequestVersion += 1;
     const requestVersion = state.detailRequestVersion;
     showLoading(point);
 
     try {
         const region = getPointRegion(point, activeProvince());
-        const cacheKey = regionCacheKey(region);
-        const cached = !forceRefresh ? state.detailsCache.get(cacheKey) : undefined;
-        const payload = cached || (await fetchRegionDetails(region));
+        // 每次通过当前线路鉴权，不复用另一条线路/旧会话留下的明细缓存。
+        const payload = await fetchRegionDetails(region);
 
         if (requestVersion !== state.detailRequestVersion) {
             return;
         }
 
-        state.detailsCache.set(cacheKey, payload);
         showDetail(point, payload);
     } catch (error) {
         if (requestVersion !== state.detailRequestVersion) {
@@ -546,6 +556,8 @@ function toggleDetailMode(): void {
     if (detail.enabled) {
         // 退出查看 = 结束口令会话：清除 Cookie 与本地缓存，再次查看需重新输入口令。
         revokeDetailAccess();
+        state.sessionSync?.notify();
+        clearDetailSession().then(() => state.sessionSync?.notify());
         return;
     }
 
@@ -554,7 +566,7 @@ function toggleDetailMode(): void {
 
     const currentPoint = state.currentPoint;
     if (sheetIsActive() && currentPoint) {
-        showDetailSheetForPoint(currentPoint, false).catch((error: unknown) => {
+        showDetailSheetForPoint(currentPoint).catch((error: unknown) => {
             console.error('Failed to refresh detail sheet after enabling detail mode:', error);
         });
     }
@@ -603,7 +615,7 @@ function bindEvents(): void {
 
             setDetailModeState({ enabled: true });
             updateDetailsButton();
-            showDetailSheetForPoint(point, state.currentMode === 'detail').catch((error: unknown) => {
+            showDetailSheetForPoint(point).catch((error: unknown) => {
                 console.error('Bottom sheet primary action failed:', error);
             });
         };
@@ -678,7 +690,7 @@ function bindEvents(): void {
 
             const mode = detailState();
             if (mode.enabled && mode.access) {
-                showDetailSheetForPoint(point, false).catch((error: unknown) => {
+                showDetailSheetForPoint(point).catch((error: unknown) => {
                     console.error('Failed to show detail sheet for point:', error);
                 });
                 return;
@@ -769,7 +781,7 @@ export function readDialogsProbe(): DialogsProbeReadings {
         overlayOpen: authIsOpen() || sheetIsActive(),
         detailMode: detailState(),
         ledger: ledgerState,
-        detailsCacheSize: state.detailsCache.size,
+        detailsCacheSize: 0,
         pendingPoint: state.pendingPoint ? state.pendingPoint.name : null,
         inertElements: [dom.pageWrapper, dom.sheet]
             .filter((element): element is HTMLElement => Boolean(element && element.inert))
@@ -795,6 +807,32 @@ export function bootDialogsIsland(): void {
     setOverlayOpenProbe(() => authIsOpen() || sheetIsActive());
 
     bindEvents();
+    state.sessionSync = watchSessionChanges(invalidateDetailAccess);
+    state.disposers.push(() => { state.sessionSync?.dispose(); state.sessionSync = null; });
+    const recheckSession = async (): Promise<void> => {
+        if (document.visibilityState !== 'visible') return;
+        // 返回标签页/BFCache 后先隐藏已有明细，再向当前选中端复核，网络失败保持关闭。
+        invalidateDetailAccess();
+        const version = state.sessionVersion;
+        try {
+            const payload = await fetchJson<PublicMapPayload>('/api/map/public');
+            if (version !== state.sessionVersion) return;
+            setDetailModeState({ available: payload.detailModeAvailable, access: payload.detailAccess });
+        } catch { /* 当前线路无法确认时不显示旧明细。 */ }
+    };
+    const onVisibility = (): void => {
+        if (document.visibilityState === 'hidden') invalidateDetailAccess();
+        else void recheckSession();
+    };
+    const onFocus = (): void => { void recheckSession(); };
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('pageshow', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+    state.disposers.push(() => {
+        window.removeEventListener('focus', onFocus);
+        window.removeEventListener('pageshow', onFocus);
+        document.removeEventListener('visibilitychange', onVisibility);
+    });
     updateDetailsButton();
 
     // 首屏就把状态同步给地图侧：详情模式是否可用决定点省份是下钻还是开面板。
@@ -828,7 +866,7 @@ export function destroyDialogsIsland(): void {
     state.currentPoint = null;
     state.currentMode = 'public';
     state.pendingPoint = null;
-    state.detailsCache.clear();
+    state.sessionVersion += 1;
     state.detailRequestVersion = 0;
     state.lastProvince = null;
 }

@@ -30,7 +30,7 @@ export function normalizeApiErrorMessage(error: unknown, fallback: string): stri
 }
 
 export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-    const requestInit: RequestInit = Object.assign({ credentials: 'same-origin' as const }, init || {});
+    const requestInit: RequestInit = Object.assign({ credentials: 'same-origin' as const, cache: 'no-store' as const }, init || {});
     const response = await fetch(url, requestInit);
     let payload: unknown = null;
 

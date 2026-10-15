@@ -13,6 +13,8 @@ import type { Env } from './types';
 
 const encoder = new TextEncoder();
 
+// 保留 Cloudflare/旧站 Cookie 契约。同 Host 下两端共享此槽位并互相覆盖；
+// 每端仍只接受本站密钥，切线重登。客户端不得把 401 自动转成 logout 写 Cookie。
 export const COOKIE_NAME = 'detail_session';
 export const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 export const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
@@ -161,7 +163,7 @@ export async function getRateLimitCount(
     env: Env,
     request: Request
 ): Promise<{ key: string; count: number }> {
-    const key = getRateLimitKey(getClientIp(request));
+    const key = getRateLimitKey(env.trustedClientIp || getClientIp(request));
     const count = await env.CLASS_MAP_DATA.get(key);
     return {
         key,
