@@ -11,6 +11,8 @@ import toolEnvironment from './local-tool-env.cjs';
 
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const WORK = path.join(ROOT, '.wrangler/production');
+/** 最近进入的阶段（含「刚打印 publishing、还没写 result.json」的那一步），失败时写进证据。 */
+let lastPhase = null;
 const config = JSON.parse(fs.readFileSync(path.join(ROOT, 'config/production.json'), 'utf8'));
 /* 仓库地址从 package.json 派生，避免在脚本里再硬编码一份 git remote（workflow 里那份只用于
    发布前的并发判定，这里是发布中的第二次判定，两者必须指向同一个仓库）。 */
@@ -96,19 +98,6 @@ export async function coordinatedDeploy(actions) {
     await actions.verifyFinal();
 }
 
-async function cfApi(suffix) {
-    check(process.env.CLOUDFLARE_API_TOKEN, 'MISSING_CLOUDFLARE_API_TOKEN');
-    if (process.env.CLOUDFLARE_ACCOUNT_ID) check(process.env.CLOUDFLARE_ACCOUNT_ID === config.accountId, 'CLOUDFLARE_ACCOUNT_MISMATCH');
-    const r = await fetch('https://api.cloudflare.com/client/v4' + suffix, { headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` }, signal: AbortSignal.timeout(20000) });
-    const j = await r.json(); check(r.ok && j.success, `CLOUDFLARE_API_${r.status}`); return j.result;
-}
-
-async function eoApi(Action, fields) {
-    check(process.env.EDGEONE_API_TOKEN, 'MISSING_EDGEONE_API_TOKEN');
-    const r = await fetch('https://pages-api.cloud.tencent.com/v1', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.EDGEONE_API_TOKEN}` }, body: JSON.stringify({ Action, ...fields }), signal: AbortSignal.timeout(20000) });
-    const j = await r.json(); check(r.ok && j.Data?.Response && !j.Data.Response.Error, `EDGEONE_API_${r.status}`); return j.Data.Response;
-}
-
 /* 读取函数都接受一个可注入的 API 实现（默认就是走真实 HTTPS 的 cfApi / eoApi）：
    这样 tests/ 可以用固定 payload 验证「派生出什么」与「守卫在什么时候中止」，
    而不是把生产网络或真实账号拖进单元测试。 */
@@ -137,6 +126,72 @@ export async function edgeoneProductionDeployment(api = eoApi) {
 }
 
 const probeHeaders = { 'User-Agent': 'classmap-production-ci/1.0', Accept: '*/*' };
+/* 控制面读取的超时与重试。20 s 对「刚发布完的 EO 控制面」偏紧（部署后列部署往往要十几秒），
+   而且瞬时 5xx/网络抖动会让整个非原子切换在第一个阶段就中止；只读调用重试是安全的，
+   破坏性动作（CLI 发布）绝不重试。 */
+const API_TIMEOUT_MS = 45000;
+const API_RETRY_ATTEMPTS = 3;
+const API_RETRY_DELAYS_MS = [500, 1000];
+
+/** 只读控制面调用的有界重试：最后一次仍失败就抛出（保留分类码）。 */
+async function withReadRetry(operation) {
+    let lastError;
+    for (let attempt = 0; attempt < API_RETRY_ATTEMPTS; attempt += 1) {
+        try {
+            return await operation();
+        } catch (error) {
+            lastError = error;
+            if (attempt < API_RETRY_ATTEMPTS - 1) await new Promise(resolve => setTimeout(resolve, API_RETRY_DELAYS_MS[attempt] || 1000));
+        }
+    }
+    throw lastError;
+}
+
+/** 传输失败的分类码：超时与不可达分开，便于从 result.json 直接判断是平台慢还是网络不通。 */
+function transportCode(prefix, error) {
+    return prefix + (error && error.name === 'TimeoutError' ? 'TIMEOUT' : 'UNREACHABLE');
+}
+
+async function cfApi(suffix) {
+    check(process.env.CLOUDFLARE_API_TOKEN, 'MISSING_CLOUDFLARE_API_TOKEN');
+    if (process.env.CLOUDFLARE_ACCOUNT_ID) check(process.env.CLOUDFLARE_ACCOUNT_ID === config.accountId, 'CLOUDFLARE_ACCOUNT_MISMATCH');
+    return withReadRetry(async () => {
+        let response;
+        try {
+            response = await fetch('https://api.cloudflare.com/client/v4' + suffix, { headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}` }, signal: AbortSignal.timeout(API_TIMEOUT_MS) });
+        } catch (error) {
+            throw new Error(transportCode('CLOUDFLARE_API_', error));
+        }
+        let payload;
+        try {
+            payload = await response.json();
+        } catch (_error) {
+            throw new Error(`CLOUDFLARE_API_INVALID_BODY_${response.status}`);
+        }
+        check(response.ok && payload.success, `CLOUDFLARE_API_${response.status}`);
+        return payload.result;
+    });
+}
+
+export async function eoApi(Action, fields) {
+    check(process.env.EDGEONE_API_TOKEN, 'MISSING_EDGEONE_API_TOKEN');
+    return withReadRetry(async () => {
+        let response;
+        try {
+            response = await fetch('https://pages-api.cloud.tencent.com/v1', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.EDGEONE_API_TOKEN}` }, body: JSON.stringify({ Action, ...fields }), signal: AbortSignal.timeout(API_TIMEOUT_MS) });
+        } catch (error) {
+            throw new Error(transportCode('EDGEONE_API_', error));
+        }
+        let payload;
+        try {
+            payload = await response.json();
+        } catch (_error) {
+            throw new Error(`EDGEONE_API_INVALID_BODY_${response.status}`);
+        }
+        check(response.ok && payload.Data?.Response && !payload.Data.Response.Error, `EDGEONE_API_${response.status}`);
+        return payload.Data.Response;
+    });
+}
 
 export function responseDiagnostic(platform, response) {
     const html = response.bytes.toString('utf8');
@@ -239,20 +294,34 @@ function runCli(script, args, extraEnvironment, label) {
     for (const secret of [process.env.CLOUDFLARE_API_TOKEN, process.env.EDGEONE_API_TOKEN].filter(Boolean)) output = output.replaceAll(secret, 'REDACTED');
     output = output.replace(/eo_token=[^&"\s]+/g, 'eo_token=REDACTED');
     fs.writeFileSync(path.join(WORK, label + '.private.log'), output);
-    if (child.status !== 0) console.error(output.split('\n').filter(line => /error|permission|authentication|unauthorized|forbidden|code:/i.test(line)).join('\n').slice(-2000));
+    if (child.status !== 0) {
+        /* 只打印过滤后的行；过滤后为空时至少把「CLI 到底有没有失败、以什么方式失败」写出来 ——
+           否则一个非零退出会跟后面的读回校验失败长得一模一样（2026-10-16 的线上失败就无法区分）。 */
+        const filtered = output.split('\n').filter(line => /error|permission|authentication|unauthorized|forbidden|code:/i.test(line)).join('\n').slice(-2000);
+        if (filtered.trim()) console.error(filtered);
+        else console.error(JSON.stringify({ phase: label, status: 'cli-failed', exit: child.status, signal: child.signal || null, spawnError: (child.error && child.error.code) || null }));
+    }
     check(child.status === 0, label.toUpperCase().replaceAll('-', '_') + '_FAILED'); return output;
 }
 
-async function deployEdgeone(directory, label, environment = 'production', dependencies = {}) {
+/** 发布一个已编译的 EO 包并读回校验（导出以便单元测试注入 describe/run/verifyProject）。 */
+export async function deployEdgeone(directory, label, environment = 'production', dependencies = {}) {
     const { verifyProject = edgeoneProject, describe = eoApi, run = runCli } = dependencies;
     await verifyProject(); // Never allow CLI's implicit project creation.
     check(process.env.EDGEONE_CLI_ENTRY && fs.existsSync(process.env.EDGEONE_CLI_ENTRY), 'EDGEONE_CLI_MISSING');
     console.log(JSON.stringify({ phase: label, status: 'publishing', projectId: config.edgeoneProjectId }));
+    lastPhase = label;
     check(path.basename(directory) === '.edgeone', 'EDGEONE_PRECOMPILED_DIRECTORY_REQUIRED');
     const output = run(process.env.EDGEONE_CLI_ENTRY, ['makers', 'deploy', directory, '--name', config.edgeoneProject, '--token', process.env.EDGEONE_API_TOKEN, '--env', environment, '--skip-ai-gateway-sync', '--json'], {}, label);
     const id = output.match(/"deploymentId":"([a-z0-9]+)"/)?.[1]; check(id, 'EDGEONE_DEPLOYMENT_ID_MISSING');
     const live = await describe('DescribePagesDeployments', { ProjectId: config.edgeoneProjectId, Offset: 0, Limit: 5, OrderBy: 'CreatedOn', Order: 'Desc' });
-    check(live.Deployments.some(x => x.DeploymentId === id && x.Status === 'Success' && x.Env === (environment === 'preview' ? 'Preview' : 'Production')), 'EDGEONE_DEPLOYMENT_NOT_SUCCESS');
+    /* 曾经这里直接 `live.Deployments.some(...)`：控制面偶尔回一个没有 Deployments 数组的
+       响应，于是 TypeError 被顶层 catch 归类成不可诊断的 PRODUCTION_DEPLOY_FAILED
+       （2026-10-16 那次线上发布就是死在这里，而 CLI 其实已经发布成功）。显式守卫，
+       让「响应形状不对」变成可分类、可重试的 EDGEONE_DEPLOYMENTS_MISSING。 */
+    const deployments = Array.isArray(live?.Deployments) ? live.Deployments : null;
+    check(deployments, 'EDGEONE_DEPLOYMENTS_MISSING');
+    check(deployments.some(x => x.DeploymentId === id && x.Status === 'Success' && x.Env === (environment === 'preview' ? 'Preview' : 'Production')), 'EDGEONE_DEPLOYMENT_NOT_SUCCESS');
     console.log(JSON.stringify({ phase: label, deploymentId: id, projectId: config.edgeoneProjectId }));
     if (environment === 'preview') {
         const result = output.split(/\r?\n/).filter(line => line.startsWith('{')).map(line => { try { return JSON.parse(line); } catch { return {}; } }).find(x => x.deploymentId === id);
@@ -315,7 +384,7 @@ export async function deploy(dependencies = {}) {
     assertUnchangedSincePrepare(await edgeoneProduction(), before.edgeoneProductionDeployment, 'EDGEONE_PRODUCTION_CHANGED_SINCE_PREPARE');
     assertUnchangedSincePrepare((await edgeone()).ProjectId, before.edgeoneProjectId, 'EDGEONE_PROJECT_CHANGED_SINCE_PREPARE');
     const result = { sha: environment.GITHUB_SHA, release: before.cloudflare.release, phases: [] }; write('result.json', result);
-    const record = (phase, fields = {}) => { result.phases.push({ phase, ...fields }); write('result.json', result); };
+    const record = (phase, fields = {}) => { lastPhase = phase; result.phases.push({ phase, ...fields }); write('result.json', result); };
     await coordinatedDeploy({
         async edgeoneCompatibility() { record('edgeone-compatibility', { deploymentId: await deployEdgeone(path.join(WORK, 'edgeone-compatibility/.edgeone'), 'edgeone-compatibility') }); },
         async verifyEdgeoneAssets() {
@@ -326,6 +395,7 @@ export async function deploy(dependencies = {}) {
         },
         async cloudflare() {
             console.log(JSON.stringify({ phase: 'cloudflare', status: 'publishing', worker: config.worker }));
+            lastPhase = 'cloudflare';
             const output = runCli(path.join(ROOT, 'node_modules/wrangler/bin/wrangler.js'), ['deploy', '--config', path.join(WORK, 'wrangler.json'), '--keep-vars'], { CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID: config.accountId }, 'cloudflare');
             const version = output.match(/Current Version ID: ([a-f0-9-]+)/)?.[1]; check(version, 'CLOUDFLARE_VERSION_MISSING'); record('cloudflare', { version });
         },
@@ -365,6 +435,21 @@ export async function deploy(dependencies = {}) {
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
     const commands = { diagnose: diagnoseTransport, prepare, 'stage-compatibility': stageCompatibility, 'verify-preview': verifyPreview, deploy };
     Promise.resolve().then(() => { check(process.argv.length === 3 && Object.hasOwn(commands, process.argv[2]), 'INVALID_PRODUCTION_COMMAND'); return commands[process.argv[2]](); }).catch(error => {
-        console.error(JSON.stringify({ error: /^[A-Z0-9_]+$/.test(error.message) ? error.message : 'PRODUCTION_DEPLOY_FAILED' })); process.exitCode = 1;
+        const classified = /^[A-Z0-9_]+$/.test(error.message);
+        /* 未分类的错误只暴露 error.name（TypeError / TimeoutError …），绝不打印 message：
+           它可能带 URL、服务器响应片段或凭据。同时把失败写进会作为 artifact 上传的
+           result.json —— 上一次线上失败就只有一行 PRODUCTION_DEPLOY_FAILED，无从判断。 */
+        const cause = error instanceof Error && /^[A-Za-z]{1,32}$/.test(error.name) ? error.name.toUpperCase() : 'UNKNOWN';
+        const code = classified ? error.message : 'PRODUCTION_DEPLOY_FAILED';
+        console.error(JSON.stringify({ error: code, phase: lastPhase || null, ...(classified ? {} : { cause }) }));
+        try {
+            const file = path.join(WORK, 'result.json');
+            if (fs.existsSync(file)) {
+                const current = JSON.parse(fs.readFileSync(file, 'utf8'));
+                current.failure = { code, cause, phase: lastPhase || null };
+                fs.writeFileSync(file, JSON.stringify(current, null, 2) + '\n');
+            }
+        } catch (_ignored) { /* 证据写入失败不能掩盖原始失败 */ }
+        process.exitCode = 1;
     });
 }
