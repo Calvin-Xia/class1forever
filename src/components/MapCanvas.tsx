@@ -25,7 +25,13 @@ import { getMapState, MAP_EVENT_NAMES } from '../lib/map-bridge';
 
 declare global {
     interface Window {
-        /** 验收 / 调试探针（只读 + 激活入口，不暴露内部状态对象本身）。 */
+        /**
+         * 验收 / 调试探针（只读 + 激活入口，不暴露内部状态对象本身）。
+         *
+         * **这是验收脚本契约**：生产页也暴露 `__mapProbe`，外部（l3_parity /
+         * Playwright 证据脚本）按这九个字段读取运行时读数。字段只能加，
+         * 不能改名或删除；页面自身不依赖它（AGENTS.md「Security & Data Rules」）。
+         */
         __mapProbe?: {
             read: typeof readMapProbe;
             points: typeof readViewPoints;

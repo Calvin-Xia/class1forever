@@ -80,10 +80,6 @@ export function getPointRegion(point: RegionPoint | null | undefined, activeProv
     };
 }
 
-export function getRegionKey(region: Region): string {
-    return region.city ? `${region.province}::${region.city}` : `${region.province}::*`;
-}
-
 export function getPointCount(point: RegionPoint | null | undefined): number {
     return Number(point && point.value ? point.value : 0);
 }
@@ -342,13 +338,37 @@ export function pointInRing(x: number, y: number, ring: ArrayLike<ArrayLike<numb
     return inside;
 }
 
-/** 数据坐标 → 地区名（只判外环；飞地孔洞在点击精度内没有意义）。 */
-export function regionNameAtDataPoint(geoJson: GeoJson | null, x: number, y: number): string | null {
+/**
+ * 数据坐标 → **所有**命中的地区名，按 `geoJson.features` 的顺序（只判外环；
+ * 飞地孔洞在点击精度内没有意义）。
+ *
+ * 为什么要「全部」：一个像素可能同时落在多个 feature 的环内（实测全国数据里
+ * 「南海诸岛」本身就有两个 feature，120×120 采样确实出现同一像素命中两个的情况），
+ * 而验收探针的网格扫描沿用旧实现「全部收下」的语义 —— 只取第一个会让某些地区的
+ * 候选像素凭空消失。
+ *
+ * `accept` 是可选的**前置过滤**（网格扫描用它做包围盒粗筛）：回调只回答
+ * 「这个 feature 还要不要判」，返回 false 表示「不可能命中」。它必须是既不过滤掉
+ * 真正命中的几何、也不改变命中顺序的保守判定，否则结果会与全量判定不一致。
+ */
+export function regionNamesAtDataPoint(
+    geoJson: GeoJson | null,
+    x: number,
+    y: number,
+    accept?: (feature: GeoFeature, index: number) => boolean
+): string[] {
     if (!geoJson || !Array.isArray(geoJson.features)) {
-        return null;
+        return [];
     }
 
-    for (const feature of geoJson.features) {
+    const names: string[] = [];
+
+    for (let index = 0; index < geoJson.features.length; index += 1) {
+        const feature = geoJson.features[index];
+        if (accept && !accept(feature, index)) {
+            continue;
+        }
+
         const name = normalizeRegionToken((feature.properties || {}).name);
         if (!name) {
             continue;
@@ -368,10 +388,25 @@ export function regionNameAtDataPoint(geoJson: GeoJson | null, x: number, y: num
             }
             const ring = polygon[0];
             if (Array.isArray(ring) && ring.length > 0 && pointInRing(x, y, ring as ArrayLike<ArrayLike<number>>)) {
-                return name;
+                names.push(name);
+                break;
             }
         }
     }
 
-    return null;
+    return names;
+}
+
+/**
+ * 数据坐标 → 地区名（第一个命中的 feature，与 ECharts 的「最上层」判定不同：
+ * 这里按 GeoJSON 顺序，触屏兜底只需要一个名字）。
+ */
+export function regionNameAtDataPoint(
+    geoJson: GeoJson | null,
+    x: number,
+    y: number,
+    accept?: (feature: GeoFeature, index: number) => boolean
+): string | null {
+    const names = regionNamesAtDataPoint(geoJson, x, y, accept);
+    return names.length > 0 ? names[0] : null;
 }

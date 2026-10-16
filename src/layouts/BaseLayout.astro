@@ -48,7 +48,10 @@ const { title, description } = Astro.props;
             动效代码落到 /_astro/motion.<hash>.js，在 CSP 下正常加载。
         -->
         <script>
-            import('../scripts/motion');
+            import('../scripts/motion').catch(() => {
+                // 动效是锦上添花：拿不到就静默降级（不显示 #cdn-error ——
+                // 地图本身还能用，为动效盖一块全屏错误面板是更差的结果）。
+            });
         </script>
     </body>
 </html>

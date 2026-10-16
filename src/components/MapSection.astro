@@ -96,10 +96,41 @@ import Icon from './Icon.astro';
                  它的两个挂载点分别在本区的 #share-btn 与页脚的 #interaction-note。
                  不用 `client:only` 是因为 Astro 岛屿水合会注入**内联** script，
                  被 `_headers` 的 `script-src 'self'` 拦下（实测两个内联脚本被拒）。
-                 用动态 import 让 Astro 产出外链 chunk，CSP 下才能正常加载。 -->
+                 用动态 import 让 Astro 产出外链 chunk，CSP 下才能正常加载。
+
+                 本段 script 标签会被 Astro 编成**入口 chunk**，页面一定会执行到它，
+                 所以「资源加载失败」的兜底必须写在这里（#11）：
+                 岛屿是动态 import 挂载的，chunk 拿不到时那边的兜底代码根本不会跑，
+                 「重新加载」按钮就成了死链。只静态引用 map-fatal-error（零依赖的小模块），
+                 不把 ECharts / 几何数据拖进入口 chunk。 -->
             <script>
-                import('../scripts/map-island-boot');
-                import('../scripts/share-boot');
+                import { revealMapFatalError } from '../scripts/map-fatal-error';
+
+                const CHUNK_LOAD_FAILED = '地图脚本加载失败，请检查网络连接后重新加载。';
+
+                // 绑定放在入口 chunk：面板由谁显示（岛屿崩了 / chunk 404 / 预加载失败）都能点。
+                document.getElementById('cdn-error-retry')?.addEventListener('click', () => {
+                    window.location.reload();
+                });
+
+                // Vite 在 chunk 预加载失败时派发这个事件（`__vitePreload` 的 catch 分支）。
+                // 有些失败不会变成下面 import 的 rejection，例如深层 modulepreload 链接。
+                // 事件本身不带「是哪个 chunk」，所以文案要对任何岛屿都成立；下面精确的
+                // `.catch`（事件先派发、rejection 后到达）会把更准确的说明覆盖上去。
+                // 不能 preventDefault：那样 Vite 不再抛出，下面的 .catch 就永远收不到了。
+                window.addEventListener('vite:preloadError', () => {
+                    revealMapFatalError('页面脚本加载失败，请检查网络连接后重新加载。', '资源加载失败');
+                });
+
+                import('../scripts/map-island-boot').catch(() => {
+                    revealMapFatalError(CHUNK_LOAD_FAILED);
+                });
+
+                // 分享只是附加能力，但失败同样不能是静默的（#12）：给同一块面板一个
+                // 说清范围的文案，而不是假装地图也没了。
+                import('../scripts/share-boot').catch(() => {
+                    revealMapFatalError('分享功能脚本加载失败，请重新加载页面。', '分享功能加载失败');
+                });
             </script>
 
             <a

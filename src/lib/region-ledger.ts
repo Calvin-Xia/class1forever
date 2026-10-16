@@ -51,6 +51,46 @@ export function initRegionLedger(deps: RegionLedgerDeps): RegionLedgerController
     const rowPoints = new Map<string, RegionPoint>();
     let rowCount = 0;
 
+    /**
+     * 当前焦点所在的地区名（只在焦点确实落在表体的行按钮上时返回）。
+     *
+     * `render()` 是整表 `innerHTML` 重写，被点那行的按钮对象会被换掉，焦点掉回 `<body>`；
+     * 读屏与键盘用户于是「按了一下就找不着北」。所以重渲染前先记住 data-region。
+     */
+    function focusedRowRegion(): string | null {
+        if (!body) {
+            return null;
+        }
+        const active = document.activeElement;
+        if (!active || !body.contains(active)) {
+            return null;
+        }
+        const button = active.closest('button[data-region]');
+        return button ? button.getAttribute('data-region') : null;
+    }
+
+    /** 重渲染后把焦点交还给同一地区的新按钮（原来那个已经被 innerHTML 换掉了）。 */
+    function restoreRowFocus(region: string | null): void {
+        if (!region || !body) {
+            return;
+        }
+        // 焦点已经落在表体里的新元素上（例如别处提前接管了焦点）就不要抢。
+        const active = document.activeElement;
+        if (active && body.contains(active)) {
+            return;
+        }
+
+        const buttons = body.querySelectorAll('button[data-region]');
+        for (let index = 0; index < buttons.length; index += 1) {
+            const button = buttons[index] as HTMLElement;
+            if (button.getAttribute('data-region') === region) {
+                button.focus();
+                return;
+            }
+        }
+        // 地区已经不在当前视野里：不强留焦点，保持浏览器默认行为。
+    }
+
     /** 行内按钮的可访问名要说清「按下去会发生什么」，两条路径的措辞要和实际行为对上。 */
     function regionActionLabel(point: RegionPoint): string {
         const canDrill = Boolean(point.drilldownFile) && !deps.getActiveProvince();
@@ -123,6 +163,7 @@ export function initRegionLedger(deps: RegionLedgerDeps): RegionLedgerController
         }
 
         const rows = sortedRows();
+        const previouslyFocusedRegion = focusedRowRegion();
         rowPoints.clear();
         rowCount = rows.length;
 
@@ -150,6 +191,8 @@ export function initRegionLedger(deps: RegionLedgerDeps): RegionLedgerController
         `;
             })
             .join('');
+
+        restoreRowFocus(previouslyFocusedRegion);
     }
 
     // 行按钮是动态生成的，用事件委托，重建表格后不需要重新绑定。

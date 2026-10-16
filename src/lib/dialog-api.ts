@@ -54,11 +54,6 @@ export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> 
     return payload as T;
 }
 
-/** 详情缓存的键：省级用 `省::*`，城市用 `省::市`（与旧站 `getRegionKey` 一致）。 */
-export function regionCacheKey(region: Region): string {
-    return region.city ? `${region.province}::${region.city}` : `${region.province}::*`;
-}
-
 /** `GET /api/map/details`：按地区取明细。401 由调用方分流成「重新输入口令」。 */
 export async function fetchRegionDetails(region: Region): Promise<DetailsPayload> {
     if (!region.province) {
