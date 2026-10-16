@@ -30,9 +30,15 @@ const edgeoneTarget = process.env.API_TARGET === 'edgeone';
 
 import { normalizeStudents, sortPeople } from '../shared/data-model.mjs';
 
-// 端口避开 8788（`npm run dev:local` 默认）与 8790–8799（同一批次里别的节点会用）；
-// 可用 TEST_PORT 覆盖。
+// 端口分配（同一 job 里绝不重复用同一个端口：Windows 上 TIME_WAIT 或残留的 workerd 会让
+// 下一次 bind 直接失败，报 `os error 10013`——这曾经让同一 `check:dual` 里的 test:session
+// 偶发红）。当前占用表：
+//   8787 wrangler dev 默认 · 8788 dev:local · 8789 edgeone 夹具 · 8791 same-host 网关
+//   8890 本文件主夹具 · 8891 本文件空 KV 夹具 · 8892 same-host 夹具 worker
+//   8895 本文件并发夹具 · 8899 check:runtime
+// 主夹具可用 TEST_PORT 覆盖，并发夹具可用 TEST_CONCURRENT_PORT 覆盖。
 const PORT = Number(process.env.TEST_PORT || 8890);
+const CONCURRENT_PORT = Number(process.env.TEST_CONCURRENT_PORT || 8895);
 // 与 src/lib/auth.ts 的 RATE_LIMIT_MAX_ATTEMPTS 保持一致（该文件是 TS，node:test 不直接 import）。
 const RATE_LIMIT_MAX_ATTEMPTS = 10;
 // 并发用例需要一份「限流窗口干净」的本地 KV：与主夹具的 state-test 分开，避免两个写者抢 SQLite。
@@ -204,7 +210,7 @@ describe('POST /api/auth/details 限流并发（复核裁定 #1）', () => {
             : await (async () => {
                 resetLocalState(LOCAL_RATE_STATE_DIR);
                 return startLocalServer({
-                    port: PORT + 2,
+                    port: CONCURRENT_PORT,
                     configPath: LOCAL_CONFIG_PATH,
                     persistTo: LOCAL_RATE_STATE_DIR
                 });
