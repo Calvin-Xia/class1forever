@@ -116,11 +116,36 @@ function resolvedDestination(destination) {
     return path.join(realpathSync(ancestor), ...suffix);
 }
 
+/**
+ * 叶节点本体不能是符号链接（复核裁定 #20）。
+ * `lstatSync` 不跟随链接，所以悬空链接也会被识别出来；目标不存在时直接放行，
+ * 交给创建（`flag: 'wx'`）/ 读取路径自己报错。判断依据是文件系统事实，不是文本比较。
+ */
+function rejectSymlinkLeaf(target) {
+    let stats;
+    try {
+        stats = lstatSync(target);
+    } catch (_error) {
+        return;
+    }
+    requireCondition(!stats.isSymbolicLink(), 'BUNDLE_SYMLINK_FORBIDDEN');
+}
+
 export function assertPrivatePath(destination) {
-    const resolved = resolvedDestination(destination);
+    const target = path.resolve(destination);
+    rejectSymlinkLeaf(target);
+    const resolved = resolvedDestination(target);
     const relative = path.relative(REPO, resolved);
     requireCondition(relative !== '' && (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)), 'PATH_MUST_BE_OUTSIDE_REPOSITORY');
     return resolved;
+}
+
+/** 私有包里的一个文件：本体不能是链接，且真实父目录必须是包目录本身。 */
+function bundleFilePath(directory, file) {
+    const target = path.join(directory, file);
+    rejectSymlinkLeaf(target);
+    requireCondition(path.dirname(realpathSync(target)) === realpathSync(directory), 'BUNDLE_SYMLINK_FORBIDDEN');
+    return target;
 }
 
 export function writeRelease(directory, release) {
@@ -137,13 +162,10 @@ export function writeRelease(directory, release) {
 export function readRelease(directory) {
     const destination = assertPrivatePath(directory);
     const files = [...Object.values(FILES), 'manifest.private.json'];
-    for (const file of files) {
-        requireCondition(!lstatSync(path.join(destination, file)).isSymbolicLink(), 'BUNDLE_SYMLINK_FORBIDDEN');
-        requireCondition(path.dirname(realpathSync(path.join(destination, file))) === realpathSync(destination), 'BUNDLE_SYMLINK_FORBIDDEN');
-    }
+    const paths = Object.fromEntries(files.map((file) => [file, bundleFilePath(destination, file)]));
     const release = {
-        manifest: parse(readFileSync(path.join(destination, 'manifest.private.json'))),
-        payloads: Object.fromEntries(Object.entries(FILES).map(([kind, file]) => [kind, readFileSync(path.join(destination, file))]))
+        manifest: parse(readFileSync(paths['manifest.private.json'])),
+        payloads: Object.fromEntries(Object.entries(FILES).map(([kind, file]) => [kind, readFileSync(paths[file])]))
     };
     verifyRelease(release);
     return release;
@@ -167,10 +189,25 @@ async function recordState(state, record) {
     if (record) await record(structuredClone(state));
 }
 
+/**
+ * 发布状态机必须留下日志（复核裁定 #21）。
+ * 生产路径必须显式传入 `record`；确需无日志（例如纯离线自检）时必须显式写
+ * `{ allowMissingJournal: true }`，不允许因为「忘了传」而静默丢掉整条激活轨迹。
+ */
+function requireJournal(record, allowMissingJournal) {
+    requireCondition(typeof record === 'function' || allowMissingJournal === true, 'JOURNAL_RECORD_REQUIRED');
+}
+
+/** 真实原因优先（复核裁定 #15）：ReleaseError 的 code 是固定字符串，不含任何敏感内容。 */
+function failureCode(error, fallback) {
+    return error instanceof ReleaseError ? error.code : fallback;
+}
+
 // No vendor API is guessed here. Only a caller-supplied, explicitly authorized adapter can write.
-export async function stageRelease(release, adapters, { record } = {}) {
+export async function stageRelease(release, adapters, { record, allowMissingJournal } = {}) {
     verifyRelease(release);
     validateAdapters(adapters);
+    requireJournal(record, allowMissingJournal);
     const state = {
         releaseId: release.manifest.releaseId, status: 'staging',
         platforms: Object.fromEntries(PLATFORMS.map((platform) => [platform, { uploaded: false, verified: false, activated: false, rollback: 'not_needed' }]))
@@ -186,10 +223,10 @@ export async function stageRelease(release, adapters, { record } = {}) {
                 requireCondition(existing === null || existing instanceof Uint8Array, 'INVALID_READBACK_TYPE');
                 requireCondition(existing === null || digest(existing) === entry.sha256, 'RELEASE_ID_COLLISION');
             }
-        } catch {
+        } catch (error) {
             state.status = 'partial_failure';
             state.failedPlatform = platform;
-            state.failure = 'PREFLIGHT_FAILED';
+            state.failure = failureCode(error, 'PREFLIGHT_FAILED');
             await recordState(state, record);
             return state;
         }
@@ -204,10 +241,10 @@ export async function stageRelease(release, adapters, { record } = {}) {
             await verifyReadback(release, adapters[platform]);
             state.platforms[platform].verified = true;
             await recordState(state, record);
-        } catch {
+        } catch (error) {
             state.status = 'partial_failure';
             state.failedPlatform = platform;
-            state.failure = 'STAGING_OR_JOURNAL_FAILED';
+            state.failure = failureCode(error, 'STAGING_OR_JOURNAL_FAILED');
             await recordState(state, record);
             return state;
         }
@@ -217,9 +254,10 @@ export async function stageRelease(release, adapters, { record } = {}) {
     return state;
 }
 
-export async function activateRelease(release, staged, adapters, { record } = {}) {
+export async function activateRelease(release, staged, adapters, { record, allowMissingJournal } = {}) {
     verifyRelease(release);
     validateAdapters(adapters, true);
+    requireJournal(record, allowMissingJournal);
     requireCondition(staged?.releaseId === release.manifest.releaseId && staged.status === 'verified' &&
         PLATFORMS.every((platform) => staged.platforms?.[platform]?.verified), 'BOTH_PLATFORMS_MUST_BE_VERIFIED');
     const state = structuredClone(staged);
@@ -243,9 +281,9 @@ export async function activateRelease(release, staged, adapters, { record } = {}
         }
         state.status = 'succeeded';
         await recordState(state, record);
-    } catch {
+    } catch (error) {
         state.status = 'partial_failure';
-        state.failure = 'ACTIVATION_OR_PROBE_OR_JOURNAL_FAILED';
+        state.failure = failureCode(error, 'ACTIVATION_OR_PROBE_OR_JOURNAL_FAILED');
         for (const platform of attempted.reverse()) {
             try {
                 await adapters[platform].restore(state.platforms[platform].previousReleaseId);
@@ -306,10 +344,7 @@ async function main(argv) {
             await verifyReadback(release, {
                 get: async (key) => {
                     const kind = Object.keys(FILES).find((name) => release.manifest.values[name].key === key);
-                    const filename = path.join(directory, FILES[kind]);
-                    requireCondition(!lstatSync(filename).isSymbolicLink(), 'BUNDLE_SYMLINK_FORBIDDEN');
-                    requireCondition(path.dirname(realpathSync(filename)) === realpathSync(directory), 'BUNDLE_SYMLINK_FORBIDDEN');
-                    return readFileSync(filename);
+                    return readFileSync(bundleFilePath(directory, FILES[kind]));
                 }
             });
         }

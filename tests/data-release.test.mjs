@@ -1,17 +1,22 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import {
     activateRelease, assertPrivatePath, createRelease, DEMO_STUDENTS, MAX_VALUE_BYTES,
-    readRelease, releaseKeys, stageRelease, verifyReadback, verifyRelease, writeRelease
+    readRelease, ReleaseError, releaseKeys, stageRelease, verifyReadback, verifyRelease, writeRelease
 } from '../scripts/data-release.mjs';
 
 const GENERATED_AT = '2026-10-14T00:00:00.000Z';
 const script = path.resolve('scripts/data-release.mjs');
+/**
+ * 显式声明「本轮用例不检查日志内容」：生产路径必须给出 record（复核裁定 #21），
+ * 所以不再有「省略 opts 就能悄悄无日志」的写法。
+ */
+const journal = { record: async () => {} };
 function fixture() {
     return createRelease(DEMO_STUDENTS, { releaseId: 'demo_20261014', generatedAt: GENERATED_AT, sourceTag: 'demo_fixture' });
 }
@@ -108,19 +113,19 @@ test('staging copies identical bytes, verifies both platforms and performs no ac
 test('second upload failure is partial and does not activate the first side', async () => {
     const adapters = platforms();
     adapters.edgeone.put = async () => { throw new Error('vendor-error-private-marker-secret'); };
-    const state = await stageRelease(fixture(), adapters);
+    const state = await stageRelease(fixture(), adapters, journal);
     assert.equal(state.status, 'partial_failure');
     assert.equal(state.platforms.cloudflare.verified, true);
     assert.equal(state.platforms.edgeone.uploaded, false);
     assert.equal(await adapters.cloudflare.currentRelease(), 'previous_demo');
     assert.equal(JSON.stringify(state).includes('private-marker'), false);
-    await assert.rejects(activateRelease(fixture(), state, adapters), /BOTH_PLATFORMS_MUST_BE_VERIFIED/);
+    await assert.rejects(activateRelease(fixture(), state, adapters, journal), /BOTH_PLATFORMS_MUST_BE_VERIFIED/);
 });
 
 test('missing or stale remote readback cannot pass by upload exit code alone', async () => {
     const adapters = platforms();
     adapters.edgeone.get = async (key) => adapters.edgeone.values.has(key) ? Buffer.from('[]') : null;
-    const state = await stageRelease(fixture(), adapters);
+    const state = await stageRelease(fixture(), adapters, journal);
     assert.equal(state.status, 'partial_failure');
     assert.equal(state.platforms.edgeone.uploaded, true);
     assert.equal(state.platforms.edgeone.verified, false);
@@ -131,20 +136,21 @@ test('release ID collision is caught on both sides before any write; matching by
     const adapters = platforms();
     const key = fixture().manifest.values.raw.key;
     adapters.edgeone.values.set(key, Buffer.from('retained-previous-version'));
-    const blocked = await stageRelease(fixture(), adapters);
+    const blocked = await stageRelease(fixture(), adapters, journal);
     assert.equal(blocked.status, 'partial_failure');
-    assert.equal(blocked.failure, 'PREFLIGHT_FAILED');
+    // 复核裁定 #15：真实原因（ReleaseError 的固定 code）不再被兜底码盖掉。
+    assert.equal(blocked.failure, 'RELEASE_ID_COLLISION');
     assert.equal(adapters.cloudflare.values.size, 0);
     assert.equal(adapters.edgeone.values.get(key).toString(), 'retained-previous-version');
     adapters.edgeone.values.clear();
-    assert.equal((await stageRelease(fixture(), adapters)).status, 'verified');
-    assert.equal((await stageRelease(fixture(), adapters)).status, 'verified');
+    assert.equal((await stageRelease(fixture(), adapters, journal)).status, 'verified');
+    assert.equal((await stageRelease(fixture(), adapters, journal)).status, 'verified');
 });
 
 test('activation requires fresh matching bytes and verified runtime probes on both sides', async () => {
     const adapters = platforms();
-    const staged = await stageRelease(fixture(), adapters);
-    const state = await activateRelease(fixture(), staged, adapters);
+    const staged = await stageRelease(fixture(), adapters, journal);
+    const state = await activateRelease(fixture(), staged, adapters, journal);
     assert.equal(state.status, 'succeeded');
     assert.equal(await adapters.cloudflare.currentRelease(), 'demo_20261014');
     assert.equal(await adapters.edgeone.currentRelease(), 'demo_20261014');
@@ -153,21 +159,21 @@ test('activation requires fresh matching bytes and verified runtime probes on bo
 
 test('a stale journal cannot activate after a platform value changes', async () => {
     const adapters = platforms();
-    const staged = await stageRelease(fixture(), adapters);
+    const staged = await stageRelease(fixture(), adapters, journal);
     adapters.edgeone.values.clear();
-    await assert.rejects(activateRelease(fixture(), staged, adapters), /READBACK_HASH_MISMATCH/);
+    await assert.rejects(activateRelease(fixture(), staged, adapters, journal), /READBACK_HASH_MISMATCH/);
     assert.equal(await adapters.cloudflare.currentRelease(), 'previous_demo');
 });
 
 test('failure after the second activation changes state rolls both sides back, never reports success', async () => {
     const adapters = platforms();
-    const staged = await stageRelease(fixture(), adapters);
+    const staged = await stageRelease(fixture(), adapters, journal);
     const activate = adapters.edgeone.activate;
     adapters.edgeone.activate = async (id) => {
         await activate(id);
         throw new Error('activation changed deployment then failed');
     };
-    const state = await activateRelease(fixture(), staged, adapters);
+    const state = await activateRelease(fixture(), staged, adapters, journal);
     assert.equal(state.status, 'partial_failure');
     for (const platform of ['cloudflare', 'edgeone']) {
         assert.equal(state.platforms[platform].rollback, 'verified');
@@ -179,10 +185,10 @@ test('failure after the second activation changes state rolls both sides back, n
 test('a failed runtime probe also causes rollback; legacy null release can be restored', async () => {
     const adapters = platforms();
     await adapters.cloudflare.restore(null);
-    const staged = await stageRelease(fixture(), adapters);
+    const staged = await stageRelease(fixture(), adapters, journal);
     const probe = adapters.edgeone.probe;
     adapters.edgeone.probe = async (id) => id === 'demo_20261014' ? false : probe(id);
-    const state = await activateRelease(fixture(), staged, adapters);
+    const state = await activateRelease(fixture(), staged, adapters, journal);
     assert.equal(state.status, 'partial_failure');
     assert.equal(state.platforms.cloudflare.previousReleaseId, null);
     assert.equal(await adapters.cloudflare.currentRelease(), null);
@@ -191,16 +197,78 @@ test('a failed runtime probe also causes rollback; legacy null release can be re
 
 test('failed rollback remains explicit and a write-journal failure stops activation', async () => {
     const adapters = platforms();
-    const staged = await stageRelease(fixture(), adapters);
+    const staged = await stageRelease(fixture(), adapters, journal);
     adapters.edgeone.activate = async () => { throw new Error('failed'); };
     adapters.cloudflare.restore = async () => { throw new Error('failed'); };
-    const state = await activateRelease(fixture(), staged, adapters);
+    const state = await activateRelease(fixture(), staged, adapters, journal);
     assert.equal(state.status, 'partial_failure');
     assert.equal(state.platforms.cloudflare.rollback, 'failed');
     const untouched = platforms();
-    const ready = await stageRelease(fixture(), untouched);
+    const ready = await stageRelease(fixture(), untouched, journal);
     await assert.rejects(activateRelease(fixture(), ready, untouched, { record: async () => { throw new Error('journal unavailable'); } }));
     assert.equal(await untouched.cloudflare.currentRelease(), 'previous_demo');
+});
+
+test('production staging and activation require an explicit journal, or an explicit opt-out', async () => {
+    await assert.rejects(stageRelease(fixture(), platforms()), /JOURNAL_RECORD_REQUIRED/);
+    const adapters = platforms();
+    const staged = await stageRelease(fixture(), adapters, journal);
+    await assert.rejects(activateRelease(fixture(), staged, adapters), /JOURNAL_RECORD_REQUIRED/);
+    assert.equal(await adapters.cloudflare.currentRelease(), 'previous_demo');
+    // 显式声明「本次无日志」是唯一允许省略 record 的写法。
+    assert.equal((await stageRelease(fixture(), platforms(), { allowMissingJournal: true })).status, 'verified');
+});
+
+test('failure keeps the real ReleaseError code and only unknown causes fall back', async () => {
+    const rejected = platforms();
+    rejected.cloudflare.put = async () => { throw new ReleaseError('VENDOR_REJECTED'); };
+    const state = await stageRelease(fixture(), rejected, journal);
+    assert.equal(state.status, 'partial_failure');
+    assert.equal(state.failure, 'VENDOR_REJECTED');
+
+    const vendor = platforms();
+    vendor.edgeone.put = async () => { throw new Error('vendor-private-marker'); };
+    const fallback = await stageRelease(fixture(), vendor, journal);
+    assert.equal(fallback.failure, 'STAGING_OR_JOURNAL_FAILED');
+    assert.equal(JSON.stringify(fallback).includes('private-marker'), false);
+
+    const live = platforms();
+    const ready = await stageRelease(fixture(), live, journal);
+    live.edgeone.probe = async () => { throw new ReleaseError('RUNTIME_PROBE_FAILED'); };
+    const activated = await activateRelease(fixture(), ready, live, journal);
+    assert.equal(activated.status, 'partial_failure');
+    assert.equal(activated.failure, 'RUNTIME_PROBE_FAILED');
+});
+
+test('private paths and bundle files reject symlinks, including dangling ones', () => {
+    const directory = mkdtempSync(path.join(os.tmpdir(), 'class-map-release-link-'));
+    try {
+        // 悬空链接：existsSync 看不见，lstatSync 看得见。
+        const target = path.join(directory, 'gone');
+        mkdirSync(target);
+        const dangling = path.join(directory, 'dangling');
+        symlinkSync(target, dangling, process.platform === 'win32' ? 'junction' : 'dir');
+        rmSync(target, { recursive: true, force: true });
+        assert.throws(() => assertPrivatePath(dangling), /BUNDLE_SYMLINK_FORBIDDEN/);
+
+        // 指向仓库本体的链接本身就是叶节点链接，不能靠 realpath 的文本比较放行。
+        const toRepo = path.join(directory, 'to-repo');
+        symlinkSync(process.cwd(), toRepo, process.platform === 'win32' ? 'junction' : 'dir');
+        assert.throws(() => assertPrivatePath(toRepo), /BUNDLE_SYMLINK_FORBIDDEN/);
+
+        // 包内文件被换成链接（用目录链接，Windows 上无需额外权限）：内容一致也必须拒绝。
+        const bundle = path.join(directory, 'bundle');
+        writeRelease(bundle, fixture());
+        const raw = path.join(bundle, 'raw.json');
+        const rawTarget = path.join(directory, 'raw-link-target');
+        mkdirSync(rawTarget);
+        writeFileSync(path.join(rawTarget, 'raw.json'), readFileSync(raw));
+        rmSync(raw);
+        symlinkSync(rawTarget, raw, process.platform === 'win32' ? 'junction' : 'dir');
+        assert.throws(() => readRelease(bundle), /BUNDLE_SYMLINK_FORBIDDEN/);
+    } finally {
+        rmSync(directory, { recursive: true, force: true });
+    }
 });
 
 test('CLI really prepares and verifies offline; logs omit records, hashes and paths', () => {

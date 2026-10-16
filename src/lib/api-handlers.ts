@@ -1,7 +1,7 @@
 /** 两平台共享业务处理器；Origin/方法保护由平台路由层负责。 */
 import type { Env } from './types';
 import { RATE_LIMIT_MAX_ATTEMPTS, buildSessionCookie, buildClearedSessionCookie,
-    clearFailedAttempts, constantTimeCompare, createSessionToken, getRateLimitCount,
+    clearFailedAttempts, constantTimeCompare, createSessionToken, reserveAttempt,
     recordFailedAttempt, hasValidSession } from './auth';
 import { buildDetailsPayload, normalizeRegionQuery, loadPublicDataset } from './data';
 import type { NormalizedRegion } from './data';
@@ -35,19 +35,21 @@ export async function login(request: Request, env: Env): Promise<Response> {
         return errorResponse(400, 'passphrase_required', '请输入口令。');
     }
 
-    const rateLimit = await getRateLimitCount(env, request);
-    if (rateLimit.count >= RATE_LIMIT_MAX_ATTEMPTS) {
+    // 先「预约」本次尝试（isolate 内同步占位，见 auth.ts 的限流说明），再看是否超限：
+    // 同 isolate 的并发请求因此拿到互不相同的序号，不会一起读到旧值全部放行。
+    const rateLimit = await reserveAttempt(env);
+    if (rateLimit.count > RATE_LIMIT_MAX_ATTEMPTS) {
         return errorResponse(429, 'too_many_attempts', '尝试次数太多，请 15 分钟后再试。');
     }
 
     if (!constantTimeCompare(passphrase, env.DETAILS_PASSPHRASE)) {
-        await recordFailedAttempt(env, request);
+        await recordFailedAttempt(env, rateLimit);
         return errorResponse(401, 'invalid_passphrase', '口令不对，请重试。', {
-            remainingAttempts: Math.max(0, RATE_LIMIT_MAX_ATTEMPTS - rateLimit.count - 1)
+            remainingAttempts: Math.max(0, RATE_LIMIT_MAX_ATTEMPTS - rateLimit.count)
         });
     }
 
-    await clearFailedAttempts(env, request);
+    await clearFailedAttempts(env, rateLimit);
     const token = await createSessionToken(env.DETAILS_SESSION_SECRET);
 
     return jsonResponse(

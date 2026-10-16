@@ -48,6 +48,9 @@ function normalizeQueryCity(city: unknown): string | null {
 /** 未激活版本时保留旧键回滚；坏配置不静默退回旧版。 */
 export function datasetKey(env: Env, kind: 'raw' | 'public'): string {
     const release = env.DATA_RELEASE_ID;
+    // 复核裁定 #13：`DATA_RELEASE_ID` 缺省时的旧键回退（students:raw:v1 / students:public:v1）
+    // 是 Cloudflare-only 的兼容路径。EdgeOne 适配器要求私有 KV 里必须有合法的 release id，
+    // 缺配置时直接 503 platform_not_configured，不会读旧键；两边行为差异由文档限定。
     if (release === undefined || release === '') return DATA_KEYS[kind];
     if (!/^[A-Za-z0-9_]{1,64}$/.test(release)) throw new Error('Invalid data release configuration.');
     return `students_${kind}_${release}`;
@@ -63,11 +66,27 @@ export async function loadPublicDataset(env: Env): Promise<PublicDataset> {
     return dataset;
 }
 
+/**
+ * 明细数据集的硬上限（复核裁定 #41，fail closed）。
+ *
+ * 明细路由每次都把整份 students:raw 读进内存再按省过滤；没有上限时，一份异常巨大的
+ * KV 值（误上传 / 被替换）就能把 isolate 打到 OOM。超过上限一律抛错，由路由转成 503，
+ * 绝不「截断后返回一部分」，因为少返回的人不会以任何方式暴露出来。
+ *
+ * 有意延后（不在本分支做）：按省分键（students_raw_<release>_<province>）可以让每次
+ * 只读需要的省、顺带突破这个上限；那会改动 KV 键布局与发布协议，属于独立的一轮工作。
+ */
+export const MAX_RAW_RECORDS = 5000;
+
 /** 读明细并归一化（students:raw:v1）。 */
 export async function loadRawStudents(env: Env): Promise<Student[]> {
     const students = await env.CLASS_MAP_DATA.get(datasetKey(env, 'raw'), 'json');
     if (!students) {
         throw new Error('Raw student dataset is not configured in KV.');
+    }
+
+    if (!Array.isArray(students) || students.length > MAX_RAW_RECORDS) {
+        throw new Error('Raw student dataset exceeds the supported size.');
     }
 
     return normalizeStudents(students) as Student[];
