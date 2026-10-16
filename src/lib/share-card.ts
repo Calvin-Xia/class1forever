@@ -15,6 +15,7 @@
  */
 import { palette } from '../styles/palette';
 import { getGeo } from './geo-loader';
+import { loadFontsBestEffort } from './map-fonts';
 import type { EChartsType } from './echarts';
 import { computeHeatMax, getMapBounds, type MapBounds, type RegionPoint } from './map-model';
 import { formatLocalDate, type ShareStats } from './share';
@@ -249,28 +250,43 @@ export function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
     });
 }
 
-/** 按冻结后的实际文字与字重加载分享图所需的全部字体分片。 */
+/**
+ * 按冻结后的实际文字与字重加载分享图所需的全部字体分片。
+ *
+ * 与地图侧同一套「尽力而为」策略（`loadFontsBestEffort`）：字体等不到就按回退字体
+ * 先画，超时/失败都不会让分享图整个失败 —— 用户按下分享按钮时最不想要的就是
+ * 一个因为字体下载慢而弹出来的「生成分享图片失败」。
+ */
 export async function loadShareFonts(stats: ShareStats, heatMax: number): Promise<void> {
     // unicode-range 按实际文本选择分片。ready 只等待已触发的下载，不能替代完整文本的 load。
     // 不读取 DOM/当前地图视野：所有动态文字均来自已经冻结的分享参数。
-    const bodyText = [
-        stats.scope,
-        ' · 数据更新于 ',
-        formatLocalDate(stats.generatedAt),
-        '万州二中 · 金鹰 1 班',
-        stats.emptyText,
-        ...(stats.columns || []).map((column) => column.label)
-    ].join('');
-    const boldText = [
-        `0 人 ${heatMax} 人`,
-        ...(stats.columns || []).map((column) => String(column.value))
-    ].join('');
-    await Promise.all([
-        document.fonts.load('600 42px "Noto Serif SC"', '金鹰 1 班蹭饭地图'),
-        document.fonts.load('400 18px "Noto Sans SC"', bodyText),
-        document.fonts.load('700 36px "Noto Sans SC"', boldText)
-    ]);
-    await document.fonts.ready;
+    try {
+        if (typeof document === 'undefined' || !document.fonts) {
+            return;
+        }
+
+        const bodyText = [
+            stats.scope,
+            ' · 数据更新于 ',
+            formatLocalDate(stats.generatedAt),
+            '万州二中 · 金鹰 1 班',
+            stats.emptyText,
+            ...(stats.columns || []).map((column) => column.label)
+        ].join('');
+        const boldText = [
+            `0 人 ${heatMax} 人`,
+            ...(stats.columns || []).map((column) => String(column.value))
+        ].join('');
+        await loadFontsBestEffort(
+            Promise.all([
+                document.fonts.load('600 42px "Noto Serif SC"', '金鹰 1 班蹭饭地图'),
+                document.fonts.load('400 18px "Noto Sans SC"', bodyText),
+                document.fonts.load('700 36px "Noto Sans SC"', boldText)
+            ]).then(() => document.fonts.ready)
+        );
+    } catch (error) {
+        console.warn('分享图字体预加载失败，改用回退字体继续合成：', error);
+    }
 }
 
 /**

@@ -94,9 +94,16 @@ test('fixed TLS transport pins target address, retains real Host/SNI and mandato
 });
 
 test('Fake-IP/private transport is rejected and fixed target success is never platform proof', async () => {
-    for (const address of ['198.18.5.157', '127.0.0.1', '10.1.2.3', '169.254.169.254', '192.168.0.1', '203.0.113.1', '100.64.0.1', '::1']) {
+    for (const address of ['198.18.5.157', '127.0.0.1', '10.1.2.3', '169.254.169.254', '192.168.0.1', '203.0.113.1', '100.64.0.1', '::1',
+        /* 保留段表必须覆盖旧硬编码漏掉的那些：192.0.0.0/24 里不止 .0/.2，还有 .9/.10；
+           6to4 relay anycast、TEST-NET 各段、基准测试段与保留/组播段同样不能当公网目标。 */
+        '192.0.0.9', '192.0.0.170', '192.88.99.1', '192.0.2.1', '198.51.100.7', '224.0.0.1', '240.0.0.1', '255.255.255.255', '198.19.255.255']) {
         assert.equal(isPublicIpv4(address), false, address);
         assert.throws(() => fixedRequestOptions(HOST, address), /UNSAFE/);
+    }
+    /* 表不能宽到把真实公网地址也拦下。 */
+    for (const address of ['1.1.1.1', '8.8.8.8', '104.16.0.1', '192.0.1.1', '223.255.255.255']) {
+        assert.equal(isPublicIpv4(address), true, address);
     }
     let probes = 0;
     const result = await observeRouting(config(), async (_resolver, name) => ({ Status: 0,
@@ -107,6 +114,27 @@ test('Fake-IP/private transport is rejected and fixed target success is never pl
     assert.equal(result.productionReady, false);
     assert.equal(result.observations.filter((entry) => entry.mode === 'recursive-selection' && entry.error === 'NON_PUBLIC_OR_FAKE_IP_ANSWER').length, 2);
     assert.doesNotMatch(JSON.stringify(result), /198\.18\.5\.157|1\.1\.1\.1/);
+});
+
+test('probeTls arms its timeout before the request and settles a synchronous failure without leaking values', async () => {
+    const thrown = await probeTls('1.1.1.1', () => { throw new Error('provider secret detail'); });
+    assert.equal(thrown.tls, 'failed');
+    assert.equal(thrown.error, 'TLS_OR_NETWORK_FAILURE');
+    assert.doesNotMatch(JSON.stringify(thrown), /provider secret detail|1\.1\.1\.1/);
+
+    /* 同步派发 response：timer 必须先于请求存在，done() 才能清掉它；同时事后不能 destroy
+       一个已经 resolve 的请求。 */
+    let destroyed = false;
+    const verified = await probeTls('1.1.1.1', (_options, onResponse) => {
+        const request = new EventEmitter();
+        request.end = () => onResponse({ socket: { authorized: true, getPeerCertificate: () => ({ valid_to: 'Nov 1 2026' }) }, statusCode: 200, resume() {} });
+        request.destroy = () => { destroyed = true; };
+        return request;
+    });
+    assert.equal(verified.tls, 'verified');
+    assert.equal(verified.certificateExpires, 'Nov 1 2026');
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    assert.equal(destroyed, false);
 });
 
 test('hostname ownership and certificate/fallback state remain independent; local snapshot is untrusted', () => {

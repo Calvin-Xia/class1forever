@@ -131,20 +131,22 @@ npx wrangler secret put DETAILS_SESSION_SECRET
 ```json
 [
   {
-    "name": "xxx",
-    "school": "北京电子科技学院",
-    "city": "丰台区",
-    "province": "北京"
+    "name": "示例同学",
+    "school": "示例大学",
+    "city": "示例区",
+    "province": "示例省"
   }
 ]
 ```
 
 脚本会在上传前做规范化处理，并生成：
 
-- 原始明细数据 `students:raw:v1`
-- 公开地图数据 `students:public:v1`
+- 原始明细数据：默认 `students:raw:v1`，带 `--release-id <id>` 时是 `students_raw_<id>`
+- 公开地图数据：默认 `students:public:v1`，带 `--release-id <id>` 时是 `students_public_<id>`
 
 ### 3.3 上传命令
+
+**生产数据更新必须走 release 版本化键**：`scripts/upload-kv-data.mjs` 支持 `--release-id <id>`（写入 `students_raw_<id>` / `students_public_<id>`），也可以用离线发布工具 `scripts/data-release.mjs`（prepare / verify / verify-readback）。不带 `--release-id` 的 `npm run data:upload` 只写固定键 `students:raw:v1` / `students:public:v1`，脚本会打印警告，且线上若已启用 `DATA_RELEASE_ID` 就**不会读取**这两种固定键。
 
 先做 dry run：
 
@@ -152,29 +154,29 @@ npx wrangler secret put DETAILS_SESSION_SECRET
 npm run data:upload -- --dry-run
 ```
 
-上传到生产环境：
+上传到生产环境（**必须带 `--release-id`**）：
 
 ```bash
-npm run data:upload
+npm run data:upload -- --release-id <id>
 ```
 
 上传到预览环境：
 
 ```bash
-npm run data:upload:preview
+npm run data:upload:preview -- --release-id <id>
 ```
 
 如果你想显式指定本地数据文件，可以附加 `--source`：
 
 ```bash
-npm run data:upload -- --source path/to/data.js
+npm run data:upload -- --release-id <id> --source path/to/data.js
 ```
 
 推荐流程是：
 
 1. `npm run data:upload -- --dry-run`
-2. `npm run data:upload:preview`
-3. 本地验证无误后，再执行 `npm run data:upload`
+2. `npm run data:upload:preview -- --release-id <id>`
+3. 本地验证无误后，再执行 `npm run data:upload -- --release-id <id>`
 
 ## 4. 本地开发
 
@@ -208,7 +210,7 @@ npm run dev:local  # http://127.0.0.1:8788
   STUDENTS_PUBLIC_FILE=public.json npm run dev:local
   ```
 
-  `students:raw:v1` 含姓名与学校，不要导出、也不要入库。
+  `students_raw_<id>`（未启用 `DATA_RELEASE_ID` 时是 `students:raw:v1`）含姓名与学校，不要导出、也不要入库。
 - 只想先写本地 KV、自己起 `astro dev` 时用 `npm run seed:local`。
 
 > **Windows 沙箱提示**：workerd 需要往临时目录写文件。如果 `npm run build` / `npm run dev:local` /
@@ -234,7 +236,7 @@ KV 的 `remote: true`，需要先 `npx wrangler login`）。旧版 `tests/dev-se
 
 如果你在本地打开页面时看到这条提示，一般有两个原因：
 
-1. 预览环境 KV 里还没有 `students:public:v1`
+1. 预览环境 KV 里还没有对应键（未启用 `DATA_RELEASE_ID` 时是 `students:public:v1`，启用后是 `students_public_<id>`）
 2. `wrangler.jsonc` 中的 `preview_id` 指向了错误的 namespace
 
 优先检查：
@@ -367,7 +369,7 @@ npx wrangler rollback        # 需要回退时：用上一个版本重新部署�
 ```bash
 npx wrangler whoami
 npm run data:upload -- --dry-run
-npm run data:upload
+npm run data:upload -- --release-id <id>   # 生产更新必须带 release ID
 ```
 
 如果是在受限沙箱里运行，有时不是 Cloudflare 配置错，而是本地执行权限不足。
@@ -390,7 +392,7 @@ npm run data:upload
 1. `.dev.vars` 是否存在且值完整（用 `npm run dev:local` 的本地通路不需要 `.dev.vars`，口令固定是 `demo`）
 2. `DETAILS_PASSPHRASE` 是否和远端环境一致
 3. `preview_id` 是否正确
-4. 是否先执行了 `npm run data:upload:preview`
+4. 是否先执行了 `npm run data:upload:preview -- --release-id <id>`（未启用 `DATA_RELEASE_ID` 时读的是固定键 `students:public:v1`）
 
 ## 10. 敏感数据处理建议
 

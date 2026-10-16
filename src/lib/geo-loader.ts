@@ -79,6 +79,11 @@ export interface GeoJson {
 
 interface GeoRegistry {
     register(id: string, geoJson: GeoJson): void;
+    /**
+     * 与旧站 `js/geo.js` 的 `CMapGeo` 保持同形：`has` 目前没有站内调用方，
+     * 但它是全局注册表对外契约的一部分（`window.CMapGeo.has(...)`），不随
+     * 只服务站内的包装函数一起删除。
+     */
     has(id: string): boolean;
     get(id: string): GeoJson | null;
     hasProvinceFile(filename: unknown): boolean;
@@ -134,11 +139,6 @@ export function installGeoRegistry(): GeoRegistry {
 export function getGeo(id: string): GeoJson | null {
     installGeoRegistry();
     return registry()!.get(id);
-}
-
-export function hasGeo(id: string): boolean {
-    installGeoRegistry();
-    return registry()!.has(id);
 }
 
 /** 该地区是否有对应的省级地图文件（台湾 / 香港 / 澳门 / 南海诸岛为 false）。 */
@@ -215,9 +215,4 @@ export function loadProvinceGeo(filename: string): Promise<GeoJson> {
 
     pendingProvinces.set(filename, promise);
     return promise;
-}
-
-/** 供探针 / 测试读取加载状态。 */
-export function isProvinceGeoRegistered(filename: string): boolean {
-    return hasGeo(provinceMapId(filename));
 }

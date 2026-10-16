@@ -4,12 +4,19 @@
  * 用假的公开数据顶替 Cloudflare Pages Functions 与 KV 绑定，
  * 因此不需要 Cloudflare 账号就能验证地图渲染、下钻、口令流程与分享图。
  *
+ * ⚠️ 已退役：**不要把它当可执行主路径**（CI 只对它做 `node --check`），本文件仅为
+ * 迁移前后的对照保留，不保证能起来。旧站的经典脚本已整体归档到 `legacy/`：
+ * 几何注册表在 `legacy/js/geo.js`，而几何数据 `js/china.js` 与 `js/province/**`
+ * 仍在仓库根（在跑的新站也读它们）。静态根里已经没有旧站的 `index.html` /
+ * `css/main.css`，所以本服务即使起来也不复现旧站；要跑旧站请用 `git archive main`。
+ *
  *   node tests/dev-server.mjs          # http://127.0.0.1:8788
  *   PORT=9000 node tests/dev-server.mjs
  *
  * 口令默认是 demo，可用 DETAILS_PASSPHRASE 覆盖。
  *
- * 想看真实聚合数字时，先用 wrangler 把 KV 里的公开数据导出来，再指向它：
+ * 下面的历史命令仅作说明，`npm run dev:mock` 这个脚本早已不存在；
+ * 若线上启用了 DATA_RELEASE_ID，公开键是 students_public_<id> 而不是 students:public:v1。
  *   npx wrangler kv key get students:public:v1 --namespace-id=<preview_id> --remote --text > public.json
  *   PUBLIC_DATA_FILE=public.json npm run dev:mock
  * 公开数据里只有聚合人数，可以安全导出；students:raw:v1 含姓名，不要导出。
@@ -41,13 +48,13 @@ const MIME_TYPES = {
 };
 
 const SCHOOLS = [
-    '万州二中',
-    '北京电子科技学院',
-    '重庆大学',
-    '浙江大学',
-    '四川大学',
-    '武汉大学',
-    '上海交通大学'
+    '示例大学',
+    '示例理工大学',
+    '示例师范大学',
+    '示例医科大学',
+    '示例财经大学',
+    '示例农业大学',
+    '示例科技大学'
 ];
 
 /**
@@ -63,7 +70,7 @@ function loadGeoRegistry() {
         });
     };
 
-    run(path.join('js', 'geo.js'));
+    run(path.join('legacy', 'js', 'geo.js'));
     run(path.join('js', 'china.js'));
 
     for (const name of readdirSync(path.join(rootDirectory, 'js', 'province'))) {

@@ -96,10 +96,47 @@ import Icon from './Icon.astro';
                  它的两个挂载点分别在本区的 #share-btn 与页脚的 #interaction-note。
                  不用 `client:only` 是因为 Astro 岛屿水合会注入**内联** script，
                  被 `_headers` 的 `script-src 'self'` 拦下（实测两个内联脚本被拒）。
-                 用动态 import 让 Astro 产出外链 chunk，CSP 下才能正常加载。 -->
+                 用动态 import 让 Astro 产出外链 chunk，CSP 下才能正常加载。
+
+                 本段 script 标签会被 Astro 编成**入口 chunk**，页面一定会执行到它，
+                 所以「资源加载失败」的兜底必须写在这里（#11）：
+                 岛屿是动态 import 挂载的，chunk 拿不到时那边的兜底代码根本不会跑，
+                 「重新加载」按钮就成了死链。只静态引用 map-fatal-error（零依赖的小模块），
+                 不把 ECharts / 几何数据拖进入口 chunk。 -->
             <script>
-                import('../scripts/map-island-boot');
-                import('../scripts/share-boot');
+                import { revealMapFatalError } from '../scripts/map-fatal-error';
+
+                const MAP_CHUNK_LOAD_FAILED = '地图脚本加载失败，请检查网络连接后重新加载。';
+
+                // 绑定放在入口 chunk：面板由谁显示（岛屿崩了 / chunk 404 / 预加载失败）都能点。
+                document.getElementById('cdn-error-retry')?.addEventListener('click', () => {
+                    window.location.reload();
+                });
+
+                // 这里刻意**不**监听 window 的 `vite:preloadError`：那个事件对页面上每个动态
+                // import 都会派发（含 BaseLayout 的动效、本区的分享），而 #cdn-error 是 z-index
+                // 全屏面板且只显示不收起 —— 动效 chunk 失败就会把还能用的地图挡在重载面板后面。
+                // 必需的 chunk 用下面各自的 `.catch` 精确兜底即可：Vite 的预加载 helper 在派发
+                // 事件之后仍会抛出 rejection（所以不能在里面 preventDefault），`.catch` 拿得到。
+                import('../scripts/map-island-boot').catch(() => {
+                    revealMapFatalError(MAP_CHUNK_LOAD_FAILED);
+                });
+
+                // 分享是附加能力：失败不能静默，但也不能盖住地图。把按钮标成不可用，并在页脚
+                // 的播报位说明（分享岛屿没加载，所以不会有别的代码来写这个位置）。
+                import('../scripts/share-boot').catch(() => {
+                    console.error('Share island failed to load.');
+                    const button = document.getElementById('share-btn');
+                    if (button instanceof HTMLButtonElement) {
+                        button.disabled = true;
+                        button.title = '分享功能未能加载，请刷新页面重试';
+                        button.setAttribute('aria-label', '分享功能未能加载，请刷新页面重试');
+                    }
+                    const note = document.getElementById('interaction-note');
+                    if (note) {
+                        note.textContent = '分享功能未能加载，请刷新页面重试。';
+                    }
+                });
             </script>
 
             <a

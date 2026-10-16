@@ -16,6 +16,8 @@
 import { echarts } from './echarts';
 import { readSessionRevision } from './session-sync';
 import { loadMapFonts } from './map-fonts';
+import { createRegionProbe } from './map-probe';
+import { revealMapFatalError } from '../scripts/map-fatal-error';
 import type { EChartsType } from './echarts';
 import {
     CHINA_MAP_ID,
@@ -29,9 +31,7 @@ import {
     buildProvincePoints,
     createRegionIndex,
     getMapBounds,
-    getPointRegion,
     normalizeRegionToken,
-    pointInRing,
     resolveRegionPoint
 } from './map-model';
 import type { ProvinceCatalogEntry, RegionPoint } from './map-model';
@@ -51,14 +51,19 @@ import type { RegionActivationDetail } from './map-bridge';
 import { initTapFallback, noteChartActivation } from './tap-fallback';
 import type { PublicMapPayload } from './types';
 
+/**
+ * 兜底面板的显示入口——实现放在 `src/scripts/map-fatal-error.ts`，那里没有任何
+ * import，因此可以同时被「一定会执行的入口 chunk」（MapSection.astro 的 `<script>`）
+ * 和本模块引用，而不会把 ECharts / 几何数据拖进入口 chunk。这里再导出一次，
+ * 让调用方只认 `map-island` 这个入口。
+ */
+export { revealMapFatalError };
+
 const PUBLIC_CACHE_KEY = 'class1forever:public:v1';
 
 interface MapUi {
     loading: HTMLElement | null;
     map: HTMLElement | null;
-    error: HTMLElement | null;
-    errorTitle: HTMLElement | null;
-    errorMessage: HTMLElement | null;
     backButton: HTMLButtonElement | null;
     regionBadge: HTMLElement | null;
     zoomIn: HTMLButtonElement | null;
@@ -103,9 +108,6 @@ function ui(): MapUi {
         islandUi = {
             loading: document.getElementById('map-loading'),
             map: document.getElementById('map'),
-            error: document.getElementById('cdn-error'),
-            errorTitle: document.getElementById('cdn-error-title'),
-            errorMessage: document.getElementById('cdn-error-message'),
             backButton: document.getElementById('map-back-btn') as HTMLButtonElement | null,
             regionBadge: document.getElementById('map-region-badge'),
             zoomIn: document.getElementById('map-zoom-in') as HTMLButtonElement | null,
@@ -146,17 +148,10 @@ function showProvinceLoading(provinceName: string): void {
 }
 
 function showFatalError(message: string, title?: string): void {
-    const dom = ui();
-    if (dom.errorTitle) {
-        dom.errorTitle.textContent = title || '地图加载失败';
-    }
-    if (dom.errorMessage) {
-        dom.errorMessage.textContent = message;
-    }
-    if (dom.error) {
-        dom.error.style.display = 'flex';
-    }
-    hideMapLoading();
+    // 面板显示、隐藏加载指示、把焦点移到「重新加载」都在共享模块里完成。
+    // 放在那里是硬要求：岛屿是动态 import 挂载的，chunk 加载失败时本模块根本不会执行，
+    // 入口 chunk（MapSection.astro 的 `<script>`）会用同一个函数兜底。
+    revealMapFatalError(message, title);
 }
 
 function normalizeApiErrorMessage(error: unknown, fallback: string): string {
@@ -207,6 +202,19 @@ async function fetchJson(url: string, init?: RequestInit): Promise<PublicMapPayl
  * 公开数据（含 localStorage 缓存）
  * ------------------------------------------------------------------ */
 
+/**
+ * 读本地公开缓存。
+ *
+ * **为什么强制 `detailAccess: false`**：这份 localStorage 缓存只有公开聚合，却会跨会话、
+ * 跨标签页存活 —— 口令会话可能早就没了（点了「退出查看」、Cookie 过期、服务端切线、
+ * 另一个标签页登出），缓存里那句 `detailAccess: true` 就成了过期授权。把它当真会让
+ * 抽屉在没有会话时直接发详情请求、拿 401、再弹口令框，用户看到的是「刚登录就失效」。
+ * 详情访问只能由当次 `/api/map/public` 响应说了算。
+ *
+ * **可见影响**：冷启动先用缓存渲染聚合并把详情入口显示成「输入口令后查看」，
+ * 随后同一个 tick 里 `applyPublicData(fresh)` 按真实会话状态刷新（有会话时按钮立刻变回
+ * 「同学信息」）。也就是说缓存只负责「先有图看」，不负责授权状态。
+ */
 function readPublicCache(): PublicMapPayload | null {
     try {
         const raw = localStorage.getItem(PUBLIC_CACHE_KEY);
@@ -226,6 +234,11 @@ function readPublicCache(): PublicMapPayload | null {
     }
 }
 
+/**
+ * 写本地公开缓存时同样把 `detailAccess` 压成 false：缓存是被下一个会话（甚至另一个
+ * 标签页）读的，写入时的会话状态到那时已经不成立了。真实访问状态只走
+ * `setDetailModeState()` 那条内存内通路，永不落盘。
+ */
 function writePublicCache(data: PublicMapPayload): void {
     try {
         localStorage.setItem(PUBLIC_CACHE_KEY, JSON.stringify({ ...data, detailAccess: false }));
@@ -642,12 +655,17 @@ function initChart(chinaGeo: GeoJson): EChartsType {
         throw new Error('页面缺少地图容器，请刷新页面重试。');
     }
 
-    // StrictMode / HMR 下 effect 可能跑两遍：同一容器已有实例时直接复用，避免
-    // ECharts 在同一个 dom 上叠两个实例（第二个会静默接不到事件）。
+    // StrictMode / HMR 下 effect 可能跑两遍：同一容器已有实例时**不能**只把旧实例
+    // 塞回 state 就 return —— 那条早退路径会漏掉 `setMapState({ chart })`、TapFallback
+    // 与 `map:ready`（旧实例上的 click/georoam 监听确实还在，但桥接快照里的 chart 是
+    // null、触摸兜底根本没挂、分享按钮会在 ready 之前就拿到空 chart）。
+    // 这里先把旧实例连同它的 disposer 一起拆掉，再走完整初始化，三条副作用一个都不少。
     const existing = echarts.getInstanceByDom(container);
     if (existing) {
-        state.chart = existing;
-        return existing;
+        state.disposers.forEach((dispose) => dispose());
+        state.disposers = [];
+        state.chart = null;
+        existing.dispose();
     }
 
     echarts.registerMap(CHINA_MAP_ID, chinaGeo as unknown as Parameters<typeof echarts.registerMap>[1]);
@@ -825,6 +843,13 @@ export function bootMapIsland(): Promise<void> {
         bindStaticUi();
         await loadApp(generation);
     })().catch((error: unknown) => {
+        // 这一轮已经被新的挂载取代（`destroyMapIsland()` + 再次 `bootMapIsland()`，例如
+        // StrictMode / HMR）：既不能清掉新一轮的 bootPromise，也不能拿旧错误盖住新实例的
+        // 界面 —— 旧模块的收尾尾巴对新生命周期没有发言权。
+        if (generation !== bootGeneration) {
+            throw error;
+        }
+
         bootPromise = null;
         console.error('Failed to initialize map:', error);
         showFatalError(normalizeApiErrorMessage(error, '地图初始化失败，请刷新页面重试。'));
@@ -899,234 +924,30 @@ export function readViewPoints(): RegionPoint[] {
     return state.viewPoints.map((point) => ({ ...point }));
 }
 
-/** 探针用：某个地区的 region 数据（下钻/详情查询用）。 */
-export function readPointRegion(point: RegionPoint): { province: string; city: string | null } {
-    return getPointRegion(point, getActiveProvinceName());
-}
-
 /* ------------------------------------------------------------------ *
  * 验收探针（只读；供 l3_parity / Playwright 证据脚本读运行时真实读数）
+ *
+ * 生产页也暴露 `window.__mapProbe`（见 src/components/MapCanvas.tsx），这是
+ * **验收脚本契约**：`read / points / activate / state / events / hitTest /
+ * regionPixels / bounds / whitelist` 九个字段只能加，不能改名或删除，
+ * 页面自身不依赖探针。
+ *
+ * 几何判定（hitTestRegion / scanRegionPixels）挪到了 `src/lib/map-probe.ts`，
+ * 这里只把模块内部状态封成闭包注进去，射线法仍然只有 map-model 那一份。
  * ------------------------------------------------------------------ */
 
-interface FeatureHit {
-    name: string;
-    polygons: unknown[];
-    minX: number;
-    minY: number;
-    maxX: number;
-    maxY: number;
-}
+const regionProbe = createRegionProbe({
+    getChart: () => state.chart,
+    getContainer: () => ui().map,
+    getActiveMapId: () => state.activeMapId,
+    getGeo: (mapId) => getGeo(mapId)
+});
 
-function collectFeatureHits(geoJson: GeoJson | null): FeatureHit[] {
-    if (!geoJson || !Array.isArray(geoJson.features)) {
-        return [];
-    }
+/** 屏幕坐标 → 地区名（与 TapFallback 同一套判定；实现在 map-probe）。 */
+export const hitTestRegion = regionProbe.hitTestRegion;
 
-    const hits: FeatureHit[] = [];
-
-    geoJson.features.forEach((feature) => {
-        const name = normalizeRegionToken((feature.properties || {}).name);
-        if (!name) {
-            return;
-        }
-
-        const geometry = feature.geometry || {};
-        const polygons: unknown[] =
-            geometry.type === 'Polygon'
-                ? [geometry.coordinates]
-                : geometry.type === 'MultiPolygon' && Array.isArray(geometry.coordinates)
-                  ? geometry.coordinates
-                  : [];
-
-        let minX = Infinity;
-        let minY = Infinity;
-        let maxX = -Infinity;
-        let maxY = -Infinity;
-
-        const visit = (node: unknown): void => {
-            if (!Array.isArray(node)) {
-                return;
-            }
-            if (typeof node[0] === 'number' && typeof node[1] === 'number') {
-                minX = Math.min(minX, node[0]);
-                maxX = Math.max(maxX, node[0]);
-                minY = Math.min(minY, node[1]);
-                maxY = Math.max(maxY, node[1]);
-                return;
-            }
-            node.forEach(visit);
-        };
-        polygons.forEach(visit);
-
-        if (minX !== Infinity) {
-            hits.push({ name: name, polygons: polygons, minX: minX, minY: minY, maxX: maxX, maxY: maxY });
-        }
-    });
-
-    return hits;
-}
-
-/** 射线法命中：`polygons` 已经是「多边形列表，每个多边形 = 环列表」。 */
-function hitPolygons(polygons: unknown[], x: number, y: number): boolean {
-    for (const polygon of polygons) {
-        if (!Array.isArray(polygon) || polygon.length === 0) {
-            continue;
-        }
-        const ring = polygon[0];
-        if (Array.isArray(ring) && ring.length > 0 && pointInRing(x, y, ring as ArrayLike<ArrayLike<number>>)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-/** 屏幕坐标 → 地区名（走 ECharts 公开 API + 射线法，与 TapFallback 同一套判定）。 */
-export function hitTestRegion(clientX: number, clientY: number): string | null {
-    const chart = state.chart;
-    const container = ui().map;
-    if (!chart || !container) {
-        return null;
-    }
-
-    const rect = container.getBoundingClientRect();
-    let dataPoint: number[] | number;
-    try {
-        dataPoint = chart.convertFromPixel({ seriesIndex: 0 }, [clientX - rect.left, clientY - rect.top]);
-    } catch (_error) {
-        return null;
-    }
-    if (!Array.isArray(dataPoint) || !isFinite(dataPoint[0]) || !isFinite(dataPoint[1])) {
-        return null;
-    }
-
-    const [dataX, dataY] = dataPoint;
-    for (const hit of collectFeatureHits(getGeo(state.activeMapId))) {
-        if (dataX < hit.minX || dataX > hit.maxX || dataY < hit.minY || dataY > hit.maxY) {
-            continue;
-        }
-        if (hitPolygons(hit.polygons, dataX, dataY)) {
-            return hit.name;
-        }
-    }
-
-    return null;
-}
-
-/**
- * 找出每个可点地区的一组屏幕像素（验收脚本用它定位省份再真点）。
- *
- * 两轮：先按 `step` 粗扫全图；对粗扫没命中的地区（如澳门这种极小地块），
- * 在它的几何包围盒对应的像素框里用 `fineStep` 补扫。
- * 结果按「离候选集重心最近」排序，验收脚本优先点最靠内的像素 ——
- * 边界像素上 ECharts 自己的命中判定可能与射线法差一个地区。
- */
-export function scanRegionPixels(step = 10, fineStep = 2): Record<string, Array<{ x: number; y: number }>> {
-    const chart = state.chart;
-    const container = ui().map;
-    if (!chart || !container) {
-        return {};
-    }
-
-    const rect = container.getBoundingClientRect();
-    const hits = collectFeatureHits(getGeo(state.activeMapId));
-    const candidates = new Map<string, Array<{ x: number; y: number }>>();
-
-    const push = (name: string, x: number, y: number): void => {
-        const list = candidates.get(name);
-        if (list) {
-            list.push({ x: x, y: y });
-        } else {
-            candidates.set(name, [{ x: x, y: y }]);
-        }
-    };
-
-    const scanBox = (left: number, top: number, right: number, bottom: number, stepSize: number): void => {
-        // 起点对齐到像素中心：step=1 时就是 x.5 网格，才可能命中只有 1px 的地块（澳门）。
-        const startX = Math.floor(Math.max(rect.left, left)) + stepSize / 2;
-        const startY = Math.floor(Math.max(rect.top, top)) + stepSize / 2;
-        const endX = Math.min(rect.right, right);
-        const endY = Math.min(rect.bottom, bottom);
-
-        for (let y = startY; y < endY; y += stepSize) {
-            for (let x = startX; x < endX; x += stepSize) {
-                // 只收「真正能点到地图」的像素：被工具栏 / 图例 / 缩放控件盖住的像素
-                // elementFromPoint 会返回那层浮层，跳过它，验收脚本就不用再猜坐标了。
-                const topElement = document.elementFromPoint(x, y);
-                if (!topElement || !container.contains(topElement)) {
-                    continue;
-                }
-
-                let dataPoint: number[] | number;
-                try {
-                    dataPoint = chart.convertFromPixel({ seriesIndex: 0 }, [x - rect.left, y - rect.top]);
-                } catch (_error) {
-                    continue;
-                }
-                if (!Array.isArray(dataPoint) || !isFinite(dataPoint[0]) || !isFinite(dataPoint[1])) {
-                    continue;
-                }
-
-                const [dataX, dataY] = dataPoint;
-                for (const hit of hits) {
-                    if (dataX < hit.minX || dataX > hit.maxX || dataY < hit.minY || dataY > hit.maxY) {
-                        continue;
-                    }
-                    if (hitPolygons(hit.polygons, dataX, dataY)) {
-                        push(hit.name, x, y);
-                    }
-                }
-            }
-        }
-    };
-
-    scanBox(rect.left, rect.top, rect.right, rect.bottom, step);
-
-    // 第二轮：粗扫没找着的地区，在它自己的像素包围盒里细扫。
-    // 小地块（澳门）可能只有 1px，所以这里用 step=1；区块很大时退到 2 控制成本。
-    for (const hit of hits) {
-        if (candidates.has(hit.name)) {
-            continue;
-        }
-        let cornerA: number[] | number;
-        let cornerB: number[] | number;
-        try {
-            cornerA = chart.convertToPixel({ seriesIndex: 0 }, [hit.minX, hit.minY]);
-            cornerB = chart.convertToPixel({ seriesIndex: 0 }, [hit.maxX, hit.maxY]);
-        } catch (_error) {
-            continue;
-        }
-        if (!Array.isArray(cornerA) || !Array.isArray(cornerB)) {
-            continue;
-        }
-
-        const boxWidth = Math.abs(cornerB[0] - cornerA[0]);
-        const boxHeight = Math.abs(cornerB[1] - cornerA[1]);
-        const fineStepForThisRegin = boxWidth * boxHeight > 40000 ? 2 : 1;
-
-        scanBox(
-            rect.left + Math.min(cornerA[0], cornerB[0]) - 2,
-            rect.top + Math.min(cornerA[1], cornerB[1]) - 2,
-            rect.left + Math.max(cornerA[0], cornerB[0]) + 2,
-            rect.top + Math.max(cornerA[1], cornerB[1]) + 2,
-            Math.min(fineStep, fineStepForThisRegin)
-        );
-    }
-
-    const result: Record<string, Array<{ x: number; y: number }>> = {};
-    for (const [name, list] of candidates) {
-        const centerX = list.reduce((sum, point) => sum + point.x, 0) / list.length;
-        const centerY = list.reduce((sum, point) => sum + point.y, 0) / list.length;
-        result[name] = list
-            .slice()
-            .sort(
-                (left, right) =>
-                    Math.hypot(left.x - centerX, left.y - centerY) - Math.hypot(right.x - centerX, right.y - centerY)
-            )
-            .slice(0, 8);
-    }
-
-    return result;
-}
+/** 网格扫描：可点地区的屏幕像素（验收脚本据此真点省份；实现在 map-probe）。 */
+export const scanRegionPixels = regionProbe.scanRegionPixels;
 
 export interface BoundsPixels {
     left: number;

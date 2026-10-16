@@ -2,7 +2,7 @@
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import https from 'node:https';
-import { isIP } from 'node:net';
+import { BlockList, isIP } from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -44,14 +44,38 @@ export function validateConfig(config) {
     return { ...config, cloudflareTarget, edgeoneTarget, fallbackOrigin };
 }
 
+/**
+ * IPv4 特殊用途地址表（RFC 6890 / IANA IPv4 Special-Purpose Address Registry）。
+ * 传输探针只允许落到真正的公网单播地址，所以这张表是「排除项」而不是「允许项」的补充。
+ * 之前只逐个 if 硬编码 192.0.0.0/24 里的 .0/.2 两个地址，漏掉了同段的 .9/.10（PCP/TURN
+ * anycast）与 192.88.99.0/24（6to4 relay anycast）等保留段。
+ */
+const RESERVED_IPV4 = new BlockList();
+for (const [network, prefix] of [
+    ['0.0.0.0', 8],        // 本网络 / unspecified
+    ['10.0.0.0', 8],       // 私有
+    ['100.64.0.0', 10],    // 运营商级 NAT
+    ['127.0.0.0', 8],      // 环回
+    ['169.254.0.0', 16],   // 链路本地
+    ['172.16.0.0', 12],    // 私有
+    ['192.0.0.0', 24],     // IETF 协议专用（含 .9/.10 anycast）
+    ['192.0.2.0', 24],     // TEST-NET-1 / 文档
+    ['192.31.196.0', 24],  // AS112-v4
+    ['192.52.193.0', 24],  // AMT
+    ['192.88.99.0', 24],   // 6to4 relay anycast（已弃用）
+    ['192.168.0.0', 16],   // 私有
+    ['192.175.48.0', 24],  // AS112
+    ['198.18.0.0', 15],    // 基准测试 / Fake-IP
+    ['198.51.100.0', 24],  // TEST-NET-2 / 文档
+    ['203.0.113.0', 24],   // TEST-NET-3 / 文档
+    ['224.0.0.0', 4],      // 组播
+    ['240.0.0.0', 4]       // 保留（含 255.255.255.255 广播）
+]) RESERVED_IPV4.addSubnet(network, prefix, 'ipv4');
+
 /** Only public IPv4 is used for transport, excluding Fake-IP, documentation and local ranges. */
 export function isPublicIpv4(value) {
     if (isIP(value) !== 4) return false;
-    const [a, b, c] = value.split('.').map(Number);
-    return !(a === 0 || a === 10 || a === 127 || a >= 224 || (a === 100 && b >= 64 && b <= 127)
-        || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)
-        || (a === 192 && b === 0 && [0, 2].includes(c)) || (a === 198 && [18, 19].includes(b))
-        || (a === 198 && b === 51 && c === 100) || (a === 203 && b === 0 && c === 113));
+    return !RESERVED_IPV4.check(value, 'ipv4');
 }
 
 export function addressLabel(value) {
@@ -119,17 +143,25 @@ export function probeTls(address, requestImpl = https.request) {
     const options = fixedRequestOptions(HOST, address);
     return new Promise((resolve) => {
         let finished = false;
-        let timer;
+        let request;
         const done = (value) => { if (!finished) { finished = true; clearTimeout(timer); resolve(value); } };
-        const request = requestImpl(options, (response) => {
-            const socket = response.socket;
-            const certificate = socket.getPeerCertificate();
-            response.resume();
-            done({ tls: socket.authorized === true ? 'verified' : 'failed', httpStatus: response.statusCode,
-                certificateExpires: certificate.valid_to || null, platform: 'unknown', workerRoute: 'unknown',
-                address: addressLabel(address), scope: 'strict TLS for map Host/SNI at pinned public IPv4; HEAD / only' });
-        });
-        timer = setTimeout(() => request.destroy(Object.assign(new Error(), { code: 'PROBE_TIMEOUT' })), 10000);
+        /* Timer 在创建请求**之前**武装：回调若同步触发（例如 requestImpl 立刻派发 response
+           或 error），done() 已经能清掉它，不会留下一个悬着的 10s 定时器 —— 旧顺序会先 resolve
+           再 setTimeout，随后 destroy 一个早已结束的请求。 */
+        const timer = setTimeout(() => { if (request) request.destroy(Object.assign(new Error(), { code: 'PROBE_TIMEOUT' })); }, 10000);
+        try {
+            request = requestImpl(options, (response) => {
+                const socket = response.socket;
+                const certificate = socket.getPeerCertificate();
+                response.resume();
+                done({ tls: socket.authorized === true ? 'verified' : 'failed', httpStatus: response.statusCode,
+                    certificateExpires: certificate.valid_to || null, platform: 'unknown', workerRoute: 'unknown',
+                    address: addressLabel(address), scope: 'strict TLS for map Host/SNI at pinned public IPv4; HEAD / only' });
+            });
+        } catch {
+            done({ tls: 'failed', error: 'TLS_OR_NETWORK_FAILURE', address: addressLabel(address), platform: 'unknown', workerRoute: 'unknown' });
+            return;
+        }
         request.on('error', (error) => done({ tls: 'failed', error: /^[A-Z0-9_]+$/.test(error.code || '') ? error.code : 'TLS_OR_NETWORK_FAILURE',
             address: addressLabel(address), platform: 'unknown', workerRoute: 'unknown' }));
         request.end();

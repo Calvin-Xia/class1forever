@@ -8,9 +8,9 @@
  * 除了对比度，还顺带校验对应项是否同值：只改一处会立刻失败，而不是等分享图和页面
  * 颜色对不上才发现。
  *
- * 迁移前这两个来源是 css/main.css 与 js/palette.js；旧文件仍留在仓库里供切换节点
- * 比对，但门禁已改指新位置，断言项一个没减（21 条对比度 + 11 条同值 + 5 条热力
- * 色带单调 = 37）。
+ * 迁移前这两个来源是 css/main.css 与 js/palette.js；旧对照件已归档到 legacy/
+ * （legacy/css/main.css、legacy/js/palette.js），门禁只读 src/styles/**，断言项一个没减
+ * （21 条对比度 + 13 条同值 + 5 条热力色带单调 = 39）。
  *
  * palette.ts 是 TypeScript 模块，门禁读的是它的**真实取值**：摘掉 TS 语法后用 vm
  * 求值，既不复写色值也不引第三方依赖（node:module 的 stripTypeScriptTypes 在
@@ -105,9 +105,11 @@ function contrastRatio(front, back) {
     return (lighter + 0.05) / (darker + 0.05);
 }
 
-/** 读 css/main.css 的 :root 自定义属性。 */
+/** 读 src/styles/main.css 的 :root 自定义属性（迁移前的 legacy/css/main.css 只是对照件，不参与断言）。 */
 function readTokens(css) {
-    const start = css.indexOf(':root');
+    /* 锚点是**规则本身**（行首的 `:root {`），不是第一个出现的 ":root" 字样：注释里写一句
+       “:root 里声明了 …” 会让旧写法从注释开始切片，读出一堆假 token 或空表。 */
+    const start = css.search(/^\s*:root\s*\{/m);
     const block = start === -1 ? '' : css.slice(start, css.indexOf('}', start));
     const tokens = {};
     const pattern = /--([a-z0-9-]+)\s*:\s*([^;]+);/gi;
@@ -138,6 +140,10 @@ function readRuleColor(css, selector) {
  *
  * 门禁要读的是真实取值，所以摘掉 TS 语法后直接求值：只认「顶层 export const」、
  * 「as const」与单行的 `type X = typeof Y;`，其它写法留给下面的结构守卫去报错。
+ *
+ * 同时读出原始 `tokens`：`palette` 里有几项（如 hoverBorder）是由 tokens 派生的，
+ * 而 `--color-accent-tertiary` / `--color-highlight` 这两个 token 只存在于 `tokens` 里，
+ * 不比 tokens 本身就会漏掉「改了调色板 token 却没改 CSS」的漂移。
  */
 function readPalette(rootDirectory) {
     const filename = 'src/styles/palette.ts';
@@ -148,8 +154,8 @@ function readPalette(rootDirectory) {
         .replace(/\s+as\s+const\b/g, '');
 
     const context = vm.createContext({});
-    vm.runInContext(`${javascript}\n;globalThis.__palette = palette;`, context, { filename });
-    return context.__palette;
+    vm.runInContext(`${javascript}\n;globalThis.__palette = palette; globalThis.__tokens = tokens;`, context, { filename });
+    return { palette: context.__palette, tokens: context.__tokens };
 }
 
 /** 报错时把解析后的颜色还原成可读文本，渐变中点这类计算值才不会打印成 [object Object]。 */
@@ -164,10 +170,11 @@ function formatColor(color) {
 function check(rootDirectory, fail) {
     const css = fs.readFileSync(path.join(rootDirectory, 'src/styles/main.css'), 'utf8');
     const tokens = readTokens(css);
-    const palette = readPalette(rootDirectory);
+    const { palette, tokens: paletteTokens } = readPalette(rootDirectory);
 
     const requiredTokens = [
         'color-bg-primary',
+        'color-bg-secondary',
         'color-bg-card',
         'color-text-primary',
         'color-text-secondary',
@@ -191,6 +198,13 @@ function check(rootDirectory, fail) {
 
     if (!palette || !palette.share || !Array.isArray(palette.heat)) {
         fail('src/styles/palette.ts 没有导出预期的调色板结构（该文件必须保持顶层 export const + as const 的字面量形状）。');
+        return 0;
+    }
+
+    if (!paletteTokens || typeof paletteTokens !== 'object') {
+        /* 原始 token 对象也要读得到：下面两条同值断言（seal / highlight）正是比它，
+           没有它就只能比 palette 里的派生值，漏掉「只改了 tokens」的漂移。 */
+        fail('src/styles/palette.ts 没有导出预期的 tokens 对象（顶层 export const tokens 是 seal / highlight 的唯一来源）。');
         return 0;
     }
 
@@ -288,6 +302,11 @@ function check(rootDirectory, fail) {
     assertSame('分享图头部终点 与 --color-accent-strong-hover', palette.share.headerTo, tokens['color-accent-strong-hover']);
     assertSame('分享图底色 与 --color-bg-primary', palette.share.background, tokens['color-bg-primary']);
     assertSame('快照底色 与 --color-bg-secondary', palette.snapshotBackground, tokens['color-bg-secondary']);
+    /* seal / highlight 是 canvas 侧的两个原始 token（page 侧的 --color-accent-tertiary /
+       --color-highlight）。它们在 palette 里只被派生使用（hoverBorder 用 seal），
+       所以比对的是 tokens 本身 —— 只改一处就会在这里失败。 */
+    assertSame('调色板 seal 与 --color-accent-tertiary', paletteTokens.seal, tokens['color-accent-tertiary']);
+    assertSame('调色板 highlight 与 --color-highlight', paletteTokens.highlight, tokens['color-highlight']);
 
     /* 热力色带必须逐档变深，否则色阶不再对应人数 */
     const ramp = palette.heat.map(color => luminance(parseColor(color)));

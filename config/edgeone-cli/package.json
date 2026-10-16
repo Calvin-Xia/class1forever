@@ -1,0 +1,8 @@
+{
+  "name": "classmap-edgeone-cli",
+  "private": true,
+  "description": "Pinned EdgeOne Makers CLI used only by the deploy workflow (see docs/ci-deployment.md).",
+  "dependencies": {
+    "edgeone": "1.6.41"
+  }
+}

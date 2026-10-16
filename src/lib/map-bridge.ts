@@ -23,7 +23,8 @@
  *    - `setDetailModeState`：详情模式开关，决定点省份是「下钻」还是「开抽屉」。
  */
 import type { PublicMapPayload } from './types';
-import type { RegionPoint, Region } from './map-model';
+import type { RegionPoint } from './map-model';
+import { BASE_ZOOM, CHINA_MAP_ID } from './map-model';
 import type { EChartsType } from './echarts';
 
 export const MAP_EVENT_NAMES = {
@@ -72,12 +73,17 @@ export interface MapState {
     detailsHint: string;
 }
 
+/**
+ * 空视野的字面量只允许一处：`mapId` / `zoom` 与地图模型里的常量同源
+ * （`CHINA_MAP_ID`、`BASE_ZOOM`），否则「初始 zoom 必须等于 scaleLimit.min」
+ * 这条契约会在改常量时静默漂移 —— 桥接快照不再等于图表实际状态。
+ */
 const EMPTY_VIEW: MapViewState = {
     province: null,
-    mapId: 'cn/china',
+    mapId: CHINA_MAP_ID,
     points: [],
     showLabels: false,
-    zoom: 1.25
+    zoom: BASE_ZOOM
 };
 
 const state: MapState = {
@@ -161,17 +167,4 @@ export function onMapEvent<TDetail>(name: string, handler: (detail: TDetail) => 
     };
     document.addEventListener(name, listener);
     return () => document.removeEventListener(name, listener);
-}
-
-/** 给探针 / 测试用：当前视野里的地区名（含省级城市的 `省::市` 键）。 */
-export function currentRegionKeys(): string[] {
-    return state.view.points.map((point) => (point.city ? `${point.province}::${point.city}` : `${point.province}::*`));
-}
-
-export function currentRegion(pointName: string): Region | null {
-    const point = state.view.points.find((candidate) => candidate.name === pointName);
-    if (!point) {
-        return null;
-    }
-    return { province: point.province, city: point.city };
 }

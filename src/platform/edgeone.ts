@@ -36,13 +36,30 @@ export function makersStore(kv: MakersKV, secret: string): DataStore {
         }
         return type === 'json' ? JSON.parse(value) : value;
     }
+    /**
+     * 上一窗口的逻辑键：`auth:rate:<ip>:<bucket-1>`（复核裁定 #5）。
+     * bucket 是最后一个冒号后的数字；IPv6 地址里也带冒号，所以只能从末尾切。
+     */
+    function previousRateWindowKey(key: string): string | null {
+        const separator = key.lastIndexOf(':');
+        if (separator === -1) return null;
+        const bucket = Number(key.slice(separator + 1));
+        if (!Number.isInteger(bucket) || bucket <= 0) return null;
+        return `${key.slice(0, separator + 1)}${bucket - 1}`;
+    }
     return {
         get,
         async put(key, value, options) {
-            const stored = key.startsWith('auth:rate:')
-                ? JSON.stringify({ value, expiresAt: Date.now() + (options?.expirationTtl ?? 900) * 1000 })
-                : value;
-            return kv.put(await physicalKey(key), stored);
+            if (!key.startsWith('auth:rate:')) {
+                return kv.put(await physicalKey(key), value);
+            }
+            const stored = JSON.stringify({ value, expiresAt: Date.now() + (options?.expirationTtl ?? 900) * 1000 });
+            const result = await kv.put(await physicalKey(key), stored);
+            // Makers KV 没有 TTL 参数，expiresAt 只是逻辑过期。写入新窗口时顺手删掉上一
+            // 窗口的物理键，否则每个 15 分钟窗口都会留下一个永远不会再被读到的键。
+            const previous = previousRateWindowKey(key);
+            if (previous) await kv.delete(await physicalKey(previous));
+            return result;
         },
         async delete(key) { return kv.delete(await physicalKey(key)); }
     };
@@ -109,7 +126,9 @@ export async function edgeoneApi(context: EdgeContext, kv?: MakersKV): Promise<R
         DETAILS_PASSPHRASE: typeof configuration.DETAILS_PASSPHRASE === 'string' ? configuration.DETAILS_PASSPHRASE : undefined,
         DETAILS_SESSION_SECRET: typeof configuration.DETAILS_SESSION_SECRET === 'string' ? configuration.DETAILS_SESSION_SECRET : undefined,
         DETAILS_HINT: typeof configuration.DETAILS_HINT === 'string' ? configuration.DETAILS_HINT : undefined,
-        trustedClientIp: ip
+        // 登录路由在 ip 缺失时已 fail closed（见上）；其余路由只用不到 IP 的处理器，
+        // 这里按 CF 适配器的同款约定回落 `'unknown'`，保持 Env.trustedClientIp 必填。
+        trustedClientIp: ip ?? 'unknown'
     };
     try {
         const response = await route.handle(request, env);

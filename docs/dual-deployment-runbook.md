@@ -114,9 +114,9 @@ Cloudflare 输出 `dist/`，EdgeOne 源组装包 `dist-edgeone/`，CLI 上传包
 
 4. **分线路上线最后确认**：只有 CDN 不兼容风险、同 Host 两端 TLS、数据与 Cookie/缓存门禁通过后，才申请添加 DNSPod 子区 @ 中国大陆 → 实际 EO 目标；默认 → 实际 CF SaaS 目标。合法记录添加后重新验收 NS/SOA/CNAME 与多网络选路，记录 TTL/负缓存和证书续期监测、失败回退；DNSPod 控制台“正常”或一次网页打开均不足以验收。不要为 map 的业务 API/POST 套原入口 WAF。若方案失败，用户可另确认改用原 class1forever 302 入口和独立 cn/global；先备份已有 CNAME、处理记录冲突，再按原方案备选部分设置两条 302 和仅旧入口 WAF，不直接覆盖现有配置。
 
-CI 现有 Cloudflare deploy 已改成先运行 `check:dual`。新增 `.github/workflows/deploy-edgeone.yml` 仅支持手动预览部署：在 GitHub Actions 选择 **Deploy (EdgeOne preview)** → **Run workflow**，分支选 `main`，填写已经核查的直接上传项目名。该文件和依赖的双平台源码须先进入远端 `main` 才可使用；本地写入 workflow 不会自动运行。
+CI 现状：仓库只有 `.github/workflows/deploy.yml`（`.github/workflows/deploy-edgeone.yml` 从未存在，独立 EO 预览工作流已并入 `deploy.yml`）。**推 `main` 即触发 CF + EO 串行正式发布**：`npm ci` → `npm run check:dual` → 只读线上预检并保留上一版公开脚本 → 隔离安装固定 CLI 并打包两个 EO 阶段 → `production-deploy.mjs verify-preview` 验证真实 Makers 预览 → CF Worker 正式部署 → EO 最终正式部署 → 双端读回验收；重复推送由 “Skip a superseded main commit before touching production” 步骤跳过已被取代的提交。完整协议与失败语义见 [CI 发布协议](ci-deployment.md)。
 
-用户已表示配置 GitHub Actions secret；流程使用 `EDGEONE_API_TOKEN`，仅部署步骤注入，测试/打包不接触此值。先运行 `check:dual`，再隔离安装固定 CLI 1.6.41，将组装产物打包并扫描，最终明确上传 `dist-edgeone/.edgeone/` 到 `preview`。不使用云端默认 Node 版本，不同步 AI Gateway，不把源码目录误作上传包。现有 Cloudflare workflow 保留。
+用户已表示配置 GitHub Actions secret；流程使用 `EDGEONE_API_TOKEN`，仅部署步骤注入，测试/打包不接触此值。先运行 `check:dual`，再隔离安装固定 CLI 1.6.41，将组装产物打包并扫描，先部署 Makers 预览环境并用 `verify-preview` 验证，再进入正式环境。不使用云端默认 Node 版本，不同步 AI Gateway，不把源码目录误作上传包。现有 Cloudflare workflow 保留。
 
 KV 审核期间可以上传无配置的预览包用于页面/路由探针，但公开数据与登录预期返回安全 503；不应据预览 URL 或 CLI 成功宣布完整服务可用。工作流不创建/绑定 KV、不上传学生数据、不写应用密钥、不改 DNS，也不提供大陆生产自动部署。获批且真实兼容/区域/TLS/缓存以及新增 SaaS/GeoDNS/同 Host 会话门禁闭合后，再单独开放生产发布。当前仅完成本地文件与打包验证，没有触发远端 workflow；GitHub secret 是否有效要由实际部署读取结果确认。 既有 CI 检查：workflow YAML/手动分支与发布范围/步骤顺序/密钥注入检查通过，7 个 run 步骤经 Bash 语法检查，非法项目名及缺 Token 提前退出负例通过；固定 CLI 本地打包与扫描再次通过。
 

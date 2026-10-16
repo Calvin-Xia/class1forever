@@ -24,7 +24,13 @@ export interface Env {
     DETAILS_SESSION_SECRET?: string;
     DETAILS_HINT?: string;
     DATA_RELEASE_ID?: string;
-    trustedClientIp?: string;
+    /**
+     * 平台提供的可信客户端 IP（复核裁定 #40，必填）。
+     * Cloudflare：`CF-Connecting-IP`，缺失记 `'unknown'`；
+     * Makers：`request.eo.clientIp`（登录路由在缺失时 fail closed）。
+     * 业务层只读这个字段，绝不回退到客户端可伪造的 `X-Forwarded-For` 之流。
+     */
+    trustedClientIp: string;
 }
 
 /** 公开聚合里的计数（students:public:v1 的 stats）。 */

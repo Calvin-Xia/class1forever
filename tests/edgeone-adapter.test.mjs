@@ -54,6 +54,29 @@ test('Makers 限流键合法、IP 隐去、过期值不计数；delete 删除相
     assert.equal(values.size, 0);
 });
 
+test('写新限流窗口时删除上一窗口键，Makers KV 不累积（复核裁定 #5）', async () => {
+    const values = new Map();
+    const kv = { async get(k) { return values.get(k) ?? null; }, async put(k, v) { values.set(k, v); }, async delete(k) { values.delete(k); } };
+    const store = adapter.makersStore(kv, 'demo-hmac-only');
+    await store.put('auth:rate:2001:db8::1:100', '1', { expirationTtl: 900 });
+    assert.equal(values.size, 1);
+    await store.put('auth:rate:2001:db8::1:101', '2', { expirationTtl: 900 });
+    // 上一窗口的物理键必须被删掉：Makers KV 没有 TTL 参数，留着就是每个窗口一份永久垃圾。
+    assert.equal(values.size, 1);
+    assert.equal(await store.get('auth:rate:2001:db8::1:101'), '2');
+    assert.equal(await store.get('auth:rate:2001:db8::1:100'), null);
+});
+
+test('未声明的方法与 CF 契约一致：405 + Allow（复核裁定 #6）', async () => {
+    for (const [pathname, allow] of [['/api/map/public', 'GET, HEAD'], ['/api/auth/details', 'POST']]) {
+        const request = new Request(`https://map.example${pathname}`, { method: 'PUT', headers: { 'content-type': 'application/json' } });
+        const response = await adapter.edgeoneApi({ request, env: {} });
+        assert.equal(response.status, 405);
+        assert.equal(response.headers.get('allow'), allow);
+        assert.equal((await response.json()).error, 'method_not_allowed');
+    }
+});
+
 test('同源保护遵循 Astro：表单/无类型拒绝外站，JSON 原契约保留；HEAD无体', async () => {
     for (const type of [undefined, 'text/plain', 'application/x-www-form-urlencoded', 'multipart/form-data; boundary=x']) {
         const headers = { origin: 'https://attacker.invalid' };

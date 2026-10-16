@@ -1,5 +1,8 @@
 name: Deploy (Cloudflare Workers + EdgeOne Makers)
 
+# Actions 钉在 v4 tag 当前指向的提交上（2026-10-16 用
+# `git ls-remote https://github.com/actions/<repo>.git refs/tags/v4` 取得；三个仓库的 v4
+# 都是轻量 tag，取到的即 commit SHA）。tag 会移动，SHA 不会。
 on:
   push:
     branches: [main]
@@ -17,12 +20,15 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 六阶段是串行的非原子切换（EO 兼容 → CF → EO 正式），每阶段都带真实网络读回与逐字节
+    # 校验；30 分钟会把慢 runner 上的正常流程截断在中间、留下半完成状态，所以放宽到 60。
+    # 单条 CLI 自身仍有 240s 上限（production-deploy.mjs runCli 的 timeout），这里给整条链留余量。
+    timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: npm
@@ -33,7 +39,20 @@ jobs:
       - name: Verify both platforms and shared public chunks
         run: npm run check:dual
       - name: Install pinned Makers CLI
-        run: npm install --prefix .edgeone-build/cli --no-package-lock --no-audit --no-fund edgeone@1.6.41
+        # 可复现安装：`config/edgeone-cli/` 提交了 package.json + package-lock.json（edgeone 1.6.41
+        # 与全部传递依赖的 resolved/integrity 都在里面），npm ci 只按这份 lockfile 装，逐字节可复现。
+        # 安装目录仍是生成目录 `.edgeone-build/cli`（gitignore，build:edgeone 会整目录重建），
+        # 所以只把 lockfile 复制过去，node_modules 不落到受版本控制的位置。
+        # `--ignore-scripts` 已实测安全：edgeone@1.6.41 的已发布 package.json 没有
+        # preinstall/install/postinstall（`npm view edgeone@1.6.41 scripts`），用它安装后
+        # `node_modules/edgeone/edgeone-dist/cli.js makers build` 能正常启动并进入构建器插件。
+        # 本步骤不接触任何部署 Token（只用 npm registry），因此 Token 没有新的暴露面。
+        run: |
+          set -euo pipefail
+          install_dir="$PWD/.edgeone-build/cli"
+          mkdir -p "$install_dir"
+          cp config/edgeone-cli/package.json config/edgeone-cli/package-lock.json "$install_dir/"
+          npm ci --prefix "$install_dir" --no-audit --no-fund --ignore-scripts
       - name: Skip a superseded main commit before touching production
         id: current
         shell: bash
@@ -77,7 +96,7 @@ jobs:
         run: node scripts/production-deploy.mjs deploy
       - name: Save deployment phase evidence only
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: production-deployment-result
           path: .wrangler/production/result.json

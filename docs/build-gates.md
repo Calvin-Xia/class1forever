@@ -31,28 +31,45 @@ npm run check
 
 | 层 | 断言 | 覆盖的 DoD |
 | --- | --- | --- |
-| A 静态 | 关键文件齐全（**面向新站**：不再把旧站 `index.html` / `js/boot.js` / `functions/**` 当必需）；且**仓库根不得再出现 `index.html`** —— 它会被 Vite 的静态中间件先命中，让 `astro dev` 的 `GET /` 返回旧站页面（`l2_motion` 的 F-2）。旧入口归档在 `legacy/index.html`（与 `main:index.html` 逐字节相同），见 `legacy/README.md` | — |
+| A 静态 | 关键文件齐全（**面向新站**：不再把旧站 `index.html` / `js/boot.js` / `functions/**` 当必需；含 `src/platform` 目录）；且**仓库根不得再出现 `index.html`** —— 它会被 Vite 的静态中间件先命中，让 `astro dev` 的 `GET /` 返回旧站页面（`l2_motion` 的 F-2）。旧入口归档在 `legacy/index.html`（与 `main:index.html` 逐字节相同），见 `legacy/README.md` | — |
 | A2 静态 | 生成类型 `worker-configuration.d.ts` 必须在位、**不被 `.gitignore`**，且 `wrangler types --check` 通过（与 `wrangler.jsonc` 无漂移） | 新树/CI 可构建 |
-| B 静态 | 明细数据与密钥名不得出现在**客户端面**（`src/components|scripts|layouts|styles|pages|lib`、`public/`、`js/`，以及编译后的 `dist/client/**`）：`students:raw:v1`、`js/data.js`、`DETAILS_PASSPHRASE`、`DETAILS_SESSION_SECRET` | 2、4 |
+| B 静态 | 明细数据与密钥名不得出现在**客户端面**（`src/**`、`public/**`、`js/**` **默认都是客户端面**，只有显式 server-only 名单 —— `src/platform/**`、`src/pages/api/**`、`src/middleware.ts`、`src/lib/{data,api-handlers,auth,http,types,security-headers}.ts`、`js/data.js` —— 除外；编译后的 `dist/client/**` 同理）：`students:raw:v1`、`js/data.js`、`DETAILS_PASSPHRASE`、`DETAILS_SESSION_SECRET` | 2、4 |
 | C 静态 | 脚本同源、`.astro` 里没有无 `src` 的 `<script is:inline>`、无 Highcharts 残留 | 1 |
 | D 静态 | `src/lib/geo-loader.ts` 的 `AVAILABLE_PROVINCE_FILES` 与 `js/province/*.js` **逐名双向一致**，省级懒加载 glob 未被改，生成文件仍以 `CMapGeo.register(...)` 开头 | 3 |
 | E 静态 | `script-src` 不含 `unsafe-inline`（`public/_headers` 与 `src/lib/security-headers.ts` 两处都查） | 1、9 |
-| F 静态 | 对比度 + CSS token ↔ 画布调色板同值（`scripts/check-contrast.js`，37 项） | 1 |
+| F 静态 | 对比度 + CSS token ↔ 画布调色板同值（`scripts/check-contrast.js`，39 项 = 21 对比度 + 13 同值 + 5 热力单调；同值含 `tokens.seal` ↔ `--color-accent-tertiary` 与 `tokens.highlight` ↔ `--color-highlight`） | 1 |
 | G 静态 | 自建 ECharts vendor 链已退役：产物/生成器文件不存在、`package.json` 无 `vendor:build`、CI 无同步步骤、没有任何地方**加载** `js/vendor/echarts.min.js`、`echarts` 依赖在位 | 7 |
 | H 静态 | `public/_headers` 与 `src/lib/security-headers.ts` 两处同源声明逐条（含 CSP 逐字）一致，防止静态资产与文档响应漂移 | 6、8 |
-| I 静态 | Node 版本门禁：`package.json` 的 `engines.node`、CI 的 `node-version` 与 `astro` / `wrangler` / `@astrojs/react` 的 engines 互相满足；遇到读不懂的 range 直接失败（不静默放过） | 5 |
+| I 静态 | Node 版本门禁：`package.json` 的 `engines.node`、CI 的 `node-version` 与 `astro` / `wrangler` / `@astrojs/react` 的 engines 互相满足；遇到读不懂的 range 直接失败（不静默放过）。CI 的 `node-version` 若解析失败（如改成矩阵表达式）**立即收口退出**，不把 `null` 传进 `satisfies()`；某个依赖的 manifest 缺失时打印 warning（不再静默 `continue`），并提示先 `npm ci` | 5 |
 | J | `astro check` 退出码 0 | 1 |
 | K | `astro build` 退出码 0（两个 astro 阶段都跑，类型错误不遮蔽产物扫描；任一失败最后统一退出 1） | 1 |
 | L 产物 | `dist/client/_headers` 必须包含 `public/_headers` 的全部内容，且额外内容只能是适配器注入的 `/_astro/*` 长缓存规则；`dist/server/wrangler.json` / `entry.mjs` 在位；客户端产物无明细键/密钥名/名单文件/vendor 加载；**任何 `dist/**` 文件里不得出现 `.dev.vars`** 或密钥类取值；服务端产物不得硬编码密钥字面量 | 4、6 |
 | M 运行时 | 真起 Worker：渲染页 `<script>` 全部带 `src`（0 个内联脚本）、文档响应与静态资产的 5 条安全头**逐条一致**、`script-src` 无 `unsafe-inline`、`/.dev.vars` / `/js/data.js` / `/js/vendor/echarts.min.js` 都不可请求 | 6、9 |
 | 人工 | 真 Chromium 打开首页，`window.__mapProbe.read().booted === true`（createRoot 挂载的岛屿真的水合了）、3 个外链 chunk 全同源、控制台 0 报错 | 9 |
 
+## 复核修正（2026-10-16，task-3）
+
+1. **B 层的判定方向反过来了**：以前是白名单（列出哪些目录算客户端面），新增一个 `src/` 子目录会静默漏检；
+   现在 `src/**` / `public/**` / `js/**` 默认都是客户端面，只有显式 server-only 名单除外，
+   并把 `src/platform` 加进 Gate A 的必需文件。
+2. **I 层两处不再静默**：CI `node-version` 解析失败立即 `reportFailures()`（以前会把 `null` 交给
+   `satisfies()`，抛出的是一段与 CI 无关的 TypeError）；依赖 manifest 缺失改为 warning 并提示 `npm ci`。
+3. **F 层 37 → 39 项**：`requiredTokens` 补 `color-bg-secondary`，新增 `tokens.seal` ↔
+   `--color-accent-tertiary`、`tokens.highlight` ↔ `--color-highlight` 两条同值断言（11 → 13 对）；
+   `readTokens` 的锚点改成真正的 `:root {` 规则，注释里出现 “:root” 字样不再干扰解析。
+4. **CI 的 `node --check` 语法扫描容忍目录缺失**：`js/`、`functions/` 等旧站资产迁到 `legacy/` 之后，
+   扫描循环按 `[ -d … ]` 跳过而不是让 `find` 报错（否则 legacy 迁移后 CI 会红）。
+5. **CI/deploy 工作流加固**：`ci.yml` 加 `permissions: contents: read` 与 `timeout-minutes: 30`；
+   `deploy.yml` 超时 30 → 60（六阶段串行切换不该被自身超时截断）；三个官方 Action 钉到 `v4` tag
+   当前指向的 commit SHA。
+
 ## 旧站入口归档（`l4_cutover` 追加的一条断言）
 
 `l2_motion` 记的 **F-2**：仓库根的 `index.html` 会被 Vite 的静态中间件先命中，`astro dev` 的 `GET /`
 返回的是旧站页面，在 astro dev 里「验证首页」会验错对象。切换节点（`l4_cutover`）把旧入口`git mv`
-到 `legacy/index.html`（内容零改动，sha256 与 `main:index.html` 相同），`js/**` / `css/**` /
-`functions/**` 原地不动。
+到 `legacy/index.html`（内容零改动，sha256 与 `main:index.html` 相同）；其后（2026-10-16）退役实现
+也一并 `git mv` 归档到 `legacy/`（`legacy/js/*`、`legacy/css/main.css`、`legacy/functions/**`），
+仓库根只留 `js/china.js`、`js/province/**` 与本地专用的 `js/data.js`（见 `legacy/README.md`）。
 
 Gate A 因此多一条：根 `index.html` 存在 → `npm run build` 失败，并提示
 `git mv index.html legacy/index.html`；`legacy/index.html` 不在位只给 warning（允许有意删掉归档）。

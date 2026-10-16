@@ -186,5 +186,6 @@ export function buildAnnouncement({ publicData, province, detailMode }: Announce
             : `${prefix} 现在可以点地区查看同学信息；想继续进入省内地图，请用下方按钮。`;
     }
 
-    return `${prefix} 已确认口令，点击“同学信息”即可查看各地区同学信息。`;
+    // 与旧站 `js/map.js:1870` 逐字一致（含「的」）：读屏文案改了就是行为回归。
+    return `${prefix} 已确认口令，点击“同学信息”即可查看各地区的同学信息。`;
 }

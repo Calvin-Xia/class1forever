@@ -34,7 +34,13 @@ import Icon from './Icon.astro';
 
 <!-- 抽屉 / 口令弹窗 /「地区一览」的水合入口（l2_dialogs，控制器在 src/lib/dialogs-island.ts）。
      不用 `client:*`：Astro 岛屿水合会注入**内联** script，被 `_headers` 的
-     `script-src 'self'` 拦下；动态 import 让 Astro 产出外链 chunk，CSP 下才能加载。 -->
+     `script-src 'self'` 拦下；动态 import 让 Astro 产出外链 chunk，CSP 下才能加载。
+     `.catch` 与 MapSection.astro 同一套理由（#12）：chunk 拿不到时不能静默 ——
+     抽屉、口令与「地区一览」就全废了，用户只会觉得「点了没反应」。 -->
 <script>
-    import('../scripts/dialogs-island-boot');
+    import { revealMapFatalError } from '../scripts/map-fatal-error';
+
+    import('../scripts/dialogs-island-boot').catch(() => {
+        revealMapFatalError('地区详情脚本加载失败，请重新加载页面。', '地区详情加载失败');
+    });
 </script>
