@@ -36,4 +36,11 @@ CLI 一律以非交互方式运行：`production-deploy.mjs` 不再向 `makers d
 
 预检或兼容部署/资源验收失败，不发布 CF。CF 发布后若 EO 最终发布失败，EO 的兼容页面仍可使用，两端新旧脚本均存在；workflow 会失败，不将半完成过程标绿。每阶段结果保存到 `production-deployment-result` artifact。检查当前状态后再修复并重跑，不盲目轮换 Secrets 或退回缺数据的旧 EO 部署。
 
+**失败必须可分类、可定位**（2026-10-16 的教训：EO 兼容包其实已经发布成功，但随后的控制面读回拿到一个没有 `Deployments` 数组的响应，`TypeError` 被归成一句 `PRODUCTION_DEPLOY_FAILED`，从运行页完全看不出死在哪）：
+
+- 控制面**只读**调用（CF `/client/v4/*`、EO `pages-api`）有 45 s 超时与 3 次有界重试；发布动作（CLI）绝不重试。
+- 传输与响应体异常各有独立错误码：`CLOUDFLARE_API_TIMEOUT` / `_UNREACHABLE` / `_INVALID_BODY_<status>`，`EDGEONE_API_TIMEOUT` / `_UNREACHABLE` / `_INVALID_BODY_<status>`；控制面返回的部署列表不是数组时是 `EDGEONE_DEPLOYMENTS_MISSING`，而不是靠 `.some` 抛类型错误。
+- 真的走到兜底时，stderr 的 JSON 会带 `phase` 与 `cause`（只有 `error.name`，例如 `TYPEERROR` / `TIMEOUTERROR`，**不打印 message**，避免带出 URL、响应片段或凭据），并把这组 `{code, cause, phase}` 追加写入会上传的 `result.json` 的 `failure` 字段。
+- CLI 非零退出且过滤后没有任何可打印行时，会额外打印 `{"phase":…,"status":"cli-failed","exit":…,"signal":…,"spawnError":…}`，用来区分「CLI 失败」与「CLI 成功但读回校验失败」。
+
 `result.success: true` 才表示本次生产流程全部完成；完整 CI 成功还需 Actions 两个工作流在同一提交上通过。固定入口与严格 TLS 的运行验收不证明真实大陆终端的选路或跨 CDN 自动续期；这些仍见 [实际分流记录](production-readiness-20261015.md)。

@@ -3,7 +3,8 @@ import test from 'node:test';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { coordinatedDeploy, deploymentCandidate, validateManifest, validatePreviousPage, responseDiagnostic, stageCompatibility, deploy, cloudflareState, edgeoneProject, edgeoneProductionDeployment, assertEdgeoneProductionUnchanged, assertMainNotSuperseded, assertProductionEnvironment, assertUnchangedSincePrepare } from '../scripts/production-deploy.mjs';
+import { fileURLToPath } from 'node:url';
+import { coordinatedDeploy, deployEdgeone, deploymentCandidate, eoApi, validateManifest, validatePreviousPage, responseDiagnostic, stageCompatibility, deploy, cloudflareState, edgeoneProject, edgeoneProductionDeployment, assertEdgeoneProductionUnchanged, assertMainNotSuperseded, assertProductionEnvironment, assertUnchangedSincePrepare } from '../scripts/production-deploy.mjs';
 
 const config = JSON.parse(fs.readFileSync(new URL('../config/production.json', import.meta.url), 'utf8'));
 const state = () => ({ release: 'prod_20261015_01', sessionNamespace: config.sessionNamespace, dataNamespace: config.dataNamespace, workersDev: true, previews: true, routes: [...config.routes.map(pattern => ({ pattern, script: config.worker })), { pattern: 'other.example/*', script: 'other-worker' }] });
@@ -189,4 +190,66 @@ test('the final EO phase refuses to publish when EO production is not the compat
     assert.throws(() => assertEdgeoneProductionUnchanged(undefined, 'eo-compatibility-1'), /EDGEONE_PRODUCTION_DEPLOYMENT_CHANGED/);
     assert.throws(() => assertEdgeoneProductionUnchanged('eo-compatibility-1', 'eo-compatibility-1'.toUpperCase()), /EDGEONE_PRODUCTION_DEPLOYMENT_CHANGED/);
     assert.doesNotThrow(() => assertEdgeoneProductionUnchanged('eo-compatibility-1', 'eo-compatibility-1'));
+});
+
+/* 2026-10-16 的线上发布：EO 兼容包其实已经发上去了（清单从 89 变 108 个文件），
+   但随后的控制面读回拿到一个没有 Deployments 数组的响应，`live.Deployments.some(...)`
+   抛 TypeError，被顶层 catch 归类成不可诊断的 PRODUCTION_DEPLOY_FAILED。以下三个用例
+   把「响应形状不对」与「CLI 之后发生了什么」固定成可分类、可回归的行为。 */
+function withEdgeoneCliEntry(operation) {
+    const previous = process.env.EDGEONE_CLI_ENTRY;
+    process.env.EDGEONE_CLI_ENTRY = fileURLToPath(import.meta.url);
+    return Promise.resolve()
+        .then(operation)
+        .finally(() => {
+            if (previous === undefined) delete process.env.EDGEONE_CLI_ENTRY;
+            else process.env.EDGEONE_CLI_ENTRY = previous;
+        });
+}
+
+test('EO deploy refuses to continue when the control plane omits the deployment list', async () => {
+    await withEdgeoneCliEntry(() => assert.rejects(
+        deployEdgeone(path.join(os.tmpdir(), 'classmap-package/.edgeone'), 'edgeone-compatibility', 'production', {
+            verifyProject: async () => ({ ProjectId: config.edgeoneProjectId }),
+            run: () => '{"deploymentId":"abc123"}',
+            describe: async () => ({ RequestId: 'fixture-without-deployments' })
+        }),
+        /EDGEONE_DEPLOYMENTS_MISSING/
+    ));
+});
+
+test('EO deploy accepts a successful production deployment through the injected control plane', async () => {
+    await withEdgeoneCliEntry(async () => {
+        const id = await deployEdgeone(path.join(os.tmpdir(), 'classmap-package/.edgeone'), 'edgeone-compatibility', 'production', {
+            verifyProject: async () => ({ ProjectId: config.edgeoneProjectId }),
+            run: () => '{"deploymentId":"abc123"}',
+            describe: async () => ({ Deployments: [{ DeploymentId: 'abc123', Status: 'Success', Env: 'Production' }] })
+        });
+        assert.equal(id, 'abc123');
+    });
+});
+
+test('EO control-plane transport and body failures get their own codes instead of an opaque failure', async () => {
+    const originalFetch = globalThis.fetch;
+    const originalToken = process.env.EDGEONE_API_TOKEN;
+    process.env.EDGEONE_API_TOKEN = 'fixture-token';
+    try {
+        globalThis.fetch = async () => {
+            const error = new Error('fixture timeout');
+            error.name = 'TimeoutError';
+            throw error;
+        };
+        await assert.rejects(eoApi('DescribePagesDeployments', {}), /EDGEONE_API_TIMEOUT/);
+
+        globalThis.fetch = async () => new Response('<html>gateway</html>', { status: 502 });
+        await assert.rejects(eoApi('DescribePagesDeployments', {}), /EDGEONE_API_INVALID_BODY_502/);
+
+        globalThis.fetch = async () => new Response(JSON.stringify({ Data: { Response: { Deployments: [] } } }), { status: 200, headers: { 'content-type': 'application/json' } });
+        const payload = await eoApi('DescribePagesDeployments', {});
+        assert.deepEqual(payload, { Deployments: [] });
+    } finally {
+        globalThis.fetch = originalFetch;
+        if (originalToken === undefined) delete process.env.EDGEONE_API_TOKEN;
+        else process.env.EDGEONE_API_TOKEN = originalToken;
+    }
 });
