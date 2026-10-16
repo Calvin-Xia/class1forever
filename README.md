@@ -33,12 +33,12 @@ Forked from [lvris/map](https://github.com/lvris/map)
 
 地图用 Apache ECharts 渲染，几何数据、渲染库、页面逻辑三者是分开的：
 
-- `js/geo.js` 只提供 `CMapGeo` 注册表，不依赖任何图表库。
+- `legacy/js/geo.js`（迁移前实现，仅对照）只提供 `CMapGeo` 注册表，不依赖任何图表库；新站的对应层是 `src/lib/geo-loader.ts`。
 - `js/china.js` 与 `js/province/*.js` 是导出好的 GeoJSON，只调用 `CMapGeo.register(...)`。
-- `js/map.js` 把需要的条目交给 ECharts，负责上色、下钻、悬浮卡片、缩放限制与分享图。
-- `js/palette.js` 是画布调色板：`js/map.js` 不能用 `import`，所以沿用注册表模式，
-  canvas 上的颜色与字体都从这里取，页面侧同值变量在 `css/main.css` 的 `:root`。
-- `js/motion.js` 只做光标墨晕、按钮磁吸、卡片聚光三件事，纯原生、无依赖，
+- `legacy/js/map.js` 把需要的条目交给 ECharts，负责上色、下钻、悬浮卡片、缩放限制与分享图（已迁移到 `src/lib/**` + `src/scripts/**`）。
+- `src/styles/palette.ts` 是画布调色板（迁移前的 `legacy/js/palette.js` 只作对照）：新站的地图与分享图
+  可以正常 `import`，canvas 上的颜色与字体都从这里取，页面侧同值变量在 `src/styles/main.css` 的 `:root`。
+- `legacy/js/motion.js`（现役对应 `src/scripts/motion.ts`）只做光标墨晕、按钮磁吸、卡片聚光三件事，纯原生、无依赖，
   在 `prefers-reduced-motion` 或没有精确指针的设备上完全不注册监听。
 
 渲染库不走 CDN：ECharts 是 npm 依赖（`echarts`），由 Vite 打进 `/_astro/*` 的同源 chunk，
@@ -48,24 +48,24 @@ Forked from [lvris/map](https://github.com/lvris/map)
 ## 仓库结构
 
 - `legacy/index.html`: 迁移前的旧入口，**已归档**（根目录不再有 `index.html`，否则会遮蔽 `astro dev` 的 `/`）；新站对应 `src/pages/index.astro`。
-- `js/boot.js`: 按顺序加载渲染库、几何数据与页面脚本，失败时给出重试入口。
-- `js/geo.js`: 地图几何数据注册表，以及可下钻省份白名单。
+- `legacy/js/boot.js`: 按顺序加载渲染库、几何数据与页面脚本，失败时给出重试入口。
+- `legacy/js/geo.js`: 地图几何数据注册表，以及可下钻省份白名单（门禁实际读 `src/lib/geo-loader.ts` 的同名白名单）。
 - `js/china.js`, `js/province/*.js`: 全国与各省 GeoJSON。
-- `js/map.js`: 地图渲染、公开数据、详情查看交互、分享图。
-- `js/palette.js`: 地图与分享图共用的调色板与 canvas 字体。
-- `js/motion.js`: L2 动效层（光标墨晕、磁吸、聚光），无第三方依赖。
+- `legacy/js/map.js`: 地图渲染、公开数据、详情查看交互、分享图。
+- `legacy/js/palette.js`: 地图与分享图共用的调色板与 canvas 字体（迁移前实现，仅对照；现役是 `src/styles/palette.ts`）。
+- `legacy/js/motion.js`: L2 动效层（光标墨晕、磁吸、聚光），无第三方依赖。
 - `favicon.svg`: 站点图标 —— 纸面 + 方环 + 罗盘玫瑰（北点朱砂）。**刻意不含地图几何**，原因见下方「已知限制」。
-- `css/main.css`: 页面样式、地图控件、悬浮卡片、移动端样式。
-- `functions/`: 迁移前的 Pages Functions 接口（等价性对照；本分支跑的是 `src/pages/api/**`）。
+- `legacy/css/main.css`: 页面样式、地图控件、悬浮卡片、移动端样式（迁移前实现，仅对照；现役是 `src/styles/main.css`）。
+- `legacy/functions/`: 迁移前的 Pages Functions 接口（等价性对照；本分支跑的是 `src/pages/api/**`）。
 - `shared/data-model.mjs`: 数据规范化、公开聚合统计生成逻辑。
 - `scripts/upload-kv-data.mjs`: 将本地数据写入 Cloudflare KV。
-- `scripts/check-contrast.js`: 关键配色的对比度断言，以及 CSS 与 `js/palette.js` 的同值校验。
+- `scripts/check-contrast.js`: 关键配色的对比度断言，以及 `src/styles/main.css` 与 `src/styles/palette.ts` 的同值校验（不再读迁移前的 `legacy/css/main.css` / `legacy/js/palette.js`）。
 - `scripts/local-runtime.mjs`: 本地运行通路（不需要 Cloudflare 凭据）：从构建产物派生本地 Worker 配置、把夹具数据写进本地 KV、起 `wrangler dev`。
 - `tests/api-contract.test.mjs`: 四个 API 路由的成功/失败态契约断言（`npm run test:api`）。
-- `tests/dev-server.mjs`: 迁移前的本地假 API 服务器，**已退役**，不再是可执行主路径（保留仅为对照）。
+- `tests/dev-server.mjs`: 迁移前的本地假 API 服务器，**已退役**，不再是可执行主路径（保留仅为对照）。它按路径加载 `legacy/js/geo.js`（几何数据 `js/china.js`、`js/province/**` 仍在仓库根），CI 只对它做 `node --check`。
 - `astro.config.mjs`, `tsconfig.json`, `worker-configuration.d.ts`: Astro 6 SSR 工程配置、TypeScript 严格预设，以及 `wrangler types` 生成的绑定类型。
 - `src/`: 新站源码（`pages/` 路由、`components/`、`layouts/`、`lib/`、`styles/`）；`pages/api/**` 是四个接口路由。
-- `legacy/index.html`, `js/**`, `css/**`, `functions/**`: 迁移前的 Pages 实现，保留对照，不再是本分支的运行/部署主路径。
+- `legacy/`（`index.html`、`js/`、`css/`、`functions/`）: 迁移前的 Pages 实现，**已整体归档**（只有 `js/china.js`、`js/province/**` 与本地未入库的 `js/data.js` 留在仓库根），不再是本分支的运行/部署主路径；见 `legacy/README.md`。
 - `DESIGN.md`: 视觉设计规范（纸本图志），改样式前先读它。
 - `wrangler.jsonc`: Cloudflare Worker + Workers Assets / KV 绑定配置（`main` 指向适配器入口，静态资源走 `ASSETS` 绑定）。
 - `.dev.vars.example`: 本地开发需要的 secret 模板。
@@ -120,23 +120,29 @@ Forked from [lvris/map](https://github.com/lvris/map)
 - `npm run data:upload -- --dry-run`
   检查当前数据源是否能正确生成 KV 需要的两份数据。
 
-- `npm run data:upload`
-  上传生产环境数据到 Cloudflare KV。
+- `npm run data:upload -- --release-id <id>`
+  以版本化键上传生产数据（`students_raw_<id>` / `students_public_<id>`）。**生产数据更新必须走 release**：
+  或者用 `scripts/data-release.mjs`（prepare / verify / verify-readback），或者给上传脚本加 `--release-id`。
 
-- `npm run data:upload:preview`
-  上传预览环境数据到 Cloudflare KV。
+- `npm run data:upload`
+  不带 `--release-id` 时只写固定键 `students:raw:v1` / `students:public:v1`，脚本会打印警告；
+  线上若已启用 `DATA_RELEASE_ID`，这两个固定键不会被读取。
+
+- `npm run data:upload:preview -- --release-id <id>`
+  上传预览环境数据到 Cloudflare KV（同样建议带 `--release-id`）。
 
 ### 用真实聚合数据调试前端
 
 公开数据只有人数，可以安全导出，用来看真实数字下的渲染效果：
 
 ```bash
-npx wrangler kv key get students:public:v1 \
+npx wrangler kv key get students_public_<DATA_RELEASE_ID> \
   --namespace-id=<wrangler.jsonc 里的 preview_id> --remote --text > public.json
+# 线上未启用 DATA_RELEASE_ID 时才读固定键 students:public:v1
 STUDENTS_PUBLIC_FILE=public.json npm run dev:local
 ```
 
-`students:raw:v1` 含姓名与学校，不要导出、也不要提交；如果确实需要本地验证详情面板，
+`students_raw_<id>`（未启用 `DATA_RELEASE_ID` 时是 `students:raw:v1`）含姓名与学校，不要导出、也不要提交；如果确实需要本地验证详情面板，
 只在本地用 `STUDENTS_RAW_FILE=<本地文件> npm run dev:local`，文件不要入库。
 
 
@@ -149,7 +155,7 @@ STUDENTS_PUBLIC_FILE=public.json npm run dev:local
 3. 复制 `.dev.vars.example` 为 `.dev.vars`，填入本地调试所需的 secret。
 4. 检查 `wrangler.jsonc` 中的 `CLASS_MAP_DATA` 绑定、`preview_id`、`remote: true` 是否仍然指向正确环境。
 5. 执行 `npm run data:upload -- --dry-run` 检查本地数据。
-6. 执行 `npm run data:upload:preview`，先把预览环境数据上传到 KV。
+6. 执行 `npm run data:upload:preview -- --release-id <id>`，先把预览环境数据上传到 KV（生产更新必须带 release ID，见「常用命令」）。
 7. 执行 `npm run build`，再执行 `npm run dev:local` 起本地站（演示口令 `demo`，不需要 Cloudflare 账号）。
    要连远端预览 KV 时才用 `npm run cf:dev`（需先 `npx wrangler login`）。
 
@@ -184,16 +190,19 @@ DETAILS_HINT=前端显示的提示语，可选
 npm run data:upload -- --dry-run
 ```
 
-再上传到 Cloudflare KV：
+再上传到 Cloudflare KV（**生产更新必须带 `--release-id`**）：
 
 ```bash
-npm run data:upload
+npm run data:upload -- --release-id <id>
 ```
+
+不带 `--release-id` 的 `npm run data:upload` 只写固定键 `students:raw:v1` / `students:public:v1`，
+脚本会打印警告；线上若已启用 `DATA_RELEASE_ID`，固定键不会被读取。
 
 如果你希望本地开发优先读取预览环境 KV，则执行：
 
 ```bash
-npm run data:upload:preview
+npm run data:upload:preview -- --release-id <id>
 ```
 
 ### 4. 启动本地开发服务
@@ -227,7 +236,7 @@ TEMP="$PWD/.wrangler/probe-tmp" TMP="$PWD/.wrangler/probe-tmp" npm run cf:dev   
 当前 `wrangler.jsonc` 已为 `CLASS_MAP_DATA` 配置 `remote: true` 和 `preview_id`。因此 `cf:dev`
 会直接读 Cloudflare 上的远端 KV；而 `dev:local` / `astro dev` 读的是本地模拟 KV。
 
-如果本地打开后看到“地图公开数据尚未配置”，通常说明预览环境 KV 里还没有 `students:public:v1`，需要先执行一次 `npm run data:upload:preview`。
+如果本地打开后看到“地图公开数据尚未配置”，通常说明预览环境 KV 里还没有对应键：未启用 `DATA_RELEASE_ID` 时是 `students:public:v1`，启用后是 `students_public_<id>`。先执行一次 `npm run data:upload:preview -- --release-id <id>`（或线上实际使用的发布配置）再重试。
 
 ## 部署方式
 

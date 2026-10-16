@@ -1,7 +1,7 @@
 # 纸本图志 · DESIGN.md
 
 > 金鹰 1 班蹭饭地图 视觉设计规范 · 版本 1.0
-> 本文档是 `css/main.css`、`js/palette.js`、`index.html`、`js/motion.js` 的唯一视觉依据。
+> 本文档是 `src/styles/main.css`、`src/styles/palette.ts`、`src/pages/index.astro`、`src/scripts/motion.ts` 的唯一视觉依据；迁移前的 `legacy/css/main.css`、`legacy/js/palette.js`、`legacy/index.html`、`legacy/js/motion.js` 只作对照，门禁与运行页都不再读它们。
 
 ---
 
@@ -217,10 +217,10 @@ focus-visible 同 4.2 · disabled 同 4.2
 
 非等大网格的**名录阵列**：
 ```
-┌ 01  杭州 ────────────── 浙江大学 ┐   ← 序号 + 城市分组头（mono，发丝下划线）
-│  01  张三    杭州    浙江大学      │   ← 交错入场，hover 底色上浮
-│  02  李四    杭州    浙江大学      │
-└ 02  宁波 ────────────────────────┘
+┌ 01  示例市 ──────────── 示例大学 ┐   ← 序号 + 城市分组头（mono，发丝下划线）
+│  01  示例甲    示例市    示例大学  │   ← 交错入场，hover 底色上浮
+│  02  示例乙    示例市    示例大学  │
+└ 02  示例市乙 ────────────────────┘
 ```
 - 城市分组头：`--color-accent-secondary`，mono，`border-bottom: 1px dashed var(--color-on-ink-line)`
 - 行 hover：`background: var(--color-ink-card-hover)`
@@ -328,7 +328,7 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
 ### 4.13 图标系统 `.icon`
 
 全部图标画在同一个 **24×24 网格**上，内容留在 3.2–20.8 之间。尺寸、线宽、端点、颜色只由
-`css/main.css` 的「图标系统」一节决定，**组件里不再各写一个 px 值**。
+`src/styles/main.css` 的「图标系统」一节决定（迁移前同名节在 `legacy/css/main.css`，仅对照），**组件里不再各写一个 px 值**。
 
 **尺寸只有四档**：
 
@@ -404,7 +404,7 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
 
 ### 档位：L2 流畅交互
 
-依赖：**零外部库**。纯 CSS 动画 + 一个同源脚本 `js/motion.js`（原生 `IntersectionObserver` + `requestAnimationFrame`）。
+依赖：**零外部库**。纯 CSS 动画 + 一个同源脚本 `legacy/js/motion.js`（现役对应 `src/scripts/motion.ts`；原生 `IntersectionObserver` + `requestAnimationFrame`）。
 
 > 为什么不用 GSAP / Lenis：本项目 CSP 为 `script-src 'self'`，跨域脚本直接被 `build.js` 拦下；且本页是单屏工具页，没有滚动叙事，引入滚动库只有成本没有收益。
 
@@ -422,7 +422,7 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
         repeating-linear-gradient(to bottom, rgba(23,36,31,0.045) 0 1px, transparent 1px 92px);
 }
 ```
-- `--mx / --my` 由 `js/motion.js` 写入，**pointermove 必须 rAF 节流**
+- `--mx / --my` 由 `legacy/js/motion.js`（现役 `src/scripts/motion.ts`）写入，**pointermove 必须 rAF 节流**
 - 仅在 `matchMedia('(hover: hover)')` 下更新
 - 纸纹用极低透明度 SVG `feTurbulence` 作 `data:` URI 背景（`img-src 'self' data:` 已放行）
 
@@ -479,7 +479,7 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
 | Text — Hero H1 | 标题逐字落墨（唯一的文字入场） | CSS `--i` 交错，700ms 一次性 |
 | Text — Section H2 | 抽屉标题、地区一览标题 | 静态排版，不做动画 |
 | Text — Label | 眉标字距收拢 | 静态 |
-| Animation — 元素级 | 按钮磁吸（≤4px）、卡片聚光、`:active` 按下态 | `js/motion.js`（rAF 节流）+ CSS |
+| Animation — 元素级 | 按钮磁吸（≤4px）、卡片聚光、`:active` 按下态 | `legacy/js/motion.js`（rAF 节流）+ CSS |
 | Component — 交互构件 | 纸版抽屉 / 地区一览表 / 印章徽标 / 图例标尺 | CSS 过渡 + ECharts visualMap |
 | Background — 氛围层 | 经纬网格 + 纸纹 + 光标墨晕 | CSS + `--mx/--my` |
 
@@ -503,9 +503,9 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
     }
 }
 ```
-`js/motion.js` 在 `prefers-reduced-motion: reduce` 或 `(hover: none)` 下**完全不注册**光标/磁吸监听。
+`legacy/js/motion.js` 在 `prefers-reduced-motion: reduce` 或 `(hover: none)` 下**完全不注册**光标/磁吸监听。
 
-**ECharts 要单独处理**：地图画在 canvas 上，上面这段媒体查询够不着它。`js/map.js` 的
+**ECharts 要单独处理**：地图画在 canvas 上，上面这段媒体查询够不着它。`legacy/js/map.js` 的
 `chartAnimationEnabled()` 读同一个查询，喂给 `animation` / `animationDuration` /
 `animationDurationUpdate`。实测开启降低动效后 `getOption().animation === false`、
 `animationDuration === 0`。改动效时两半必须一起改，否则只降了一半。
@@ -516,8 +516,8 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
 
 ### Do
 
-1. **所有颜色走 CSS 变量**。`css/main.css` 出现裸色值只允许三处例外，且都写在注释里说明原因：`:root` 的定义处、`.auth-modal__feedback[data-variant=...]` 的两个色值（`scripts/check-contrast.js` 用正则直接读它们，写 `var(...)` 会解析失败）、以及 `.atmosphere__grid` 遮罩里的 `black`（那是 alpha 通道，不是设计色）。
-2. **改色必须同时改两处**：`css/main.css` 的 `:root` 与 `js/palette.js` 的 `tokens`。`scripts/check-contrast.js` 有 11 对同值断言。
+1. **所有颜色走 CSS 变量**。`src/styles/main.css` 出现裸色值只允许三处例外，且都写在注释里说明原因：`:root` 的定义处、`.auth-modal__feedback[data-variant=...]` 的两个色值（`scripts/check-contrast.js` 用正则直接读它们，写 `var(...)` 会解析失败）、以及 `.atmosphere__grid` 遮罩里的 `black`（那是 alpha 通道，不是设计色）。
+2. **改色必须同时改两处**：`src/styles/main.css` 的 `:root` 与 `src/styles/palette.ts` 的 `tokens`。`scripts/check-contrast.js` 有 13 对同值断言（迁移前的 `legacy/css/main.css` / `legacy/js/palette.js` 只是对照副本，不在断言里）。
 3. **中文排版用中文字族**，行高 ≥ 1.7、字距 ≥ 0.02em、正文 ≥ 15px。
 4. **发丝线优先于阴影**。想区分层级，先想「加一条线」，再想「加一层影」。
 5. **热力色带逐档变深**，并保证 `mapLabel` 在最浅一档上 ≥ 4.5:1。
@@ -525,8 +525,8 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
 7. **触摸目标 ≥ 44×44px**（移动端）。
 8. **图标一律内联 SVG**，`stroke: currentColor`，随文字颜色走。
 9. **动效服务于「印刷」隐喻**：落墨、落印、翻页，而不是弹跳、光晕、粒子。
-10. **保留全部既有 ID 与类名契约**（`js/map.js` 依赖它们）。
-11. **对比度断言要覆盖一个色值实际落到的每一种底色**。`--color-text-muted` 曾经只对页面底断言（5.12:1），可它实际坐在衬纸上的两处（地图版权、比例尺刻度）只有 **4.48:1** —— 只对一种底色断言就是漏检。现在是 37 条。
+10. **保留全部既有 ID 与类名契约**（`legacy/js/map.js` 依赖它们）。
+11. **对比度断言要覆盖一个色值实际落到的每一种底色**。`--color-text-muted` 曾经只对页面底断言（5.12:1），可它实际坐在衬纸上的两处（地图版权、比例尺刻度）只有 **4.48:1** —— 只对一种底色断言就是漏检。现在是 39 条（迁移前 37 条）。
 12. **交互控件统一加 `touch-action: manipulation`**，`#map` 除外：它需要保留原生拖拽与双指缩放。
 
 ### Don't
@@ -537,7 +537,7 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
 4. **不要**用 12px 以上的圆角 —— 纸版是方的，圆角只做 2–4px 的「倒边」。
 5. **不要**在移动元素上使用 `filter: blur()` 或大范围 `backdrop-filter`。
 6. **不要**使用 `transition: all`（会把 focus ring 拖进过渡，破坏键盘可见性）。
-7. **不要**硬编码色值到 `js/map.js` —— 画布颜色统一从 `CMapPalette` 取。
+7. **不要**硬编码色值到 `legacy/js/map.js` —— 画布颜色统一从 `CMapPalette` 取。
 8. **不要**给地图容器加 `overflow: hidden` 之外的裁剪，也**不要**改 `aspectScale` 与 `BASE_ZOOM`（几何数据是 EPSG:3415 预投影）。
 9. **不要**新增跨域 `<script>` 或内联 `<script>`（`build.js` 会直接失败）。
 10. **不要**把 `#map` 变成可 Tab 聚焦的控件 —— 它只是焦点锚点；键盘选地区的路径是「地区一览」表。
@@ -571,12 +571,12 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
 
 | 约束来源 | 本规范如何满足 |
 |----------|----------------|
-| `build.js` 无内联/跨域脚本 | 动效集中在同源 `js/motion.js`；SVG 内联，无 CDN |
+| `build.js` 无内联/跨域脚本 | 动效集中在同源 `legacy/js/motion.js`（现役 `src/scripts/motion.ts`）；SVG 内联，无 CDN |
 | `build.js` 无 Highcharts 残留 | 不受影响 |
 | `check-contrast.js` 12 个必需变量 | §2 全部提供，且都在首个 `:root` 块内 |
-| `check-contrast.js` 37 条断言 | 全部色值已按 WCAG 2.2 AA 核算通过（含「弱化墨/次级墨 × 衬纸」两对） |
-| 11 对 CSS ↔ palette 同值 | §2 与 `js/palette.js` `tokens` 一一对应 |
+| `check-contrast.js` 39 条断言 | 全部色值已按 WCAG 2.2 AA 核算通过（含「弱化墨/次级墨 × 衬纸」两对） |
+| 13 对 CSS ↔ palette 同值 | §2 与 `src/styles/palette.ts` 的 `tokens` 一一对应（旧 `legacy/js/palette.js` 仅对照） |
 | `_headers` CSP | 字体走同源 `/fonts/`（`font-src 'self'`）；纸纹用 `data:`（在 `img-src` 白名单） |
 | `favicon.svg` 不含地图几何 | 32px 放不下中国地图规范要求的南海诸岛插图，任何按面积简化的国境线剪影都会把那些岛礁当碎点筛掉（早期版本确实丢了）。改用图志语汇：纸面 + 印章形方环 + 罗盘玫瑰，北点朱砂。手写 SVG，约 700 字节 |
-| `js/map.js` 不可 `import` | 画布色与字体仍从 `window.CMapPalette` 读 |
+| `legacy/js/map.js` 不可 `import` | 画布色与字体仍从 `window.CMapPalette` 读 |
 | 几何数据不可手改 | 本规范不触碰 `js/china.js` 与 `js/province/*.js` |

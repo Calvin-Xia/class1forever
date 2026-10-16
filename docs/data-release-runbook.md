@@ -8,7 +8,7 @@
 
 唯一输入为受保护的仓库外 JSON 文件（学生数组），或本地进程的 `STUDENTS_DATA`。不执行遗留 JS 文件，也不在两端分别生成数据。复用 `shared/data-model.mjs` 规范化，一次固定 `generatedAt`，生成同一份 raw/public 字节。数据格式 `version: "v1"` 保持原语义。
 
-发布 ID 只允许 1–64 个 ASCII 字母、数字、下划线，物理键为 `students_raw_<releaseId>` 和 `students_public_<releaseId>`。为旧版本回滚保留 `students:raw:v1` / `students:public:v1`。每个 UTF-8 值最多 1,000,000 字节；该上限是按文档矛盾采取的保守检查，不能代替真实 Makers 单值限制实测。
+发布 ID 只允许 1–64 个 ASCII 字母、数字、下划线，物理键为 `students_raw_<releaseId>` 和 `students_public_<releaseId>`。为旧版本回滚保留 `students:raw:v1` / `students:public:v1`——**该回退只适用于 Cloudflare**（未设置 `DATA_RELEASE_ID` 时回落到固定键）；EdgeOne 缺 `DATA_RELEASE_ID` 时是 503，回滚必须按 release 配置恢复到上一版本。每个 UTF-8 值最多 1,000,000 字节；该上限是按文档矛盾采取的保守检查，不能代替真实 Makers 单值限制实测。
 
 输出目录包含 `raw.json`、`public.json`、`manifest.private.json`。manifest 仅含 schema/data/release 版本、UTC 生成时间、非敏感来源标签、聚合统计、物理键、字节数与 SHA-256；不含来源路径或凭据。manifest 和哈希同样只留在受控发布环境，不提供公开 API。
 
@@ -48,8 +48,8 @@ node --test tests/data-release.test.mjs
 | --- | --- |
 | `createRelease(records, { releaseId, generatedAt?, sourceTag? })` | 生成一次字节与私有 manifest |
 | `verifyRelease(release)` | 哈希、长度、规范化明细和地区聚合一致性核验 |
-| `stageRelease(release, adapters, { record? })` | 两端顺序写新物理键，逐端读回；不激活 |
-| `activateRelease(release, staged, adapters, { record? })` | 仅接受两端 verified；重新读回后逐端激活并探测，失败则恢复已尝试的端 |
+| `stageRelease(release, adapters, { record, allowMissingJournal? })` | 两端顺序写新物理键，逐端读回；不激活。`record` **必填**：缺省会抛 `JOURNAL_RECORD_REQUIRED`，只有显式传 `{ allowMissingJournal: true }` 才允许无日志 |
+| `activateRelease(release, staged, adapters, { record, allowMissingJournal? })` | 仅接受两端 verified；重新读回后逐端激活并探测，失败则恢复已尝试的端。`record` 同样**必填**，豁免条件与 `stageRelease` 一致 |
 | `verifyReadback(release, adapter)` | 读取两键完整字节，逐一比对 SHA-256 |
 
 `adapters` 必须同时提供 `cloudflare` 和 `edgeone`，以下方法返回 Promise：
@@ -65,7 +65,7 @@ node --test tests/data-release.test.mjs
 }
 ```
 
-接入生产时必须提供 `record(state)`，以受保护持久日志记录状态快照，使用安全原子文件替换或经过验证的等价机制，并包含同一 Git SHA、平台资源标识、操作时间、操作者和探测记录。函数提供的状态仅含发布 ID、uploaded/verified/activated、上一版本和回滚结果，不含源数据/凭据；部署动作和成功探测后均需落盘。记录失败会阻止后续激活或触发回滚，若最终日志保存也失败，入口必须报失败并按平台当前状态人工复核，不能将未保存的状态视为可靠成功记录。
+接入生产时必须提供 `record(state)`，以受保护持久日志记录状态快照，使用安全原子文件替换或经过验证的等价机制，并包含同一 Git SHA、平台资源标识、操作时间、操作者和探测记录。函数提供的状态仅含发布 ID、uploaded/verified/activated、上一版本和回滚结果，不含源数据/凭据；部署动作和成功探测后均需落盘。记录失败会阻止后续激活或触发回滚，若最终日志保存也失败，入口必须报失败并按平台当前状态人工复核，不能将未保存的状态视为可靠成功记录。实现现状：`stageRelease` / `activateRelease` 在生产路径已把 `record` 强制为必需参数——缺少 `record` 会直接报错，确需无日志必须显式传 `opts.allowMissingJournal === true`；该强制由 `tests/data-release.test.mjs` 的负例覆盖。
 
 Cloudflare 控制面适配可使用官方 Wrangler 的版本化 KV 上传与原始值读取，但须验证 namespace/绑定、实际命令格式、读回延迟和错误行为。EdgeOne 必须先证明 Makers KV 的控制面写入/读回接口、命名空间和绑定，不能替换为其他腾讯产品的 `EdgeKVPut`。尚无可用自动化接口时，先使用控制台同字节导入并受控导出读回；本工具不声称控制台导入已经完成。
 
@@ -84,10 +84,10 @@ Cloudflare 控制面适配可使用官方 Wrangler 的版本化 KV 上传与原�
 
 两云之间没有原子事务。激活期间两端可能短暂使用不同 release ID；单次请求必须冻结本站使用的 ID，以免 raw/public 混读。这份操作包不解除大陆 KV、可信 IP、Crypto/TTL、实际部署目录、上传权限和上线确认门禁。
 
-## 6. Makers 配置与激活补充
+## 5. Makers 配置与激活补充
 
 CLI 1.6.41 的 context.env 为构建时注入。应用改从私有 Makers KV 的 `classmap_runtime_config` 读取本次请求配置，含 DATA_RELEASE_ID、DETAILS_PASSPHRASE、本站独立 DETAILS_SESSION_SECRET、DETAILS_HINT。此配置不得写入数据 bundle/manifest/Git/CI/静态目录或日志。真实写入等待 KV 获批、控制面核查与上线确认。EdgeOne adapter 的 currentRelease/activate/restore 应读取、完整保留并受控更新该配置中的发布 ID；restore 必须恢复旧配置并探测，不等同于回退代码。配置与数据均最终一致，观察到旧值时继续等待并核验，不能将控制面成功等同于立即全网激活。Cloudflare 仍使用原生 runtime vars/Secrets。
 
-## 7. 2026-10-15 域名策略对发布的影响
+## 6. 2026-10-15 域名策略对发布的影响
 
 优先评估同一 `map.calvin-xia.cn` 的 DNSPod GeoDNS + CF SaaS，原 302/独立域名作备选。DNS/证书/ownership/同 Host 会话门禁与数据发布门禁分别验收，GeoDNS 不提供两云原子激活。发布失败时先恢复版本和私有配置；如需暂停问题 DNS 线路，须获授权并等待 TTL/负缓存，不能把改 DNS 当数据回滚完成。官方 CDN 不兼容风险与续期失败处理见 [主方案](edgeone-cloudflare-dual-deployment-plan.md) 和 [运行手册](dual-deployment-runbook.md)。本轮不更改发布工具或上传真实数据。

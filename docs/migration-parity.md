@@ -5,6 +5,7 @@
 + ECharts 6 + TypeScript + React 岛屿之后，下列每一条都必须逐条等价，不得增删语义。
 
 - 冻结基准：本仓库 `astro-migration` 分支工作区（未提交改动前的现站实现），核对命令见 §6。
+- 路径时效（2026-10-16）：本文所有 `css/main.css` / `js/palette.js` 引用都是这套冻结基线的一部分，仅作对照；现役门禁读 `src/styles/main.css` 与 `src/styles/palette.ts`（见 §3 路径注）。
 - 核对视角：以「可被命令 / 文件 / 读数逐条核对」为准；每条附**可观察判据**。
 - 契约来源（只读）：`functions/api/**`、`functions/_lib/**`、`shared/data-model.mjs`、`js/**`、
   `css/main.css`、`index.html`、`_headers`、`build.js`、`scripts/check-contrast.js`、`AGENTS.md`。
@@ -172,6 +173,9 @@
 ---
 
 ## §3 视觉契约
+
+> 路径注（2026-10-16）：本节冻结的是迁移前基线。`scripts/check-contrast.js` 现读 `src/styles/main.css`（页面侧 token）
+> 与 `src/styles/palette.ts`（画布侧），下文 `css/main.css` / `js/palette.js` 的引用只作对照。门禁现为 21 条对比度 + 13 条同值 + 5 条热力单调 = 39 条（迁移前基线为 11 条同值 / 37 条，新增 `palette.seal` 与 `palette.highlight` 两条 assertSame）。
 
 ### 3.1 12 个必需 CSS 变量（`css/main.css` `:root`，缺一个 `npm run build` 失败）
 
@@ -373,7 +377,7 @@
 4. 限流计数按 `clientIp` 分桶；本地 `npm run dev:local` / `cf:dev` 下 `CF-Connecting-IP` 可能缺失，
    此时所有请求共享 `unknown` 桶——本地复现 429 时按此预期。（原先此条写的旧本地假 API 脚本已随
    `tests/dev-server.mjs` 退役，见 §7。）
-5. 视觉契约目前有 37 条断言、12 个必需变量、11 组同值对，三个数字必须与
+5. 视觉契约的基线是 37 条断言、12 个必需变量、11 组同值对（2026-10-16 起门禁为 39 / 12 / 13，见 §3 路径注），三个数字必须与
    `scripts/check-contrast.js` 保持一致；迁移若把对比度检查改写成 TS，需保留同等断言数或明确记录变更。
 6. `git status --short` 中 `.graph/`、`.pi/`、`CONTEXT-MAP.md`、`DECISIONS.md`、`docs/` 为未跟踪项
    （图与文档目录尚未提交）；`functions/`、`js/`、`css/` 无任何改动——见 §6.4 收尾读数。

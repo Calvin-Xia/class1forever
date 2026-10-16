@@ -61,8 +61,10 @@ npx wrangler deployments list       # 记录本次 Deployment / Version ID（回
 ```
 
 或者交给 CI：仓库自带 `.github/workflows/deploy.yml`（推 `main` 或手动 `workflow_dispatch`），
-在仓库 Actions Secrets 放 `CLOUDFLARE_API_TOKEN`（可选 `CLOUDFLARE_ACCOUNT_ID`、`DETAILS_PASSPHRASE`、
-`DETAILS_SESSION_SECRET`）即可。步骤见 `DEPLOYMENT.md` §5.1。
+Actions Secrets 只需 `CLOUDFLARE_API_TOKEN`（可选 `CLOUDFLARE_ACCOUNT_ID`）与 `EDGEONE_API_TOKEN`。
+`DETAILS_PASSPHRASE` / `DETAILS_SESSION_SECRET` **不再由 CI 从仓库 Secret 同步**，必须已经绑在 Worker
+（EdgeOne 走私有 KV 配置）上，CI 沿用线上值。该流程是 CF + EO 串行正式发布，
+步骤见 `DEPLOYMENT.md` §5.1 与 [CI 发布协议](ci-deployment.md)。
 
 > **注意**：Cloudflare Pages 的自动部署来自 Cloudflare 上 `class1forever` Pages 项目的
 > Git 集成，不由仓库文件控制。想只走 Workers，先把它的 **Automatic deployments** 关掉
@@ -213,14 +215,14 @@ GET /js/vendor/echarts.min.js    status=404
 
 **处置（非破坏、可回滚）**：把旧入口**归档**为 `legacy/index.html`（`git mv`，内容零改动，
 sha256 与 `main:index.html` 逐字节相同：`babad1aa4606efa62ccdadb1f7f39993692b929336cd60e78252b2286c78feda`），
-`js/**`、`css/**`、`functions/**` **原地不动**（对照资产与视觉基线，见 §9.3）。新增 `legacy/README.md` 说明归档原因与回滚命令。
+`js/**`、`css/**`、`functions/**` 当时**原地不动**（对照资产与视觉基线，见 §9.3）。2026-10-16 的 legacy 收口迁移已用 `git mv` 把它们移到 `legacy/js|css|functions/`（内容零改动），仓库根只保留跑着的 `js/china.js`、`js/province/**` 与本地 `js/data.js`；`legacy/README.md` 记录了归档原因与回滚命令。
 `build.js` 的 Gate A 新增一条断言：**仓库根不得再出现 `index.html`**（否则 `npm run build` 失败并提示 `git mv` 回归档位）。
 
 两处通路的实测指纹（`astro dev` 证据：`.wrangler/probe-tmp/l4-astrodev/astro-dev-probe-out.txt`）：
 
 | 通路 | `GET /` | 旧站指纹 | 新站指纹 |
 |---|---|---|---|
-| `astro dev`（`:8985`，`--host 127.0.0.1`） | 200 / 81830 B | `href="css/main.css"`=0、`js/boot.js`=0、`href="favicon.svg"`=0 | `href="/favicon.svg"`=1、`map-frame`=41、`region-table`=24、`@vite/client`=1 |
+| `astro dev`（`:8985`，`--host 127.0.0.1`） | 200 / 81830 B | `href="css/main.css"`=0（旧站指纹）、`js/boot.js`=0（旧站指纹）、`href="favicon.svg"`=0 | `href="/favicon.svg"`=1、`map-frame`=41、`region-table`=24、`@vite/client`=1 |
 | `wrangler dev`（`dev:local` `:8788`） | 200 / 12041 B | 同上全 0 | `href="/favicon.svg"`=1、`map-frame`=9、`region-table`=4、`/_astro/`=5 |
 
 `astro dev` 下 `/api/map/public` 返回 **503 `public_data_unavailable`**（Astro 路由被执行，只是模拟 KV 没有数据）
@@ -351,7 +353,7 @@ $ git diff main -- wrangler.jsonc
 ```text
 $ git diff main --name-status -- js/ css/ DESIGN.md
 D  js/vendor/echarts.min.js          ← 唯一差异，是 ADR-0002 授权的 vendor 退役（l3_gates 已交付，非本节点引入）
-（css/** 与 DESIGN.md 无差异；js/china.js、js/province/**、js/palette.js、js/map.js、js/geo.js、js/motion.js 均无差异）
+（迁移前路径：css/** 与 DESIGN.md 无差异；js/china.js、js/province/**、js/palette.js、js/map.js、js/geo.js、js/motion.js 均无差异）
 
 $ git show main:index.html | sha256sum   → babad1aa4606efa62ccdadb1f7f39993692b929336cd60e78252b2286c78feda
 $ sha256sum legacy/index.html            → babad1aa4606efa62ccdadb1f7f39993692b929336cd60e78252b2286c78feda   （逐字节相同）
@@ -373,7 +375,7 @@ $ sha256sum legacy/index.html            → babad1aa4606efa62ccdadb1f7f39993692
 |---|---|---|
 | `docs/**`、`legacy/README.md`、`CONTEXT-MAP.md`、`DECISIONS.md` | **提交** | 迁移的契约/门禁/验收/切换包就是交付物 |
 | `worker-configuration.d.ts` | **提交**（本节点前已在索引里，本节点确保它随迁移一起落盘） | `l3_gates` P1 + `l3_verify` 复核判据：`git ls-files --cached` 可见、未被 `.gitignore` 匹配、`wrangler types --check` 通过 |
-| `.graph/` **设计态**（`graph.yaml`、`nodes/`、`edges/`） | **提交** | 图的计划与执行证据（checkpoint/execution report）随代码留档 |
+| `.graph/` **设计态**（`graph.yaml`、`nodes/`、`edges/`） | **不提交**（2026-10-16 起停止追踪，磁盘文件保留） | 设计态不再入库；见 `.gitignore` 的 `.graph/` 条目 |
 | `.graph/` **运行时缓存**（`index/`、`**/snapshots/`、`**/.locks/`） | **不提交**（`.gitignore`） | 9.8 MB 的快照与索引缓存是工具运行时状态，`graph` 可重算 |
 | `.pi/`（agent 目标池/运行态） | **不提交**（`.gitignore`） | pi 的运行态，不是项目源码 |
 | `js/data.js`、`.dev.vars`、`output/`、`.wrangler/`、`dist/` | 不提交（既有 gitignore） | 明细数据与密钥绝不入库 |

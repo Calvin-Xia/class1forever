@@ -1,4 +1,0 @@
-id: e_l3tc_before_gates
-source: l3_typecheck_fix
-target: l3_gates
-type: depends_on
