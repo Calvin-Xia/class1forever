@@ -684,6 +684,19 @@ button.chip:active {
     animation: spin 1s linear infinite;
 }
 
+/* 分享岛屿没加载时按钮被置为 disabled（见 src/components/MapSection.astro 的 .catch）：
+   给一个看得出来的不可用态，并挡掉 hover / active 的强调色，否则看起来还能点。
+   仍然只用 :root 里的既有 token。 */
+.share-btn:disabled {
+    cursor: not-allowed;
+    background: var(--color-bg-sunken);
+    border-color: var(--color-border);
+}
+
+.share-btn:disabled svg {
+    color: var(--color-text-muted);
+}
+
 .map-credit {
     position: absolute;
     right: 16px;
