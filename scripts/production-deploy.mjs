@@ -12,11 +12,45 @@ import toolEnvironment from './local-tool-env.cjs';
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const WORK = path.join(ROOT, '.wrangler/production');
 const config = JSON.parse(fs.readFileSync(path.join(ROOT, 'config/production.json'), 'utf8'));
+/* 仓库地址从 package.json 派生，避免在脚本里再硬编码一份 git remote（workflow 里那份只用于
+   发布前的并发判定，这里是发布中的第二次判定，两者必须指向同一个仓库）。 */
+const REPOSITORY = String(JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).repository?.url || '')
+    .replace(/^git\+/, '').replace(/\.git$/, '');
 const transportAddresses = new Map();
 const digest = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
 const check = (condition, code) => { if (!condition) throw new Error(code); };
 const read = name => JSON.parse(fs.readFileSync(path.join(WORK, name), 'utf8'));
 const write = (name, value) => fs.writeFileSync(path.join(WORK, name), JSON.stringify(value, null, 2) + '\n');
+
+/** 当前远端 main 的提交 SHA；查询失败返回 null（调用方据此中止，绝不当作「没变化」）。 */
+export function remoteMainSha() {
+    if (!REPOSITORY) return null;
+    const result = spawnSync('git', ['ls-remote', `${REPOSITORY}.git`, 'refs/heads/main'], {
+        cwd: ROOT, encoding: 'utf8', timeout: 60000, env: toolEnvironment.localToolEnvironment()
+    });
+    if (result.error || result.status !== 0) return null;
+    return (result.stdout || '').trim().split(/\s+/)[0] || null;
+}
+
+/* 下面三个断言从 deploy() 里拆出来单独导出：它们是纯函数，负例可以在 tests/ 里直接跑，
+   不必真连 Cloudflare / EdgeOne。 */
+export function assertProductionEnvironment(environment) {
+    check(environment.GITHUB_ACTIONS === 'true' && environment.GITHUB_REF === 'refs/heads/main'
+        && /^[a-f0-9]{40}$/.test(environment.GITHUB_SHA || ''), 'PRODUCTION_REQUIRES_MAIN_GITHUB_ACTIONS');
+}
+
+export function assertMainNotSuperseded(remoteSha, expectedSha) {
+    check(typeof remoteSha === 'string' && remoteSha.length > 0, 'MAIN_SHA_UNAVAILABLE');
+    check(remoteSha === expectedSha, 'MAIN_SUPERSEDED_BEFORE_DEPLOY');
+}
+
+export function assertUnchangedSincePrepare(current, before, code) {
+    check(isDeepStrictEqual(current, before), code);
+}
+
+export function assertEdgeoneProductionUnchanged(expected, current) {
+    check(Boolean(expected) && current === expected, 'EDGEONE_PRODUCTION_DEPLOYMENT_CHANGED');
+}
 
 export function validateManifest(manifest) {
     check(manifest?.schema === 1 && Array.isArray(manifest.files) && manifest.files.length > 0 && manifest.files.length <= 10000, 'INVALID_PUBLIC_ASSET_MANIFEST');
@@ -75,9 +109,12 @@ async function eoApi(Action, fields) {
     const j = await r.json(); check(r.ok && j.Data?.Response && !j.Data.Response.Error, `EDGEONE_API_${r.status}`); return j.Data.Response;
 }
 
-async function cloudflareState() {
+/* 读取函数都接受一个可注入的 API 实现（默认就是走真实 HTTPS 的 cfApi / eoApi）：
+   这样 tests/ 可以用固定 payload 验证「派生出什么」与「守卫在什么时候中止」，
+   而不是把生产网络或真实账号拖进单元测试。 */
+export async function cloudflareState(api = cfApi) {
     const base = `/accounts/${config.accountId}/workers/scripts/${config.worker}`;
-    const [settings, routes, entry, deployments] = await Promise.all([cfApi(base + '/settings'), cfApi(`/zones/${config.zoneId}/workers/routes`), cfApi(base + '/subdomain'), cfApi(base + '/deployments')]);
+    const [settings, routes, entry, deployments] = await Promise.all([api(base + '/settings'), api(`/zones/${config.zoneId}/workers/routes`), api(base + '/subdomain'), api(base + '/deployments')]);
     const binding = name => settings.bindings.find(x => x.name === name);
     const release = binding('DATA_RELEASE_ID')?.text;
     check(typeof release === 'string' && /^[A-Za-z0-9_]{1,64}$/.test(release), 'ACTIVE_DATA_RELEASE_MISSING');
@@ -85,10 +122,18 @@ async function cloudflareState() {
     return { release, routes: routes.map(x => ({ pattern: x.pattern, script: x.script })).sort((a, b) => a.pattern.localeCompare(b.pattern)), sessionNamespace: binding('SESSION')?.namespace_id, dataNamespace: binding('CLASS_MAP_DATA')?.namespace_id, workersDev: entry.enabled, previews: entry.previews_enabled, version: deployments.deployments[0].versions[0].version_id };
 }
 
-async function edgeoneProject() {
-    const j = await eoApi('DescribePagesProjects', { Filters: [{ Name: 'ProjectId', Values: [config.edgeoneProjectId] }], Offset: 0, Limit: 10 });
+export async function edgeoneProject(api = eoApi) {
+    const j = await api('DescribePagesProjects', { Filters: [{ Name: 'ProjectId', Values: [config.edgeoneProjectId] }], Offset: 0, Limit: 10 });
     const project = j.Projects?.find(x => x.ProjectId === config.edgeoneProjectId);
     check(project?.Name === config.edgeoneProject && project.Area === 'global', 'EXISTING_EDGEONE_PROJECT_MISMATCH'); return project;
+}
+
+/** 当前生效的 EdgeOne Production 部署 ID：prepare 记基线、发布中查漂移都用它。 */
+export async function edgeoneProductionDeployment(api = eoApi) {
+    const page = await api('DescribePagesDeployments', { ProjectId: config.edgeoneProjectId, Offset: 0, Limit: 100, OrderBy: 'CreatedOn', Order: 'Desc' });
+    const production = (page.Deployments || []).find(x => x.Env === 'Production');
+    check(production?.DeploymentId, 'EXISTING_EDGEONE_PRODUCTION_MISSING');
+    return production.DeploymentId;
 }
 
 const probeHeaders = { 'User-Agent': 'classmap-production-ci/1.0', Accept: '*/*' };
@@ -141,7 +186,7 @@ async function parallelFiles(files, operation) {
 
 async function prepare() {
     fs.mkdirSync(WORK, { recursive: true });
-    const [state, project, cfPublic, eoPublic] = await Promise.all([cloudflareState(), edgeoneProject(), publicData('cloudflare'), publicData('edgeone')]);
+    const [state, project, cfPublic, eoPublic, eoProduction] = await Promise.all([cloudflareState(), edgeoneProject(), publicData('cloudflare'), publicData('edgeone'), edgeoneProductionDeployment()]);
     check(state.release === cfPublic.release && state.release === eoPublic.release && isDeepStrictEqual(cfPublic.data, eoPublic.data), 'PLATFORM_DATA_OR_RELEASE_DIFFER');
     const built = JSON.parse(fs.readFileSync(path.join(ROOT, 'dist/server/wrangler.json'), 'utf8'));
     write('wrangler.json', deploymentCandidate(built, state));
@@ -168,7 +213,7 @@ async function prepare() {
     check(oldPage.status === 200 && /<html\b/i.test(oldPage.bytes.toString()), 'EXISTING_EDGEONE_PAGE_MISSING');
     validatePreviousPage(oldPage.bytes.toString(), previous);
     fs.writeFileSync(path.join(WORK, 'previous-index.html'), oldPage.bytes);
-    write('before.json', { cloudflare: state, edgeoneProjectId: project.ProjectId, public: cfPublic, previousFiles: previous.files.length, retainedFiles: manifest.files.length });
+    write('before.json', { cloudflare: state, edgeoneProjectId: project.ProjectId, edgeoneProductionDeployment: eoProduction, public: cfPublic, previousFiles: previous.files.length, retainedFiles: manifest.files.length });
     console.log(JSON.stringify({ prepared: true, release: state.release, previousFiles: previous.files.length, retainedFiles: manifest.files.length, cloudWrites: false }));
 }
 
@@ -184,8 +229,13 @@ export function stageCompatibility(root = ROOT) {
 }
 
 function runCli(script, args, extraEnvironment, label) {
-    const child = spawnSync(process.execPath, [script, ...args], { cwd: ROOT, env: toolEnvironment.localToolEnvironment({ CI: '1', ...extraEnvironment }), input: 'y\n', encoding: 'utf8', windowsHide: true, timeout: 240000, maxBuffer: 4000000 });
+    /* 不注入任何 stdin：CLI 一旦需要交互确认（例如项目不存在要隐式创建）就会读到 EOF 而
+       直接失败 —— 一个连错项目的部署不该靠我们替它按 `y` 通过。--token 仍是 CLI 唯一已知的
+       非交互凭据接口，其取值会在下面的日志脱敏里被替换掉。 */
+    const child = spawnSync(process.execPath, [script, ...args], { cwd: ROOT, env: toolEnvironment.localToolEnvironment({ CI: '1', ...extraEnvironment }), encoding: 'utf8', windowsHide: true, timeout: 240000, maxBuffer: 4000000 });
     let output = (child.stdout || '') + '\n' + (child.stderr || '');
+    /* 脱敏覆盖：两个部署 Token 的整串值（CLI 可能把 --token 的取值回显进错误/日志），
+       以及 EO 授权 URL 里的 eo_token 查询参数。 */
     for (const secret of [process.env.CLOUDFLARE_API_TOKEN, process.env.EDGEONE_API_TOKEN].filter(Boolean)) output = output.replaceAll(secret, 'REDACTED');
     output = output.replace(/eo_token=[^&"\s]+/g, 'eo_token=REDACTED');
     fs.writeFileSync(path.join(WORK, label + '.private.log'), output);
@@ -193,14 +243,15 @@ function runCli(script, args, extraEnvironment, label) {
     check(child.status === 0, label.toUpperCase().replaceAll('-', '_') + '_FAILED'); return output;
 }
 
-async function deployEdgeone(directory, label, environment = 'production') {
-    await edgeoneProject(); // Never allow CLI's implicit project creation.
+async function deployEdgeone(directory, label, environment = 'production', dependencies = {}) {
+    const { verifyProject = edgeoneProject, describe = eoApi, run = runCli } = dependencies;
+    await verifyProject(); // Never allow CLI's implicit project creation.
     check(process.env.EDGEONE_CLI_ENTRY && fs.existsSync(process.env.EDGEONE_CLI_ENTRY), 'EDGEONE_CLI_MISSING');
     console.log(JSON.stringify({ phase: label, status: 'publishing', projectId: config.edgeoneProjectId }));
     check(path.basename(directory) === '.edgeone', 'EDGEONE_PRECOMPILED_DIRECTORY_REQUIRED');
-    const output = runCli(process.env.EDGEONE_CLI_ENTRY, ['makers', 'deploy', directory, '--name', config.edgeoneProject, '--token', process.env.EDGEONE_API_TOKEN, '--env', environment, '--skip-ai-gateway-sync', '--json'], {}, label);
+    const output = run(process.env.EDGEONE_CLI_ENTRY, ['makers', 'deploy', directory, '--name', config.edgeoneProject, '--token', process.env.EDGEONE_API_TOKEN, '--env', environment, '--skip-ai-gateway-sync', '--json'], {}, label);
     const id = output.match(/"deploymentId":"([a-z0-9]+)"/)?.[1]; check(id, 'EDGEONE_DEPLOYMENT_ID_MISSING');
-    const live = await eoApi('DescribePagesDeployments', { ProjectId: config.edgeoneProjectId, Offset: 0, Limit: 5, OrderBy: 'CreatedOn', Order: 'Desc' });
+    const live = await describe('DescribePagesDeployments', { ProjectId: config.edgeoneProjectId, Offset: 0, Limit: 5, OrderBy: 'CreatedOn', Order: 'Desc' });
     check(live.Deployments.some(x => x.DeploymentId === id && x.Status === 'Success' && x.Env === (environment === 'preview' ? 'Preview' : 'Production')), 'EDGEONE_DEPLOYMENT_NOT_SUCCESS');
     console.log(JSON.stringify({ phase: label, deploymentId: id, projectId: config.edgeoneProjectId }));
     if (environment === 'preview') {
@@ -241,10 +292,29 @@ async function verifyAssets(platform) {
     console.log(JSON.stringify({ phase: 'verify-assets', platform, files: manifest.files.length, passed: true }));
 }
 
-async function deploy() {
-    check(process.env.GITHUB_ACTIONS === 'true' && process.env.GITHUB_REF === 'refs/heads/main' && /^[a-f0-9]{40}$/.test(process.env.GITHUB_SHA || ''), 'PRODUCTION_REQUIRES_MAIN_GITHUB_ACTIONS');
-    const before = read('before.json'); check(isDeepStrictEqual(await cloudflareState(), before.cloudflare), 'PRODUCTION_CHANGED_SINCE_PREPARE');
-    const result = { sha: process.env.GITHUB_SHA, release: before.cloudflare.release, phases: [] }; write('result.json', result);
+/**
+ * 真正的发布阶段。依赖全部可注入（默认走真实环境/网络），这样 tests/ 可以在不碰生产账号的
+ * 前提下验证每个守卫的负例：环境、远端 main 复核、Cloudflare/EO 的 prepare 基线读回。
+ */
+export async function deploy(dependencies = {}) {
+    const {
+        environment = process.env,
+        readMainSha = remoteMainSha,
+        readState = read,
+        cloudflare = cloudflareState,
+        edgeone = edgeoneProject,
+        edgeoneProduction = edgeoneProductionDeployment
+    } = dependencies;
+    assertProductionEnvironment(environment);
+    /* 第一件实事：重做「main 是否已被更新」的判断。workflow 在拿到凭据之前已经用
+       git ls-remote 跳过一次，但那段等待可能长达几分钟门禁；第二次判定保证「跳过了
+       更新的 main」不会因为时间差而漏掉。查不到远端 SHA 也中止（失败即安全）。 */
+    assertMainNotSuperseded(await readMainSha(), environment.GITHUB_SHA);
+    const before = readState('before.json');
+    assertUnchangedSincePrepare(await cloudflare(), before.cloudflare, 'PRODUCTION_CHANGED_SINCE_PREPARE');
+    assertUnchangedSincePrepare(await edgeoneProduction(), before.edgeoneProductionDeployment, 'EDGEONE_PRODUCTION_CHANGED_SINCE_PREPARE');
+    assertUnchangedSincePrepare((await edgeone()).ProjectId, before.edgeoneProjectId, 'EDGEONE_PROJECT_CHANGED_SINCE_PREPARE');
+    const result = { sha: environment.GITHUB_SHA, release: before.cloudflare.release, phases: [] }; write('result.json', result);
     const record = (phase, fields = {}) => { result.phases.push({ phase, ...fields }); write('result.json', result); };
     await coordinatedDeploy({
         async edgeoneCompatibility() { record('edgeone-compatibility', { deploymentId: await deployEdgeone(path.join(WORK, 'edgeone-compatibility/.edgeone'), 'edgeone-compatibility') }); },
@@ -260,21 +330,36 @@ async function deploy() {
             const version = output.match(/Current Version ID: ([a-f0-9-]+)/)?.[1]; check(version, 'CLOUDFLARE_VERSION_MISSING'); record('cloudflare', { version });
         },
         async verifyCloudflareAssets() { await verifyAssets('cloudflare'); record('cloudflare-assets-verified'); },
-        async edgeoneFinal() { record('edgeone-final', { deploymentId: await deployEdgeone(path.join(ROOT, 'dist-edgeone/.edgeone'), 'edgeone-final') }); },
+        async edgeoneFinal() {
+            /* 兼容阶段自己就是一次 EO Production 发布，所以「与 prepare 基线相同」在这里必然
+               不成立；能且必须成立的是：当前 Production 仍是本次兼容阶段刚发布的那个部署，
+               即兼容发布与最终发布之间没有人从旁改过 EO 线上。prepare 的基线已在 deploy()
+               开头比对过（EDGEONE_PRODUCTION_CHANGED_SINCE_PREPARE）。 */
+            const compatibility = result.phases.find(x => x.phase === 'edgeone-compatibility');
+            assertEdgeoneProductionUnchanged(compatibility?.deploymentId, await edgeoneProduction());
+            record('edgeone-final', { deploymentId: await deployEdgeone(path.join(ROOT, 'dist-edgeone/.edgeone'), 'edgeone-final') });
+        },
         async verifyFinal() {
             const state = await cloudflareState(), previous = before.cloudflare;
             check(isDeepStrictEqual({ ...state, version: previous.version }, previous), 'CLOUDFLARE_CONFIG_CHANGED');
+            /* 记录值必须由真实比对推导：路由集合、SESSION 与 CLASS_MAP_DATA 绑定都比对过，
+               secrets 的**取值**没有任何读回接口，所以这里不再声称「secrets 未变」——
+               `--keep-vars` 会保留线上既有 secrets，那属于 CLI 行为，不是本字段的证据。 */
+            const bindingsAndRoutesUnchanged = isDeepStrictEqual(
+                { routes: state.routes, sessionNamespace: state.sessionNamespace, dataNamespace: state.dataNamespace },
+                { routes: previous.routes, sessionNamespace: previous.sessionNamespace, dataNamespace: previous.dataNamespace });
+            check(bindingsAndRoutesUnchanged, 'CLOUDFLARE_BINDINGS_OR_ROUTES_CHANGED');
             for (const platform of ['cloudflare', 'edgeone']) {
                 check(isDeepStrictEqual(await publicData(platform), before.public), 'FINAL_PUBLIC_DATA_CHANGED');
                 const manifest = await request(platform, '/deployment-assets.json');
                 check(manifest.status === 200 && isDeepStrictEqual(JSON.parse(manifest.bytes), read('assets.json')), 'FINAL_ASSET_MANIFEST_MISMATCH');
                 check((await request(platform, '/')).status === 200, 'FINAL_PAGE_UNAVAILABLE');
             }
-            await verifyAssets('edgeone'); record('final-runtime-verified', { stats: before.public.data.stats, preservedRoutes: state.routes.length, dataAndSecretsUnchanged: true });
+            await verifyAssets('edgeone'); record('final-runtime-verified', { stats: before.public.data.stats, preservedRoutes: state.routes.length, bindingsAndRoutesUnchanged });
         }
     });
     result.success = true; write('result.json', result);
-    if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Dual production deployment\n\n- Commit: ${result.sha}\n- Release: ${result.release}\n- CF and EO production verified; previous chunks retained.\n- Data, existing secrets, KV bindings and DNS preserved.\n- Public chunks per platform: ${read('assets.json').files.length}\n`);
+    if (environment.GITHUB_STEP_SUMMARY) fs.appendFileSync(environment.GITHUB_STEP_SUMMARY, `## Dual production deployment\n\n- Commit: ${result.sha}\n- Release: ${result.release}\n- CF and EO production verified; previous chunks retained.\n- Data, KV bindings, routes and DNS preserved; existing Worker secrets are left in place by --keep-vars (values are never read back or compared).\n- Public chunks per platform: ${read('assets.json').files.length}\n`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

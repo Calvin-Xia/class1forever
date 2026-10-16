@@ -10,7 +10,8 @@
  *
  * 门禁覆盖（对应 l3_gates 的 9 条 DoD）：
  *   A. 关键文件齐全（**面向新站**：不再把旧站 index.html / js/boot.js / functions 当必需；
- *      另外断言旧站入口**不在仓库根**，否则 astro dev 的 `/` 会被它遮蔽）
+ *      旧实现已归档 legacy/，见 legacy/README.md；另外断言旧站入口**不在仓库根**，
+ *      否则 astro dev 的 `/` 会被它遮蔽）
  *   B. 学生明细数据不得回到客户端（源码 + 产物两层）
  *   C. 脚本同源、HTML 无内联脚本（`.astro` 的 `is:inline` 无 src 即失败）、无 Highcharts 残留
  *   D. 省份白名单与 `js/province/` 目录逐名一致（两向）＋生成文件外形未被改动
@@ -127,6 +128,7 @@ const requiredFiles = [
     'src/lib/map-model.ts',
     'src/lib/map-island.ts',
     'src/lib/echarts.ts',
+    'src/platform',
     'src/scripts/map-island-boot.ts',
     'src/scripts/dialogs-island-boot.ts',
     'src/scripts/share-boot.ts',
@@ -203,18 +205,13 @@ if (!exists(TYPES_FILE)) {
 const RAW_KEY = 'students:raw:v1';
 /** 明细数据文件：只允许上传脚本、测试与文档提到它。 */
 const DETAIL_DATA_FILE = 'js/data.js';
-/** 会进入浏览器 / 静态资源的目录（含以后新增的 src/lib/* 客户端模块）。 */
-const CLIENT_SURFACE_PREFIXES = [
-    'src/components/',
-    'src/scripts/',
-    'src/layouts/',
-    'src/styles/',
-    'src/pages/',
-    'src/lib/',
-    'public/',
-    'js/'
-];
-/** 明确属于服务端的源码：数据层、鉴权、安全头、中间件与 API 路由。 */
+/* 判定方向是**默认客户端面**：`src/**` / `public/**` / `js/**` 里的任何文件都算会送到浏览器，
+ * 只有显式的 server-only 名单才排除。这样以后新增一个目录（例如 `src/foo/`）会默认被扫到，
+ * 而不是像白名单那样静默漏检 —— 漏检的代价是明细键/密钥名可以悄悄进客户端。 */
+const CLIENT_SURFACE_PREFIXES = ['src/', 'public/', 'js/'];
+/** 显式属于服务端的目录：运行时适配层与 API 路由。 */
+const SERVER_ONLY_PREFIXES = ['src/platform/', 'src/pages/api/'];
+/** 明确属于服务端的单文件：数据层、鉴权、安全头、中间件与本地名单输入。 */
 const SERVER_ONLY_FILES = new Set([
     'src/lib/data.ts',
     'src/lib/api-handlers.ts',
@@ -227,7 +224,7 @@ const SERVER_ONLY_FILES = new Set([
 ]);
 
 function isClientSurface(file) {
-    if (SERVER_ONLY_FILES.has(file) || file.startsWith('src/pages/api/')) {
+    if (SERVER_ONLY_FILES.has(file) || SERVER_ONLY_PREFIXES.some((prefix) => file.startsWith(prefix))) {
         return false;
     }
     return CLIENT_SURFACE_PREFIXES.some((prefix) => file.startsWith(prefix));
@@ -443,10 +440,10 @@ if (/build-vendor|vendor:build/.test(ciWorkflow)) {
 
 /* “引用”取的是「真的去加载它」：`src=` / `import()` / `from '…'` / `fetch('…'`。
    文档注释里提到这个路径（例如 src/lib/echarts.ts 说明模块集对应关系）不算引用。
-   迁移前的经典脚本 js/boot.js / js/map.js 仍写着这条路径，但它们是仓库根的**等价性对照资产**
-   （与 main 保持零 diff，见 docs/cutover-runbook.md §7），不在本断言的扫描面内；
+   迁移前的经典脚本仍写着这条路径（现为 legacy/js/boot.js / legacy/js/map.js），但它们已归档到
+   legacy/，作为**等价性对照资产**（与 main 保持零 diff，见 docs/cutover-runbook.md §7），不在本断言的扫描面内；
    扫描面只覆盖新站会真正送达浏览器的位置（src/、public/、package.json、astro.config.mjs、CI）。
-   旧入口 index.html 已归档到 legacy/（见 legacy/README.md）。 */
+   旧入口 index.html 同样归档在 legacy/（见 legacy/README.md）。 */
 const VENDOR_LOAD_PATTERN = /(?:\ssrc\s*=\s*|import\s*\(\s*|from\s+|fetch\s*\(\s*)['"`]?[^'"`\n]*js\/vendor\/echarts\.min\.js/;
 const vendorReferenceSurface = [...walk('src'), ...walk('public'), 'package.json', 'astro.config.mjs', '.github/workflows/ci.yml'];
 for (const file of vendorReferenceSurface) {
@@ -545,12 +542,19 @@ if (!ciNodeVersion) {
         `CI 的 node-version 解析失败（读到 ${ciNodeRaw ? ciNodeRaw.trim() : '(缺失)'}）：` +
             '门禁需要字面量版本号（如 24）。若改成矩阵表达式，请同步扩展 build.js 的解析。'
     );
+    /* 立即收口：下面所有 engineChecks 都会把 ciNodeVersion 交给 satisfies()，而
+       satisfies(null, …) 会在 compareVersions 里读 null[0] 直接抛 TypeError —— 那样报出来的是
+       一段与 CI 无关的栈，而不是上面这条可操作的失败。 */
+    reportFailures();
 }
 
 const engineChecks = [{ label: 'package.json 自身 engines.node', range: engines.node }];
 for (const dependency of ['astro', 'wrangler', '@astrojs/cloudflare', '@astrojs/react']) {
     const manifestPath = `node_modules/${dependency}/package.json`;
     if (!exists(manifestPath)) {
+        /* 不再静默 continue：少比对一条 engines 就等于门禁悄悄少一条约束。
+           本机没装全依赖时给 warning（CI 在 `npm ci` 之后一定齐全），但必须留痕。 */
+        warn(`依赖 ${dependency} 的 manifest 不在位（缺 ${manifestPath}）：跳过它的 engines 比对；请在 \`npm ci\` 之后重跑门禁。`);
         continue;
     }
     const manifest = JSON.parse(read(manifestPath));
@@ -636,6 +640,12 @@ if (failures.length > 0) {
 }
 
 if (staticOnly) {
+    /* 静态段产生的 warning 也要在这里落地：完整门禁的末尾还有一次统一打印，但
+       `--static-only` 会在那之前退出 —— 否则「某个依赖 manifest 缺失、少比对了一条
+       engines」这条提示只存在于内存里，改断言的人永远看不到。 */
+    for (const message of warnings) {
+        console.log(`⚠️  ${message}`);
+    }
     console.log(
         `✅ 静态断言通过（${passed.length} 组）：${passed.join('；')}。` +
             '已按 --static-only 跳过 astro check / astro build / 产物断言。'

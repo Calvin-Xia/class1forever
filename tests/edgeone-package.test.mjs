@@ -5,6 +5,15 @@ import vm from 'node:vm';
 import { webcrypto } from 'node:crypto';
 import { demoKV, DEMO_RELEASE } from '../scripts/edgeone-local.mjs';
 
+/*
+ * 前置：`node scripts/build-edgeone.mjs --artifacts-only --package-cli`（需要
+ * EDGEONE_CLI_ENTRY 指向已安装的 edgeone/edgeone-dist/cli.js）产出的
+ * dist-edgeone/.edgeone/edge-functions/index.js。
+ *
+ * 因此这个用例**只在部署流程（.github/workflows/deploy.yml）里执行**，不在 ci.yml 里：
+ * CI 不装 Makers CLI，也不跑打包步骤。CI 侧覆盖同一份 API 契约的是
+ * `npm run check:edgeone` 里的 tests/edgeone-adapter.test.mjs（未打包的 edge-functions）。
+ */
 test('CLI combined fetch entry serves API, login, details, logout and static fallback', async () => {
     const kv = demoKV();
     kv.values.set('classmap_runtime_config', JSON.stringify({ DATA_RELEASE_ID: DEMO_RELEASE,

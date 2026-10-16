@@ -137,9 +137,14 @@ function scan(directory, staticSurface = false) {
         const relative = path.relative(directory, file).replaceAll('\\', '/');
         assert(!/\.dev\.vars|(?:^|\/)\.env(?:\.|$)|(?:^|\/)data\.js$|\.map$/.test(relative), `Forbidden build filename: ${relative}`);
         const buffer = fs.readFileSync(file);
+        /* 密钥取值比对必须在**原始字节**上做，并且要在二进制跳过之前：一个带 NUL 的产物
+           （字体、wasm、被误打包的图片）同样可能夹带泄漏的凭据，跳过它等于给密钥开一条
+           不受检的通道。NUL 只用于跳过下面那些「按文本/正则解析」的断言。 */
+        for (const secret of secretValues) {
+            assert(!buffer.includes(Buffer.from(secret, 'utf8')), `Local secret value present in build file: ${relative}`);
+        }
         if (buffer.subarray(0, 8000).includes(0)) continue;
         const content = buffer.toString('utf8');
-        for (const secret of secretValues) assert(!content.includes(secret), `Local secret value present in build file: ${relative}`);
         assert(!content.includes('cloudflare:workers'), `Cloudflare runtime reference in EdgeOne artifact: ${relative}`);
         assert(!/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(content), `Google Fonts dependency in EdgeOne artifact: ${relative}`);
         assert(!/DETAILS_(?:PASSPHRASE|SESSION_SECRET)\s*[:=]\s*['"`]([^'"`]{6,})['"`]/.test(content), `Hardcoded credential in artifact: ${relative}`);
@@ -174,7 +179,10 @@ checkFontSubsets(assets);
 if (packageCli) {
     const cli = process.env.EDGEONE_CLI_ENTRY;
     assert(cli && fs.existsSync(cli), 'Set EDGEONE_CLI_ENTRY to the installed edgeone/edgeone-dist/cli.js for local packaging.');
-    // Never let CLI read .env, .dev.vars, login state, or inherit application secrets.
+    // Only a system-path environment (plus repo-local TEMP/TMP) is passed down: the CLI must
+    // not inherit application secrets, .env / .dev.vars values or production source variables.
+    // This is an environment whitelist, not a login-state sandbox — a credential file already
+    // on disk (for example a CLI login stored in the user profile) is still reachable.
     const environment = buildEnvironment();
     runNode(cli, ['makers', 'build'], output, environment);
     fs.writeFileSync(path.join(output, '.edgeone/edgeone.json'), `${JSON.stringify({ ...edgeoneConfiguration(), outputDirectory: './assets' }, null, 4)}\n`);

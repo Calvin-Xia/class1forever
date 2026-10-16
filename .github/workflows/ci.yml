@@ -1,18 +1,27 @@
 name: CI
 
+# Actions 钉在 v4 tag 当前指向的提交上（2026-10-16 用
+# `git ls-remote https://github.com/actions/<repo>.git refs/tags/v4` 取得；三个仓库的 v4
+# 都是轻量 tag，取到的即 commit SHA）。tag 会移动，SHA 不会。
 on:
   push:
   pull_request:
 
+# 只读：CI 不写仓库、不发布。
+permissions:
+  contents: read
+
 jobs:
   checks:
     runs-on: ubuntu-latest
+    # 门禁含 astro build 与一次真实 wrangler dev；超时上限防止挂死的进程占住 runner。
+    timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           # astro 6 的 engines 要求 node >= 22.12.0（wrangler >= 22.0.0），
           # 所以这里用 24，不再用 node 20。
@@ -53,10 +62,19 @@ jobs:
       - name: Syntax check
         run: |
           set -e
-          for file in $(find js shared scripts tests -type f \( -name '*.js' -o -name '*.mjs' -o -name '*.cjs' \) ! -path 'js/vendor/*'); do
-            node --check "$file"
+          # 退役的旧站资产（js/、functions/ 等）会按 task-4 的 legacy 迁移移出仓库根：
+          # 目录不存在时跳过而不是让 `find` 报错 —— 语法扫描不该因为「目录已归档」而变红。
+          for directory in js shared scripts tests; do
+            [ -d "$directory" ] || continue
+            for file in $(find "$directory" -type f \( -name '*.js' -o -name '*.mjs' -o -name '*.cjs' \) ! -path 'js/vendor/*'); do
+              node --check "$file"
+            done
           done
-          for file in $(find functions -type f \( -name '*.js' -o -name '*.mjs' \)); do
-            cat "$file" | node --check --input-type=module
-          done
+          # Pages Functions 的旧路由是 ESM 语法的 .js，用 --input-type=module 校验；
+          # 目录缺失（已归档到 legacy/）时同样跳过。
+          if [ -d functions ]; then
+            for file in $(find functions -type f \( -name '*.js' -o -name '*.mjs' \)); do
+              cat "$file" | node --check --input-type=module
+            done
+          fi
           node --check build.js

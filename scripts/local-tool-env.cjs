@@ -2,7 +2,13 @@
 const path = require('node:path');
 const fs = require('node:fs');
 
-/** 本地构建/夹具子进程仅继承系统路径；不继承 Token、DEBUG、生产来源或应用秘密。 */
+/**
+ * 白名单式环境变量构造：只把系统路径类变量透传给本地构建/夹具子进程，其余变量
+ * （Token、DEBUG、生产来源、应用秘密等）一律丢弃，并显式指向仓库内的 TEMP/TMP。
+ *
+ * 注意这是**环境变量白名单**，不是登录态隔离：子进程仍以当前用户、当前工作区身份运行，
+ * 磁盘上的凭据（例如 wrangler 在用户目录里的登录态）不在本函数的约束范围内。
+ */
 function localToolEnvironment(extra = {}) {
     const allowed = ['PATH', 'Path', 'SystemRoot', 'WINDIR', 'COMSPEC', 'PATHEXT', 'APPDATA', 'LOCALAPPDATA', 'USERPROFILE', 'CI'];
     const root = path.resolve(__dirname, '..');
