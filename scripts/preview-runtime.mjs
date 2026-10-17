@@ -373,7 +373,11 @@ export async function seedPreviewKv() {
     log(`✅ demo 夹具已写入预览命名空间 ${kvId}（口令 ${DEMO_PASSPHRASE}，与生产 KV 无关）`);
 }
 
-const BOOTSTRAP_REQUIRED = /not\s*found|does\s*not\s*exist|script_not_found|10007/i;
+// wrangler 4.149 在"worker 还不存在"时的真实报错是：
+//   You cannot upload a new version of a Worker that does not yet exist. Please run the `deploy` command first.
+// 首次真机运行（PR #8）就是漏在这一点上：原判据写 `does\s*not\s*exist`，匹配不到中间多出来的 "yet"，
+// 于是自举分支没触发、整个预览 job 直接红。这里放宽成「not (yet )?exist / not found / 那句原话」都认。
+const BOOTSTRAP_REQUIRED = /not\s*found|not\s+(yet\s+)?exist|script_not_found|10007|cannot\s+upload\s+a\s+new\s+version/i;
 const UNKNOWN_FLAG = /unknown\s+(argument|option)|unrecognized\s+(argument|option)/i;
 
 /**
