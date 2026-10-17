@@ -48,7 +48,7 @@ import {
     setMapView
 } from './map-bridge';
 import type { RegionActivationDetail } from './map-bridge';
-import { initTapFallback, noteChartActivation } from './tap-fallback';
+import { initTapFallback, noteChartActivation, ownsTouchGesture } from './tap-fallback';
 import type { PublicMapPayload } from './types';
 
 /**
@@ -525,6 +525,11 @@ async function drillIntoProvince(point: RegionPoint): Promise<void> {
     }
 
     point.loading = true;
+
+    // 「即将下钻」在**任何 await 之前**同步广播：抽屉侧据此先把自己收起来，
+    // 免得 await 期间弹层还盖在图上、下钻完成后又和新视野打架。
+    emitMapEvent(MAP_EVENT_NAMES.drillStart, { point });
+
     showProvinceLoading(point.name);
 
     try {
@@ -573,9 +578,76 @@ function handleRegionClick(params: { componentType?: string; name?: unknown }): 
         return;
     }
 
+    // 触摸补发的 click 一律让位给 TapFallback。证据（不是猜测）：(1) zrender 在**它自己的
+    // touchend 处理里**、距 touchstart <300ms 时就同步合成一条 click，而它的监听是
+    // `echarts.init()` 挂到 viewportRoot 上的、比 initTapFallback 早（同元素先注册先跑），
+    // 所以轻点一定是这条 click 先到；(2) Chromium 在 touchend 之后还会补一套鼠标兼容事件
+    // （mousedown/up/click），那是第二条 click。不让位就会把一次轻触记成 'touch-tap' + 'map'
+    // 两条激活，换层后那条迟到的 click 还会在省级图上凭空激活一个城市。
+    // 这里**必须先返回、不能先 note**：若先 note，排在后面的 TapFallback 会被 450ms 去重吞掉，
+    // 轻触就彻底没反应了。
+    if (ownsTouchGesture()) {
+        return;
+    }
+
     // 记一笔，让触摸兜底知道这次触摸已经被 zrender 处理过了。
     noteChartActivation();
     activateRegion(point, 'map');
+}
+
+/**
+ * 右键一个地区 = **强制开面板**（不下钻），并压掉浏览器自带的右键菜单。
+ */
+function handleRegionContextMenu(params: { componentType?: string; name?: unknown; event?: unknown }): void {
+    if (!params || params.componentType !== 'series') {
+        return;
+    }
+
+    // 触摸设备长按也会补一条 contextmenu（长按 = TapFallback 的 'touch-hold'，不是鼠标右键），
+    // 所以只要这次事件来自触摸手势，就不走右键分支。
+    if (ownsTouchGesture()) {
+        return;
+    }
+
+    const point = resolveRegionPoint(params.name, state.regionIndex, getActiveProvinceName());
+    if (!point) {
+        return;
+    }
+
+    suppressNativeContextMenu(params.event);
+    activateRegion(point, 'right-click', 'panel');
+}
+
+/**
+ * 压掉原生右键菜单。`params.event` 的形状以 node_modules 实证为准，不臆测：
+ * ECharts `_initEvents()`（`echarts/lib/core/echarts.js`）把 zrender 派发的事件包
+ * 原样挂到 `params.event` 上，那就是 `makeEventPacket()`
+ * （`zrender/lib/Handler.js`）造的对象 —— `packet.event` 才是原生 DOM 事件，
+ * 包上还有一个 `stop()`（内部走 `eventTool.stop()`：preventDefault + stopPropagation）。
+ * 两层都防御性调用：任一层缺失（ECharts/zrender 升级换形状）也不抛。
+ */
+function suppressNativeContextMenu(packet: unknown): void {
+    if (!packet || typeof packet !== 'object') {
+        return;
+    }
+
+    const zrPacket = packet as { event?: unknown; stop?: unknown };
+    if (typeof zrPacket.stop === 'function') {
+        try {
+            zrPacket.stop();
+        } catch (_error) {
+            /* 包结构变了也得让右键激活继续走完 */
+        }
+    }
+
+    const nativeEvent = zrPacket.event;
+    if (nativeEvent && typeof (nativeEvent as { preventDefault?: unknown }).preventDefault === 'function') {
+        try {
+            (nativeEvent as Event).preventDefault();
+        } catch (_error) {
+            /* 同上 */
+        }
+    }
 }
 
 /**
@@ -593,23 +665,28 @@ function requestRegionActivation(point: RegionPoint, source: string, callout?: s
 }
 
 /**
- * 区域激活意图（跨岛屿契约的一部分）：
+ * 区域激活意图（跨岛屿契约的一部分），三条分支互斥且穷尽：
  *
- * - `auto`（默认）：详情模式关闭且该地区可下钻 → 下钻；否则把「要看这个地区」
- *   的意图交给抽屉侧（旧站 `activateRegion` 的行为）。地图点击、「地区一览」行按钮走它。
- * - `drill`：**显式要求下钻，不受详情模式门禁** —— 等价旧站抽屉的
+ * - `auto`（默认）：该地区可下钻（有省级地图文件且当前不在省级视野）→ 下钻；
+ *   否则把「要看这个地区」的意图交给抽屉侧开面板（旧站 `activateRegion` 的行为）。
+ *   地图点击、轻触（TapFallback）、「地区一览」行主按钮走它。
+ * - `panel`：**强制开面板**，不下钻 —— 长按、右键、地区一览的「详情」按钮走它。
+ * - `drill`：**强制下钻** —— 等价旧站抽屉的
  *   `BottomSheet.handleDrilldownClick()`（`if (currentPoint.drilldownFile && !isActiveProvinceView()) drillIntoProvince(...)`）。
  *   只有抽屉的「进入 X 地图详情」按钮用它；不可下钻时静默返回（与旧站一致），
  *   不会反过来广播一个 `region-activate` 把抽屉又打开一遍。
+ *
+ * 详情模式（`getDetailModeState().enabled`）**不再**参与这条分流：点地图就下钻，
+ * 想看名单走长按 / 右键 / 地区一览，不再需要先开「同学信息」。
  */
-export type RegionActivationIntent = 'auto' | 'drill';
+export type RegionActivationIntent = 'auto' | 'drill' | 'panel';
 
 /**
- * 打开一个地区的唯一入口（地图点击、「地区一览」行按钮、抽屉的进入地图详情都走这里）。
+ * 打开一个地区的唯一入口（地图点击、轻触/长按、右键、「地区一览」按钮、抽屉按钮都走这里）。
  *
- * 只有两条分支，且都收在本模块里：`drillIntoProvince`（下钻）与
- * `requestRegionActivation`（把意图交给抽屉侧，旧站这里是 BottomSheet.showPublic /
- * showDetailSheetForPoint）。外部不得复制第二条下钻分支。
+ * 分支都收在本模块里：`drillIntoProvince`（下钻）与 `requestRegionActivation`
+ * （把意图交给抽屉侧，旧站这里是 BottomSheet.showPublic / showDetailSheetForPoint）。
+ * 外部不得复制第二条下钻分支。
  */
 export function activateRegion(point: RegionPoint | null, source = 'external', intent: RegionActivationIntent = 'auto'): void {
     if (!point) {
@@ -623,6 +700,11 @@ export function activateRegion(point: RegionPoint | null, source = 'external', i
 
     const canDrill = Boolean(point.drilldownFile) && !isActiveProvinceView();
 
+    if (intent === 'panel') {
+        requestRegionActivation(point, source);
+        return;
+    }
+
     if (intent === 'drill') {
         // 旧站 handleDrilldownClick：不可下钻就什么也不做（不关抽屉、不改视野）。
         if (canDrill) {
@@ -633,9 +715,7 @@ export function activateRegion(point: RegionPoint | null, source = 'external', i
         return;
     }
 
-    const detailMode = getDetailModeState();
-
-    if (canDrill && !detailMode.enabled) {
+    if (canDrill) {
         drillIntoProvince(point).catch((error: unknown) => {
             console.error('Drilldown failed:', error);
         });
@@ -692,6 +772,8 @@ function initChart(chinaGeo: GeoJson): EChartsType {
     );
 
     chart.on('click', handleRegionClick as (params: unknown) => void);
+    // 右键地区 → 开面板（不下钻）；只在命中地区时压掉浏览器右键菜单。
+    chart.on('contextmenu', handleRegionContextMenu as (params: unknown) => void);
     // 拖动/滚轮改变视野后立刻纠偏，避免把地图拖出可视区域。
     chart.on('georoam', () => clampMapRoam());
 
@@ -706,7 +788,7 @@ function initChart(chinaGeo: GeoJson): EChartsType {
             getGeo: (mapId) => getGeo(mapId),
             isOverlayOpen: () => isOverlayOpen(),
             resolvePoint: (name) => resolveRegionPoint(name, state.regionIndex, getActiveProvinceName()),
-            activate: (point) => activateRegion(point, 'touch')
+            activate: (point, source, intent) => activateRegion(point, source, intent)
         })
     );
 

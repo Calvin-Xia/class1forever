@@ -156,11 +156,11 @@
 | A3 | 台湾 / 香港 / 澳门 / 南海点击**只开信息面板**，不发省份脚本请求 | 点击后 Network 面板**不出现** `js/province/*.js` 请求；信息面板打开 | `js/geo.js` `hasProvinceFile()` 白名单（31 个）；`js/map.js:986` 用白名单决定是否下钻 |
 | A4 | 缩放不可低于适配比例（也不高于上限） | 连续缩小到底后，地图仍完整填满布局框、不出现大面积空白；`BASE_ZOOM` 同时是 `scaleLimit.min` 与初始 `zoom` | `js/map.js:71` `BASE_ZOOM = 1.25`、`:1230-1234` `zoom` / `scaleLimit{min:1.25,max:8}`、`:1500` 乘数夹紧 |
 | A5 | 拖动不可把地图拖出视口 | 往任一方向大幅拖动后，地图内容仍在视口内（自动回弹）；回弹阈值 0.5px | `js/map.js:74` `ROAM_TOLERANCE_PX = 0.5`、`clampMapRoam()`（`:1462` 起的位移判定） |
-| A6 | 触摸「长按后轻点」仍能下钻（不依赖 zrender 的 300ms click 窗口） | 按住 600ms 再松手（位移 ≤14px）仍下钻或开面板；一次手势只触发一次 | `js/map.js:1606` `TapFallback`：`MAX_MOVE_PX=14`、`MAX_DURATION_MS=900`、`DEDUPE_MS=450`，射线法 `pointInRing` + `convertFromPixel` |
-| A7 | 触摸设备上点省份直接下钻（没有「先开聚合面板」这一步） | 单次轻点即进入省级地图 | `activateRegion()` 无 `isTouchDevice` 分支 |
+| A6 | 触摸手势分流：长按（≥300ms、位移 ≤14px）开信息面板；轻点与鼠标左键按 A1 分流；鼠标右键开面板（2026-10-17 起，见 §8） | 按住 600ms 再松手：信息面板打开并保持；右键省份同样打开并保持；按压满 300ms 出现按压反馈；一次手势**恰好一条**激活（触摸补发的 canvas click 由 `ownsTouchGesture()` 让位，不记成第二条 `source='map'`） | `src/lib/tap-fallback.ts`（`MAX_MOVE_PX=14`、`HOLD_MIN_MS=300`、`MAX_DURATION_MS=2000`、`DEDUPE_MS=450`、`ownsTouchGesture()`）+ `src/lib/map-island.ts` 的 `activateRegion(point, source, intent)`；迁移自 `js/map.js:1606` `TapFallback` |
+| A7 | 触摸设备上**轻点**可下钻省份直接下钻（没有「先开聚合面板」这一步）；长按是开面板的通道 | 单次轻点即进入省级地图；同一地区长按则开信息面板而非下钻；`activations` 里轻点记 `source='touch-tap'`（鼠标左键为 `'map'`、长按 `'touch-hold'`） | `activateRegion(point, source, intent)` 无 `isTouchDevice` 分支：轻点 `intent='auto'`、长按 `intent='panel'` |
 | A8 | 弹窗（底部面板 / 口令弹窗）打开时背景 inert，关闭后焦点归还 | 弹窗打开时 Tab 无法落在背景控件上；关闭后焦点回到打开它的按钮 / 地图锚点 | `FocusScope`（`js/map.js:335` 起，记录 `inerted`、恢复） |
 | A9 | 面板关闭后 `#bs-*` 控件不可被 Tab 到 | 关闭面板后从页首连续 Tab，焦点顺序**不经过** `#bs-close`/`#bs-primary-btn`/`#bs-drilldown-btn` | 面板用 `bottom` 滑出屏幕，`BottomSheet.updateButtons()` 同步置 `hidden`（`js/map.js:444-446`） |
-| A10 | 「地区一览」是键盘/读屏的等价路径：每个地区一个按钮 | 展开后每一地区行都有 `button[data-region]`；Enter 触发结果与点地图一致 | `js/map.js:renderRegionTable()` / `handleRegionTableClick()`，两路径同走 `activateRegion()` |
+| A10 | 「地区一览」是键盘/读屏的等价路径：每个地区两个按钮 | 展开后每一地区行都有 `button[data-region]`：「查看」=自动分流（可下钻则下钻、否则开面板），「详情」=强制开面板；Enter 结果分别与地图左键 / 长按（右键）一致 | 行内 `data-action="view"\|"detail"` + `viewActionLabel()` / `detailActionLabel()`，两路径同走 `activateRegion(point, source, intent)` |
 | A11 | 排序切换时 `aria-sort` 只落在当前排序列 | 切到「按地区名」后 `#region-th-name` 为 `ascending`/`descending`，`#region-th-count` 为 `none`（反之亦然） | `js/map.js:1940-1953`；`index.html:165-166` 初始 `name=none`、`count=descending` |
 | A12 | 视口宽度 ≤480px 时无横向滚动 | 375/414/480px 宽度下 `document.documentElement.scrollWidth <= clientWidth`（无横向滚动条） | `css/main.css:1875` `@media (max-width: 480px)`（收窄内边距、隐藏角落装饰与版权/比例尺） |
 | A13 | 「reduce motion」下不动画：地图不播入场动画、标题不逐字落下 | OS 开启 reduce motion 后刷新：choropleth 直接呈现、标题一次性出现、`atmosphere__glow` 不显示、`magnet` 无位移 | CSS：`css/main.css:1962` `@media (prefers-reduced-motion: reduce)`；canvas 侧：`js/map.js:1280` `chartAnimationEnabled()` 喂给 `animation`/`animationDuration` |
@@ -265,7 +265,7 @@
 |---|------|-----------|
 | 1 | `npm run dev:local`（需先 `npm run build`；演示口令 `demo`；要看真实聚合数字用 `STUDENTS_PUBLIC_FILE=public.json npm run dev:local`）打开 http://127.0.0.1:8788 | 地图渲染完成，色带图例出现，只有公开聚合数字（无姓名/学校） |
 | 2 | 悬浮一个省份 | 出现悬浮卡片，图例在该数值上标出色带位置 |
-| 3 | 点击有数据的省份下钻；用「返回全国」或 `Esc` 上钻 | 进入省级地图并加载该省脚本；返回后回到全国视野 |
+| 3 | 点击有数据的省份下钻；用「返回全国」或 `Esc` 上钻 | 进入省级地图并加载该省脚本；下钻期间地图上可见「正在加载 <省> 地图...」加载层与转圈（`#map-loading` 在 `.map-frame` 下、`#map` 之外），完成后消失；返回后回到全国视野 |
 | 4 | 点击台湾/香港/澳门/南海 | 信息面板打开，Network 无省份脚本请求 |
 | 5 | 缩放与拖动 | 地图不能被拖出视口；缩放不低于适配比例 |
 | 6 | 口令流程 | 错误口令被拒；登录后详情可加载；「退出查看」清会话与缓存详情 |
@@ -275,13 +275,15 @@
 | 10 | 展开「地区一览」，Tab 到某行「查看」按 Enter | 结果与点地图该地区一致；切排序后 `aria-sort` 换列 |
 | 11 | 面板打开再关闭，从页首 Tab | 焦点顺序绝不停在 `#bs-*` 控件（关闭时位于 y≈1660） |
 | 12 | OS 开 reduce motion 后刷新 | choropleth 不动画，标题不逐字落下 |
-| 13 | 触摸设备（或 `playwright-cli open --device "iPhone 15"`） | 点省份即下钻；点台湾**开面板后随即被同一次触摸合成的 click 关掉**（合成 click 落在刚盖上的遮罩上）；按住 >300ms 的点击仍生效（走 `TapFallback`） |
+| 13 | 触摸设备（或 `playwright-cli open --device "iPhone 15"`） | 轻点可下钻省份即下钻（`activations` 恰好 1 条 `source='touch-tap'`）；轻点台湾**面板打开并保持**（迟到 click 落 `bs-overlay` 但不再关闭面板）；按住 ≥300ms（位移 ≤14px）松手开面板并保持，按压满 300ms 有按压反馈；一次手势恰好一条激活。口径与实测轨迹见 `docs/parity-touch-compare.md` 的「新裁定（2026-10-17）」与「T5 实测轨迹」 |
 | 14 | `npm run build`；`npm run data:upload -- --dry-run` | 两条命令均成功（后者不实际写入 KV） |
 
-> **smoke 13「台湾」子项的口径（2026-10-13 用户裁定，补记）**：上表第 13 行的台湾子项以**实测**为准 ——
-> 「轻点台湾＝打开信息面板，但同一次触摸合成的 click 落在刚盖上的遮罩上把面板关掉」。这是**迁移前既有行为**
-> （新旧站事件序列逐字相同），用户已**接受该等价性 override**；`AGENTS.md` smoke 13 与此同步改写，
-> 裁定与证据记录见 `docs/parity-touch-compare.md` 的「裁决记录」。桌面端点击（上表第 4 行）不受影响：面板打开并保持。
+> **smoke 13 口径变更（2026-10-17 用户授权，取代 2026-10-13 裁定）**：上表第 13 行已改为「面板保持打开」。
+> 2026-10-13 曾以「新旧站事件序列逐字一致」接受该等价性 override；2026-10-17 用户授权**主动偏离等价性基线**，
+> 把「面板被同一次触摸迟到的合成 click 关掉」判定为迁移前基线缺陷并修复（`#bs-overlay` 关闭触发由 `click`
+> 改为 `pointerdown`）。这是**产品变更，不是迁移回归修复**。旧裁定原文与证据仍保留在
+> `docs/parity-touch-compare.md`，其结论由该文件的「新裁定（2026-10-17）」取代。
+> 桌面端点击（上表第 4 行）不受影响：面板打开并保持；桌面新增右键开面板（A6）。
 
 > **smoke 第 1 项实跑记录**（2026-10-12，`l2_contract_rev` 节点，本分支）：
 >
@@ -430,3 +432,68 @@ $ git status --short
   的打印字符串（§6.4 的记录就是它的原样输出）；该文件属于旧门禁，改它不在本节点范围。
 - `docs/migration-parity.md` §2 的「现实现位置」列全部指向旧站 `js/map.js` —— 它们描述的是
    **等价性基准**，迁移到 `src/` 岛屿后需由相关节点逐条重新落地并标注新位置。
+
+---
+
+## §8 修订记录：手势驱动的点击语义（2026-10-17，用户授权的产品变更）
+
+本节记录一次**经用户授权的主动偏离等价性基线**。它不是迁移回归修复：旧站（`legacy/` 等价基线）的
+「轻点不可下钻地区 → 面板打开后又被同一次触摸迟到的合成 click 关掉」按新裁定属于**基线缺陷**。
+**§1–§7 的既有核对读数与裁定原文保持原样**（它们是当时的实测与历史记录），本节只记录变更与差异。
+
+1. **语义改为手势驱动的三路 `intent`**（`activateRegion(point, source, intent)`）：
+   - `'auto'`（轻点 / 鼠标左键）：可下钻则下钻，否则开信息面板；
+   - `'panel'`（触摸长按 ≥300ms / 鼠标右键 / 「地区一览」的「详情」）：强制开信息面板；
+   - `'drill'`（面板内下钻按钮）：强制下钻，不可下钻时静默返回。
+   `intent` 分流**不再读** `detailMode.enabled`：`#details-btn` 不再门禁地图点击，职责收窄为决定面板默认
+   展开「同学信息」还是公开卡、以及承载「退出查看」；按钮已从地图框移到页头（页头 `.plate__eyebrow` 行右侧）。
+   `map:region-activate` 的 `detail.source` 取值：`'map' | 'touch-tap' | 'touch-hold' | 'right-click' |
+   'ledger' | 'ledger-detail' | 'sheet' | 'probe' | 'external'`。
+2. **新增 `map:drill-start` 事件**：在 `drillIntoProvince()` 里「`point.loading` 守卫通过、`point.loading = true`
+   之后，任何 `await` 之前」同步广播，抽屉岛订阅后立即 `closeSheet()` —— 恢复旧站「下钻即收面板」的同步观感
+   （此前新站拖到 view change 才关，最长可被字体等待拖到约 2s）。
+3. **迟到 click 修复（本次根因）**：`#bs-overlay` 的关闭触发由 `click` 改为 `pointerdown`。
+   触摸手势的 `pointerdown` 在遮罩还是 `pointer-events: none` 时就已派发，因此不会命中；鼠标点遮罩仍即时关闭。
+   `#auth-overlay` 不动。详见 `docs/parity-touch-compare.md` 的「新裁定（2026-10-17）」。
+4. **`TapFallback` 阈值与按压反馈**：`MAX_MOVE_PX=14`、`HOLD_MIN_MS=300`、`MAX_DURATION_MS=2000`
+   （原 900）、`DEDUPE_MS=450`；按压满 300ms 显示 `#map-press-ring`（`touchend` / `touchcancel` / >2000ms
+   一律隐藏，元素缺失时静默容错）。
+5. **同步更新的条目**：§2 的 A6（长按 → 面板）、A7（轻点仍直接下钻，长按是面板通道）、A10（地区一览
+   每行两个按钮「查看」/「详情」），§5 的 smoke 13（面板保持打开）及其口径注。
+6. **回归覆盖**：新增 `tests/map-touch.test.mjs` / `npm run test:touch`（真 Chromium + CDP 原生触摸事件），
+   并进入 CI；同一动作在桌面左键与触摸轻点下的最终状态必须一致。此类缺陷只有真浏览器能抓（已复发两次）。
+   T5 实测轨迹（触摸轻点 → `+39ms` 浏览器补发 click 落 `CANVAS`，仍只有 1 条 `source='touch-tap'`；
+   长按/台湾 → click 落 `bs-overlay`，面板在 +250ms / +1250ms 仍 active）见
+   `docs/parity-touch-compare.md` 的「T5 实测轨迹」。
+7. **触摸补发 click 的单一所有者（`ownsTouchGesture()`）**：`src/lib/tap-fallback.ts` 导出的让位守卫
+   同时看「手势进行中」与「手势结束后 450ms 窗口」。`src/lib/map-island.ts` 的 `handleRegionClick` /
+   `handleRegionContextMenu` **必须先判它再处理**：否则一次轻触会被 zrender 的合成 click 与 Chromium 的
+   鼠标兼容事件记成 `'touch-tap'` + `'map'` 两条激活，换层后那条迟到的 click 还会在省级图上凭空激活城市；
+   触摸长按补发的 `contextmenu` 也不能记成 `'right-click'`。卸载时这个窗口与鼠标时间戳都要**归零**（不只是置 false）：
+   否则旧窗口会漏进 StrictMode / HMR 建的新实例；在不发 `pointerdown` 的内核上，新实例头 450ms 的鼠标点击会被让位
+   （安全方向，但不是预期行为）。
+8. **地图加载态已修复（T9，2026-10-17 后续）**：旧实现把 `#map-loading` 放在 `#map` 内，而
+   `echarts.init(#map)` 经 zrender `Painter` 构造的 `root.innerHTML = ''`（`zrender/lib/canvas/Painter.js:114`）
+   会把它删掉——`showProvinceLoading()` / `hideMapLoading()`（`src/lib/map-island.ts:125-148`）此后操作的是
+   一个脱离文档的节点，所以「正在加载 …」文案与转圈**曾经从不可见**。现修复为：`#map-loading` 是
+   `.map-frame` 的**直接子元素**（`#map` 的兄弟，几何/层叠不变）+ `aria-hidden="true"`（不得重复进无障碍树，
+   读屏通路仍是 `#map[aria-busy]` 与页脚 `role=status`）；下钻时 `display:flex` 且文案为
+   「正在加载 <省> 地图...」，完成回 `display:none`。`.map-loading` 带
+   `background: var(--color-bg-primary-translucent)`（与 `.cdn-error` 同一 token），因为文案压在旧 choropleth
+   上、热力色阶有深端（`#35604d` 一类）。根因是 zrender 初始化清空容器，**不能把加载层放回 `#map`**。
+   旧站是同一套结构、加载层同样不可见，所以这次可见化属**同一次变更的已记录改进**（不是回归）。
+   证据：`tests/map-touch.test.mjs:900-948`、T14 日志（`.wrangler/probe-tmp/t14-touch-valid.log`，scratch）。
+9. **设备判别守卫与 ~700ms 触摸后鼠标死区（T13/T14，2026-10-17 后续）**：`ownsTouchGesture()` 现在按
+   **输入设备**判别——viewportRoot 上 capture 阶段的 `pointerdown` 记录 `pointerType === 'mouse'`
+   （`src/lib/tap-fallback.ts:340-346`），触摸窗口内出现真实鼠标按下就放行；内核不给 `pointerdown` 时
+   自动退回 450ms 时间窗让位（安全降级）。**但触摸后约 700ms 内鼠标左键无响应不是这个守卫造成的**：
+   zrender 的 `env.pointerEventsSupported` 只对 Edge/IE 为 true（`zrender/lib/core/env.js:69-71`），
+   Chrome/Firefox/Safari 走 touch+mouse 分支，`setTouchTimer()` 把 `scope.touching` 保持 700ms
+   （`HandlerProxy.js:38-48`），期间 mouse 监听被整体跳过（`HandlerProxy.js:197-210`），click 根本到不了
+   ECharts。实测边界：Δ≈628/668ms 时 `chart.on('click')` 零派发，Δ≈741ms 起恢复
+   （`tests/map-touch.test.mjs:889-896`）。旧站同版本 zrender 6.1.0（从 `90c182b:js/vendor/echarts.min.js`
+   恢复比对）行为相同 → **基线既有行为，不是本次引入**；守卫的鼠标放行分支在 Chromium 上不可达，
+   收益只落在 pointer-events 分支（Edge/IE）。理论盲区（map-core 上报）：内核若违反规范对触摸也补发
+   `pointerdown(pointerType='mouse')`，窗口会放行合成 click 而可能记两条；安全方向是让位，Android/iOS 实测无此行为。
+10. **下游引用**：A6/A7 的「现实现位置」已指到 `src/lib/tap-fallback.ts` / `src/lib/map-island.ts`；
+   §2 其余各条仍以旧站路径为**等价性基准**（见本节开头与 §7 遗留项），后续迁移节点逐条重新落地。

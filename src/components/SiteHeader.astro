@@ -12,7 +12,21 @@ const titleChars = ['金', '鹰', ' ', '1', ' ', '班', '蹭', '饭', '地', '�
 <header class="page__header">
     <div class="plate">
         <div class="plate__main">
-            <p class="plate__eyebrow">金鹰 1 班 · 同学分布图志</p>
+            <!-- 眉标行：文案在左，详情模式按钮在右（.plate__eyebrow 就是那条 flex 行）。
+                 按钮的 id 与 .chip/.details-btn/.magnet/.spotlight 类名必须逐字保留：
+                 dialogs-island.ts 按 id 找它，验收脚本把它当「Esc 后焦点归还目标」。
+                 它的职责只有两条：决定面板默认展开「同学信息」还是公开卡、承载「退出查看」；
+                 地图/列表点击的下钻与面板分流不再看它。 -->
+            <p class="plate__eyebrow">
+                <span class="plate__eyebrow-text">金鹰 1 班 · 同学分布图志</span>
+                <button
+                    id="details-btn"
+                    class="chip details-btn magnet spotlight"
+                    type="button"
+                    aria-label="开启查看详情模式"
+                    aria-pressed="false">同学信息</button
+                >
+            </p>
             <h1 class="page__title" aria-label="金鹰 1 班蹭饭地图">
                 <span aria-hidden="true"
                     >{titleChars.map((char, index) => (

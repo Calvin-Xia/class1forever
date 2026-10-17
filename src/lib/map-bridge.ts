@@ -13,14 +13,16 @@
  *    - `map:view-change`    视野切换（全国 ⇄ 省）
  *    - `map:public-data`    公开聚合到手（含 detailAccess / detailModeAvailable / detailsHint）
  *    - `map:zoom-change`    缩放被夹紧或改变
- *    - `map:region-activate` 点击了「不能下钻或正在详情模式」的地区 —— 抽屉侧据此开面板
+ *    - `map:region-activate` 某地区要「开面板」（长按 / 右键 / 地区一览「详情」/ 不可下钻）—— 抽屉侧据此开面板
+ *    - `map:drill-start`    即将下钻某地区（已过 loading 守卫、尚未 await） —— 抽屉侧据此先收自己的弹层
  *    - `map:escape`         弹层打开时按了 Esc（地图不越权关别人的弹层，只广播意图）
  *    - `map:detail-mode-change` 详情模式开关变化
- *    上面 7 个名字以 `MAP_EVENT_NAMES` 为**唯一真相源**：广播方与订阅方都引用常量，
+ *    上面 8 个名字以 `MAP_EVENT_NAMES` 为**唯一真相源**：广播方与订阅方都引用常量，
  *    源码里不再散落字面量（新增事件也一律先加在这里）。
  * 3. **两个反向钩子**（由 l2_dialogs 注册，未注册时地图 island 也能独立工作）：
  *    - `setOverlayOpenProbe`：弹层打开时 TapFallback 不认点击（默认走 DOM 兜底判定）；
- *    - `setDetailModeState`：详情模式开关，决定点省份是「下钻」还是「开抽屉」。
+ *    - `setDetailModeState`：详情模式开关状态（只影响提示语与按钮文案，**不再**决定点省份是
+ *      「下钻」还是「开抽屉」—— 那条分流现在由手势来源与 `activateRegion` 的 intent 决定）。
  */
 import type { PublicMapPayload } from './types';
 import type { RegionPoint } from './map-model';
@@ -33,6 +35,7 @@ export const MAP_EVENT_NAMES = {
     publicData: 'map:public-data',
     zoomChange: 'map:zoom-change',
     regionActivate: 'map:region-activate',
+    drillStart: 'map:drill-start',
     escape: 'map:escape',
     detailModeChange: 'map:detail-mode-change'
 } as const;
@@ -51,9 +54,26 @@ export interface RegionActivationDetail {
     point: RegionPoint;
     /** 这个地区是否有省级地图文件（false = 台湾/香港/澳门/南海这类）。 */
     canDrill: boolean;
-    /** 触发来源：地图点击 / 键盘（地区一览）等。 */
+    /**
+     * 触发来源，取值见 `RegionActivationSource`：
+     * `'map'`（zrender 点击）/ `'touch-tap'`（轻触兜底）/ `'touch-hold'`（长按）/
+     * `'right-click'`（右键）/ `'ledger'`（地区一览主按钮）/ `'ledger-detail'`（地区一览「详情」）/
+     * `'sheet'`（抽屉里的按钮）/ `'probe'`（验收探针）/ `'external'`（默认值）。
+     */
     source: string;
 }
+
+/** `RegionActivationDetail.source` 的取值集合（类型上仍是 string，便于探针/外部传自定义值）。 */
+export type RegionActivationSource =
+    | 'map'
+    | 'touch-tap'
+    | 'touch-hold'
+    | 'right-click'
+    | 'ledger'
+    | 'ledger-detail'
+    | 'sheet'
+    | 'probe'
+    | 'external';
 
 export interface DetailModeState {
     /** 服务端是否配齐了口令与会话密钥。 */

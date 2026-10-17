@@ -3,7 +3,8 @@
  * 「地区一览」：`<details>` + 原生 `<table>`。
  *
  * 图表画在 canvas 上，地区和城市无法聚焦。这张表是键盘与读屏的替代路径，
- * 每行一个按钮，行为和在地图上点击该地区完全一致（两条路径都走 `activateRegion()`）。
+ * 每行两个按钮：「查看」和在地图上轻点该地区完全一致，「详情」直接展开面板
+ * （两条路径都走 `activateRegion()` 的 `intent`，见 src/lib/region-ledger.ts）。
  *
  * 表体由客户端填：控制器在 `src/lib/region-ledger.ts`（l2_dialogs），数据来自地图岛屿
  * 广播的当前视野（`map-bridge` 的 `view.points`）。所以这里给的是骨架：表头、初始排序
@@ -30,7 +31,7 @@ import Icon from './Icon.astro';
         </div>
         <table class="region-table">
             <caption class="visually-hidden"
-                >各地区公开人数一览。每一行都有一个按钮，作用和在地图上点击该地区相同。</caption
+                >各地区公开人数一览。每一行都有「查看」与「详情」两个按钮：「查看」和在地图上轻点该地区相同，「详情」直接展开地区面板。</caption
             >
             <thead>
                 <tr>

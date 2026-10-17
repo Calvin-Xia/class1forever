@@ -21,13 +21,6 @@ import Icon from './Icon.astro';
                     <Icon name="arrow-left" size="sm" />
                     <span>返回全国</span>
                 </button>
-                <button
-                    id="details-btn"
-                    class="chip details-btn"
-                    type="button"
-                    aria-label="开启查看详情模式"
-                    aria-pressed="false">同学信息</button
-                >
                 <span id="map-region-badge" class="chip map-region-badge">中国</span>
             </div>
 
@@ -76,20 +69,39 @@ import Icon from './Icon.astro';
                 <span class="map-scale__label">200 km</span>
             </div>
 
-            <!-- role=img 里的内容对读屏是纯装饰，加载文案读不出来；
-                 busy 状态靠 aria-busy 与页脚那条 role=status 的播报承担。 -->
+            <!-- 地图容器只留给 ECharts。加载层**不能**再放回这里面：zrender 的 Painter 在
+                 init 时会 `root.innerHTML = ''`（zrender/lib/canvas/Painter.js:114），
+                 任何静态子节点会在那一刻被删掉 —— 加载文案与转圈就是这么变成「从不可见」的。
+                 role=img 需要 aria-label；忙碌状态靠容器自己的 aria-busy 与页脚那条
+                 role=status 的播报承担。 -->
             <div
                 id="map"
                 role="img"
                 aria-label="中国地图，显示同学分布"
                 aria-busy="true"
                 tabindex="-1"
-            >
-                <div id="map-loading" class="map-loading">
-                    <div class="map-loading__spinner"></div>
-                    <p class="map-loading__text">正在展开图面…</p>
-                </div>
+            ></div>
+
+            <!-- 地图加载态（「正在展开图面…」/「正在加载 X 地图…」+ 转圈）。
+                 它是 .map-frame 的直接子元素、#map 的兄弟：`.map-loading` 是
+                 position:absolute; inset:0; z-index:50，在 .map-frame（relative + overflow:hidden）
+                 里的几何与层叠和以前挂在 #map 里完全一致（#map 有 1px 边框差，视觉不可见），
+                 可见时按默认 pointer-events 吸收点击 —— 加载期间点不到 canvas，是旧站原意。
+                 aria-hidden="true" 是硬要求：离开 role="img" 容器后它会重新进入无障碍树，
+                 会和 #map[aria-busy]、页脚 role=status 重复播报；本次只让它可见，不改读屏语义。
+                 map-island 的 showProvinceLoading / hideMapLoading 与 scripts/map-fatal-error.ts
+                 都按 id 找它，与 DOM 位置无关。 -->
+            <div id="map-loading" class="map-loading" aria-hidden="true">
+                <div class="map-loading__spinner"></div>
+                <p class="map-loading__text">正在展开图面…</p>
             </div>
+
+            <!-- 触摸按压反馈环（l2_map 的 tap-fallback 写它）：
+                 按住 300ms 命中一个地区时设 data-visible="true" 并写 style.left / top
+                 （相对 .map-frame padding box 的 px），touchend / touchcancel / 超时后
+                 置回 data-visible="false"。纯视觉反馈，所以 aria-hidden，
+                 样式见 main.css 的 .map-press-ring。 -->
+            <div id="map-press-ring" class="map-press-ring" aria-hidden="true" data-visible="false"></div>
 
             <!-- 地图岛屿（l2_map）：入口是 src/scripts/map-island-boot.ts；
                  分享图与读屏播报（l2_share）挂在同一条入口上（src/scripts/share-boot.ts），
