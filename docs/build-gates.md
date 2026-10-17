@@ -16,9 +16,17 @@ node build.js --artifacts-only
 # 运行时门禁：真起一次本地 Worker，对真实 HTTP 响应断言
 TEMP="$PWD/.wrangler/probe-tmp" TMP="$PWD/.wrangler/probe-tmp" npm run check:runtime
 
+# 真浏览器手势回归（需先 npm run build；首次需 npx playwright install --with-deps chromium）
+npm run test:touch
+
 # 全套（构建门禁 + 运行时门禁 + 四路由契约）
 npm run check
 ```
+
+> **`test:touch` 独立于 `npm run check`**：Playwright 的浏览器二进制不进 `npm ci`，所以 CI 在
+> `test:api` 之后单独一步 `npx playwright install --with-deps chromium`，再跑 `npm run test:touch`
+> （顺序见 `.github/workflows/ci.yml`：build → check:runtime → test:api → install chromium → test:touch
+> → check:edgeone → …）。`npm run check` 本地仍只串 `build + check:runtime + test:api`。
 
 > **Windows 沙箱**：`astro build` / `wrangler dev` 会通过 workerd 建临时目录，必须把 `TEMP`/`TMP`
 > 指到工作区内（如 `.wrangler/probe-tmp`），否则报 `CreateDirectory: #5 拒绝访问`。这条**不写进
@@ -31,7 +39,7 @@ npm run check
 
 | 层 | 断言 | 覆盖的 DoD |
 | --- | --- | --- |
-| A 静态 | 关键文件齐全（**面向新站**：不再把旧站 `index.html` / `js/boot.js` / `functions/**` 当必需；含 `src/platform` 目录）；且**仓库根不得再出现 `index.html`** —— 它会被 Vite 的静态中间件先命中，让 `astro dev` 的 `GET /` 返回旧站页面（`l2_motion` 的 F-2）。旧入口归档在 `legacy/index.html`（与 `main:index.html` 逐字节相同），见 `legacy/README.md` | — |
+| A 静态 | 关键文件齐全（**面向新站**：不再把旧站 `index.html` / `js/boot.js` / `functions/**` 当必需；含 `src/platform` 目录；2026-10-17 起把 `tests/map-touch.test.mjs` 也列进必需文件数组）；且**仓库根不得再出现 `index.html`** —— 它会被 Vite 的静态中间件先命中，让 `astro dev` 的 `GET /` 返回旧站页面（`l2_motion` 的 F-2）。旧入口归档在 `legacy/index.html`（与 `main:index.html` 逐字节相同），见 `legacy/README.md` | — |
 | A2 静态 | 生成类型 `worker-configuration.d.ts` 必须在位、**不被 `.gitignore`**，且 `wrangler types --check` 通过（与 `wrangler.jsonc` 无漂移） | 新树/CI 可构建 |
 | B 静态 | 明细数据与密钥名不得出现在**客户端面**（`src/**`、`public/**`、`js/**` **默认都是客户端面**，只有显式 server-only 名单 —— `src/platform/**`、`src/pages/api/**`、`src/middleware.ts`、`src/lib/{data,api-handlers,auth,http,types,security-headers}.ts`、`js/data.js` —— 除外；编译后的 `dist/client/**` 同理）：`students:raw:v1`、`js/data.js`、`DETAILS_PASSPHRASE`、`DETAILS_SESSION_SECRET` | 2、4 |
 | C 静态 | 脚本同源、`.astro` 里没有无 `src` 的 `<script is:inline>`、无 Highcharts 残留 | 1 |
@@ -45,6 +53,7 @@ npm run check
 | K | `astro build` 退出码 0（两个 astro 阶段都跑，类型错误不遮蔽产物扫描；任一失败最后统一退出 1） | 1 |
 | L 产物 | `dist/client/_headers` 必须包含 `public/_headers` 的全部内容，且额外内容只能是适配器注入的 `/_astro/*` 长缓存规则；`dist/server/wrangler.json` / `entry.mjs` 在位；客户端产物无明细键/密钥名/名单文件/vendor 加载；**任何 `dist/**` 文件里不得出现 `.dev.vars`** 或密钥类取值；服务端产物不得硬编码密钥字面量 | 4、6 |
 | M 运行时 | 真起 Worker：渲染页 `<script>` 全部带 `src`（0 个内联脚本）、文档响应与静态资产的 5 条安全头**逐条一致**、`script-src` 无 `unsafe-inline`、`/.dev.vars` / `/js/data.js` / `/js/vendor/echarts.min.js` 都不可请求 | 6、9 |
+| N 真浏览器 | `npm run test:touch`（`tests/map-touch.test.mjs`，真 Chromium + CDP 原生触摸事件，11 个用例）：轻点可下钻省份→下钻；长按 ≥300ms / 右键 / 轻点台湾→面板打开且**保持打开**；「地区一览」「查看」「详情」键盘等价；一次手势**恰好一条**激活（`source` 唯一）；加载态在 `#map` 之外且下钻期间可见；触摸后真实鼠标在窗口外必须记 `source='map'`（设备判别回归）；页面脚本伪造 `pointerdown(mouse)` 不得把轻点改写成 `source='map'`（`isTrusted` 收口回归） | 交互 A6/A7/A10 |
 | 人工 | 真 Chromium 打开首页，`window.__mapProbe.read().booted === true`（createRoot 挂载的岛屿真的水合了）、3 个外链 chunk 全同源、控制台 0 报错 | 9 |
 
 ## 复核修正（2026-10-16，task-3）
@@ -74,6 +83,37 @@ npm run check
 Gate A 因此多一条：根 `index.html` 存在 → `npm run build` 失败，并提示
 `git mv index.html legacy/index.html`；`legacy/index.html` 不在位只给 warning（允许有意删掉归档）。
 静态断言组数因此从 **15** 变为 **16**；完整读数与两处通路的实测指纹见 `docs/cutover-runbook.md` §5.4。
+
+## 真浏览器手势门禁（2026-10-17 新增）
+
+`tests/map-touch.test.mjs` 用真 Chromium 驱动页面：轻点用 `page.touchscreen.tap`，长按用 CDP
+`Input.dispatchTouchEvent`（touchStart → **真等 600ms** → touchEnd）。它固化的是只有真浏览器才会出现的
+时序：`touchend` 之后 zrender 与 Chromium 都可能补发 click，一次触摸很容易被记成两条激活，或让迟到的
+click 打在刚盖上的遮罩上把面板关掉（该缺陷已复发两次；2026-10-13 曾以「旧站等价行为」被接受，
+2026-10-17 用户授权推翻并修复，见 `docs/parity-touch-compare.md`）。
+
+- 本地顺序：`npm run build` → `npx playwright install --with-deps chromium`（只需一次）→
+  `npm run test:touch`。启动形态与 `test:api` 相同（自己起 `wrangler dev`，`--state-dir` 隔离在
+  `.wrangler/local/state-touch`，演示口令 `demo`，不读 `.dev.vars`）。
+- CI 顺序：`build` → `check:runtime` → `test:api` → 单独装 Chromium → `test:touch` → 其余 EdgeOne /
+  同源会话 / 双部署门禁（见 `.github/workflows/ci.yml`）。`build.js` 的必需文件数组已包含本测试文件。
+- 现有 **11 个用例**（T14 当时为 `tests 10 / pass 10`；T17 新增第 11 条后 T18 全绿 `tests 11 / pass 11`；锚点
+  `tests/map-touch.test.mjs`，SHA256 `87E288DE…`、1123 行）：桌面左键下钻、右键开面板并保持、触摸轻点恰好
+  一条激活、长按开面板并保持、轻点台湾开面板并保持、地区一览「查看」/「详情」键盘等价、桌面与触摸最终状态
+  一致，T14 的两条回归——**加载态可见性**（`#map-loading` 在 DOM、`aria-hidden`、下钻期间 `display:flex` 且
+  文案正确、结束后 `none`，`tests/map-touch.test.mjs:900-948`）与**设备判别**（触摸后真实鼠标左键：click 到
+  图表必须按设备放行、没到图表必须 0 激活；窗口外 ≥900ms 必须记 `source='map'`，
+  `tests/map-touch.test.mjs:950-1050`）——以及 T17 的**伪造 pointerdown 收口**
+  （`tests/map-touch.test.mjs:1057-1122`）：页面脚本伪造 `pointerdown(pointerType='mouse')` 后轻点台湾，
+  必须仍恰好一条 `source='touch-tap'`、不产生第二条激活、面板保持打开；**反向验证**：去掉
+  `handlePointerDown` 里的 `isTrusted` 判定后该用例复红（报 `实际 map`）。
+- 断言失败时会打印手势轨迹（`touchstart` / `touchend`、浏览器补发 click 的 target、`map:drill-start`、
+  `map:view-change`、`__mapProbe.read().activations`），用来区分「测试脚本问题」与「实现回归」。
+- 触摸后约 700ms 内鼠标左键不响应**不是本门禁或让位守卫引入的**：是 zrender 自身的 `touching` 闸门
+  （`zrender/lib/core/env.js:69-71` + `HandlerProxy.js:38-48` / `:197-210`，旧站同版本 zrender 6.1.0 相同），
+  边界与源码证据见 `docs/parity-touch-compare.md` 的「2026-10-17 二次修订」。
+- 完整门禁当前打印「静态断言 18 组」（T5/T14 实测：静态 13 + `astro check`/`astro build` 2 + `dist/client`
+  字体 1 + 产物 2），以 `build.js` 实际输出为准；`--static-only` 下是 13 组。
 
 ## 生成类型（`worker-configuration.d.ts`）为什么是门禁的一部分
 

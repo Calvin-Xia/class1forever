@@ -295,10 +295,18 @@ git mv legacy/index.html index.html  # 单独回滚 dev 遮蔽处置（会重新
 3. 公开聚合：`GET /api/map/public` 200，响应头含 `Vary: Cookie` 与 `Cache-Control: no-store`；地图色带与人数正常。
 4. 口令流程：错误口令 401（`remainingAttempts` 递减）、连续 10 次后 429；正确口令签发 HttpOnly Cookie；
    匿名 `GET /api/map/details` 401；登录后按省返回 `{province,city,count,people}`；`退出查看` 清会话。
-5. 悬停省份出卡片、色带同步标记；有数据省份点击下钻、Esc/返回全国；台湾/香港/澳门/南海诸岛不请求省级脚本。
-   触摸轻点台湾是「打开面板 → 同一次触摸的合成 click 落在刚盖上的遮罩上 → 面板关闭」（迁移前既有行为，
-   2026-10-13 已裁定接受等价性 override，见 §11.5 与 `docs/parity-touch-compare.md`）。
-6. 触摸设备：**600ms 长按**仍能下钻（`TapFallback` 路径，非 zrender 的 300ms 补发）。
+5. 悬停省份出卡片、色带同步标记；有数据省份左键点击下钻、Esc/返回全国；台湾/香港/澳门/南海诸岛不请求省级脚本。
+   下钻期间地图上应可见「正在加载 <省> 地图...」加载层与转圈，完成后消失（`#map-loading` 在 `.map-frame` 下、
+   `#map` 之外；放在 `#map` 内会被 ECharts 初始化清空——2026-10-17 已修，见 `docs/parity-touch-compare.md` 二次修订）。
+   手势语义（2026-10-17 用户授权的产品变更，**取代** 2026-10-13 的等价性 override，见 `docs/parity-touch-compare.md`）：
+   - 触摸轻点可下钻省份 = 下钻；轻点台湾/港澳/南海 = 面板打开**并保持**（同一次触摸迟到的合成 click 不得再把它关掉）；
+   - 触摸长按 ≥300ms（位移 ≤14px）= 面板打开并保持，按压满 300ms 出现 `#map-press-ring` 反馈；
+   - 鼠标右键点省份 = 面板打开并保持（抑制浏览器右键菜单）；
+   - 「详情模式」「#details-btn」不再门禁地图点击，已从地图框移到页头，只决定面板默认展开「同学信息」还是公开卡。
+6. 触摸设备（`TapFallback` 路径，非 zrender 的 300ms 补发）：轻点 <300ms 按上一条分流；长按 300–2000ms 打开面板；
+   一次手势**恰好一条**激活——同一次触摸里 zrender / 浏览器补发的 click 由 `ownsTouchGesture()` 让位守卫挡下。
+   鼠标事件按输入设备放行（`pointerdown` 的 `pointerType`）；触摸后约 **700ms** 内鼠标左键不响应是 zrender 自身的
+   `touching` 闸门（旧站同版本 zrender 同样如此，**不是**本次守卫造成的）。
 7. 分享图：全国/省级/空态三种范围文案与文件名正确（`蹭饭地图_<范围>_<日期>.png`，日期取本地时区）。
 8. 键盘 passes：焦点环可见；口令弹窗与抽屉打开时背景 `inert`、Esc 关闭且焦点归还。
 9. 窄屏（375/414/480px）无横向滚动、控件不重叠。
@@ -438,6 +446,10 @@ $ git rev-list --count main..HEAD   → 7
    但同一次触摸合成的 click 落在刚盖上的遮罩上把面板关掉」），裁定与证据记录在 `docs/parity-touch-compare.md`
    的「裁决记录」。**本次只改文档，未动 `js/map.js` / `src/**` 的交互逻辑**（若要真修「打开后不被合成 click 关掉」，
    属独立开票，需重新走一轮触摸对照 + smoke 13）。
+   - **已被取代（2026-10-17，用户授权）**：把「面板被同一次触摸迟到的合成 click 关掉」判为**迁移前基线的缺陷**
+     并修复（`#bs-overlay` 关闭触发 `click` → `pointerdown`），属**主动偏离等价性基线的产品变更，不是迁移回归修复**。
+     上面「接受 override」的结论文本保留为历史记录；现行口径见 `docs/parity-touch-compare.md` 的
+     「新裁定（2026-10-17）」、`AGENTS.md` smoke 13 与 `docs/migration-parity.md` §8。
 6. **`WORKERS_CI` / Git 集成**：本分支未 push，Worker 的 Git 构建连接与 production branch 属人工配置（M9）。
 7. **文档口径**：`DEPLOYMENT.md` / `README.md` / `AGENTS.md` 已在本节点同步为 Worker 口径（C5）；
    若还有人从旧文档复制 `wrangler pages ...` 命令，按 §2 的 Worker 口径替换。

@@ -3,7 +3,9 @@
  * 口令与详情流程、`renderRegionTable` 一族忠实迁移）。
  *
  * 三件事共用一份状态，因为它们本来就是一条链：点地区 → 开抽屉 → 要口令 → 取详情 →
- * 抽屉换成明细卡；详情模式开关又会反过来改变「点地区」的行为（下钻还是开面板）。
+ * 抽屉换成明细卡。`#details-btn`（详情模式开关）只决定面板默认展开公开卡还是「同学信息」，
+ * 不再插手「点地区是下钻还是开面板」—— 那条分支现在只由点击意图（`activateRegion` 的
+ * `intent`）决定。
  *
  * 边界：
  * - 地图下钻 / 缩放 / 悬浮卡片 / 触摸兜底归 `src/lib/map-island.ts`（只读消费它的
@@ -579,8 +581,8 @@ function toggleDetailMode(): void {
 function bindEvents(): void {
     const dom = ui();
 
-    // 「同学信息」在 MapSection.astro 里（那份文件归 l2_share），本节点不改它，
-    // 只从岛屿这一侧接管它的行为与状态（l2_map 的报告也是这么划的）。
+    // 详情模式按钮（「同学信息」/「退出查看」）在 SiteHeader.astro 的眉标行里。
+    // 本节点只从岛屿这一侧接管它的行为与状态，不动它的 DOM。
     if (dom.detailsButton) {
         const onDetailsClick = (): void => toggleDetailMode();
         dom.detailsButton.addEventListener('click', onDetailsClick);
@@ -588,9 +590,13 @@ function bindEvents(): void {
     }
 
     if (dom.overlay) {
-        const onOverlayClick = (): void => closeSheet();
-        dom.overlay.addEventListener('click', onOverlayClick);
-        state.disposers.push(() => dom.overlay?.removeEventListener('click', onOverlayClick));
+        // 关面板只能用 pointerdown，不能用 click。触摸点开面板时，这一下的 pointerdown
+        // 早已派发完毕（那会儿这块遮罩还是 pointer-events: none，命中的是地图），
+        // 但浏览器随后补发的原生 click 会落在刚刚盖满屏幕的遮罩上，把面板立刻关掉 ——
+        // 表现就是「点一下、面板闪一下就没了」。pointerdown 不会迟到；鼠标点遮罩照旧即时关闭。
+        const onOverlayPointerDown = (): void => closeSheet();
+        dom.overlay.addEventListener('pointerdown', onOverlayPointerDown);
+        state.disposers.push(() => dom.overlay?.removeEventListener('pointerdown', onOverlayPointerDown));
     }
 
     if (dom.closeButton) {
@@ -675,6 +681,19 @@ function bindEvents(): void {
     }
 
     // 地图侧的事件（l2_map 的契约）：
+
+    // 下钻「一开始」就收面板：drillIntoProvince 过完守卫、在任何 await 之前广播
+    // `map:drill-start`。旧站是下钻前同步 close（legacy/js/map.js:1538），新站此前要等
+    // `map:view-change` 才关，而那条路要等省级地图与字体就位，最长能把面板多留 2s，
+    // 读起来像「点了省份，面板还赖在那里」。来源是抽屉自己的下钻按钮时也一样收。
+    state.disposers.push(
+        onMapEvent<{ point?: RegionPoint }>(MAP_EVENT_NAMES.drillStart, () => {
+            if (sheetIsActive()) {
+                closeSheet();
+            }
+        })
+    );
+
     state.disposers.push(
         onMapEvent<RegionActivationDetail & { callout?: string }>(MAP_EVENT_NAMES.regionActivate, (detail) => {
             const point = detail?.point;
@@ -704,8 +723,9 @@ function bindEvents(): void {
         onMapEvent<{ province: string | null }>(MAP_EVENT_NAMES.viewChange, (detail) => {
             const province = detail?.province ?? null;
 
-            // 下钻 / 返回全国都会换视野：旧站这两条路径各自先 `BottomSheet.close()`，
-            // 新站地图不碰抽屉，由这里补上。同视野的数据刷新（province 不变）不关。
+            // 下钻已经由 `map:drill-start` 提前收掉了；这里兜住「返回全国」与其他换视野路径。
+            // 旧站这两条路径各自先 `BottomSheet.close()`，新站地图不碰抽屉，由这里补上。
+            // 同视野的数据刷新（province 不变）不关。
             if (province !== state.lastProvince) {
                 state.lastProvince = province;
                 closeSheet();
@@ -800,7 +820,8 @@ export function bootDialogsIsland(): void {
         getActiveProvince: () => activeProvince(),
         getStats: () => getMapState().publicData?.stats || null,
         getDetailState: () => detailState(),
-        activate: (point, source) => activateRegion(point, source)
+        // intent 一路上传，不在这一层再判一次：「查看」= 轻点语义，「详情」= 强制开面板。
+        activate: (point, source, intent) => activateRegion(point, source, intent)
     });
 
     // 地图侧用它判断「弹层是否打开」（TapFallback 忽略弹层上的触摸、Esc 先关弹层）。
@@ -835,7 +856,8 @@ export function bootDialogsIsland(): void {
     });
     updateDetailsButton();
 
-    // 首屏就把状态同步给地图侧：详情模式是否可用决定点省份是下钻还是开面板。
+    // 首屏就把状态同步给地图侧：地图与面板共用这一份 detailMode 快照
+    // （`available` / `access` 决定面板里的公开卡与详情卡，`enabled` 只决定默认展开哪一张）。
     const publicData = getMapState().publicData;
     if (publicData) {
         setDetailModeState({

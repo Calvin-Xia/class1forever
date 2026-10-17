@@ -308,12 +308,34 @@ input {
     align-items: start;
 }
 
+/* 眉标行：文案在左、详情模式按钮在右（#details-btn 从图版工具条挪到这里）。
+   flex-wrap 是窄屏兜底：≤480px 时先让文案在 span 内部换行，实在放不下按钮才整体
+   掉到第二行，两者不会互相压住（A12：≤480px 不得横向滚动）。 */
 .plate__eyebrow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
     font-family: var(--font-mono);
     font-size: 0.78rem;
     letter-spacing: 0.24em;
     color: var(--color-text-muted);
     margin-bottom: var(--space-3);
+}
+
+/* min-width: 0 让文案先在自己内部换行，而不是把按钮挤出容器。 */
+.plate__eyebrow-text {
+    min-width: 0;
+}
+
+/* 按钮不参与收缩；尺寸仍由 .chip 决定（≤768px 提到 44px 触摸目标）。
+   自己声明 position: relative，和 .bs-btn 同一套理由：.spotlight 的 ::after 是 inset:0
+   的绝对定位层，需要一个定位祖先。平常靠 .magnet 的 transform 兜住，但 reduced-motion
+   下 .magnet 的 transform 被清成 none，没有这条就会按 .page 铺满整页。 */
+.plate__eyebrow .details-btn {
+    position: relative;
+    flex: 0 0 auto;
 }
 
 .page__title {
@@ -503,6 +525,31 @@ input {
 /* 地图只作为焦点锚点（关掉面板时把焦点还回来），不是可交互控件，不画描边。 */
 #map:focus {
     outline: none;
+}
+
+/* 触摸按压反馈环：tap-fallback 在按住 300ms 命中地区时把它移到触点并点亮
+   （data-visible="true"），抬起 / 取消 / 超时后置回 "false"。
+   它是 .map-frame 的绝对定位子元素，left/top 也按该参考系写（JS 侧含 1px 边框修正）；
+   margin 负半径让 left/top 指向圆心。颜色只走 :root 已有 token。
+   z-index 低于 .map-toolbar / .share-btn（100），高于画布，不拦截任何指针事件。 */
+.map-press-ring {
+    position: absolute;
+    z-index: 90;
+    width: 44px;
+    height: 44px;
+    margin: -22px 0 0 -22px;
+    border: 2px solid var(--color-accent-primary);
+    border-radius: 50%;
+    background: var(--color-focus-soft);
+    opacity: 0;
+    transform: scale(0.6);
+    transition: opacity var(--transition-fast), transform var(--transition-fast);
+    pointer-events: none;
+}
+
+.map-press-ring[data-visible="true"] {
+    opacity: 1;
+    transform: scale(1);
 }
 
 /* ==========================================================================
@@ -788,6 +835,10 @@ button.chip:active {
     justify-content: center;
     gap: var(--space-4);
     color: var(--color-text-secondary);
+    /* 下钻时这一层压在旧 choropleth 上，而热力色阶有深端（#35604d 一类），
+       --color-text-secondary 直接压上去读不清。用 .cdn-error 同一个纸白半透明 token
+       铺底：加载期间地图本就不可点（这一层吸收点击），蒙住比读不清好。 */
+    background: var(--color-bg-primary-translucent);
 }
 
 .map-loading__spinner {
@@ -1122,6 +1173,14 @@ button.chip:active {
     white-space: nowrap;
 }
 
+/* 一行两个按钮：「查看」为主、「详情」为次；inline-flex 让它们自己排开，
+   不把 td 改成 flex（那会破坏表格列宽计算）。 */
+.region-table__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .region-table__btn {
     min-height: 36px;
     padding: 0 14px;
@@ -1152,6 +1211,16 @@ button.chip:active {
 .region-table__btn:focus-visible {
     outline: 2px solid var(--color-accent-primary);
     outline-offset: 2px;
+}
+
+/* 「详情」是次要动作：不填底色、文字降一档，和同一行的主按钮拉开主次；
+   描边仍用 --color-border-strong，与 .chip / 主按钮同一档边界。
+   hover / active 仍由 .region-table__btn:hover / :active 接管（伪类选择器优先级更高）。 */
+.region-table__btn--secondary {
+    background: transparent;
+    border-color: var(--color-border-strong);
+    color: var(--color-text-secondary);
+    font-weight: 500;
 }
 
 .region-table__row:hover {
@@ -2019,6 +2088,12 @@ button.chip:active {
     }
 
     .magnet {
+        transform: none;
+        transition: none;
+    }
+
+    /* 按压环退化为静态高亮：不缩放、不淡入淡出，出现/消失都是瞬时。 */
+    .map-press-ring {
         transform: none;
         transition: none;
     }

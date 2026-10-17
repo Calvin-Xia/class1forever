@@ -10,6 +10,14 @@
   提供静态文件 + 同源 `/api/*`（用同一份夹具）；不修改工作区任何实现文件。
 - build/dev 均带 `TEMP=$PWD/.wrangler/probe-tmp TMP=...`；各 serve/KV 用独立 `--state-dir`；跑 build 前 `netstat` 确认 88xx/89xx 无 dev server 占 dist。
 
+> **后续状态（2026-10-17，用户授权）** —— 本文件正文是 2026-10-12 的验收读数，**保持原样**；
+> 其中**触摸结论已被 2026-10-17 的产品变更取代**：smoke 13 的台湾子项与 A6「长按仍下钻」不再是现行口径。
+> 现行手势语义：轻点可下钻省份 = 下钻；轻点台湾/港澳/南海 = 面板打开**并保持**；长按 ≥300ms = 面板打开；
+> 鼠标右键 = 面板。经用户授权，这是**主动偏离等价性基线的产品变更，不是迁移回归修复**（修复
+> 「面板被同一次触摸迟到的合成 click 关掉」这一基线缺陷）。现行口径与实测轨迹见
+> `docs/parity-touch-compare.md` 的「新裁定（2026-10-17）」/「T5 实测轨迹」、`docs/migration-parity.md` §8、
+> `AGENTS.md` smoke 13。
+
 ## 结论
 
 - **14 项 smoke：全部通过**（逐条证据见下；smoke 13 的台湾子项按「与旧站一致」判定，见发现 F-P1）。
@@ -61,7 +69,7 @@
 
 | 条目 | 结论 | 证据 |
 |------|------|------|
-| A1 统一下钻入口 | 通过 | 点省份 → `activeProvince`/`activeMapId` 正确；`activations` 记录 `source=map`；「地区一览」同走 `activateRegion`（`source=ledger`） |
+| A1 统一下钻入口 | 通过 | 点省份 → `activeProvince`/`activeMapId` 正确；`activations` 记录 `source=map`（**按输入设备区分**：鼠标为 `'map'`、触摸轻点为 `'touch-tap'`、长按为 `'touch-hold'`；2026-10-17 起）；「地区一览」同走 `activateRegion`（`source=ledger`） |
 | A2 返回全国（按钮 + Esc） | 通过 | 两条路径都回 `cn/china` |
 | A3 台湾/香港/澳门/南海只开面板、不发省脚本 | 通过 | 4 例逐一点击：无 `/_astro/<省slug>.*.js` 请求 |
 | A4 缩放不低于适配比例 | 通过 | `zoom=1.25 === scaleLimit.min`；缩到底地图完整铺满 |

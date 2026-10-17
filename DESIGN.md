@@ -266,7 +266,7 @@ disabled `background: var(--color-bg-sunken); color: var(--color-text-muted)`
 
 - 外壳用原生 `<details>` + `<summary>`：天然可键盘操作、自带展开/折叠状态播报，默认收起，不把 34 行塞给所有人（`progressive-disclosure`）。
 - 内部是原生 `<table>`：`<th scope="col">` 表头、`<th scope="row">` 地区名、`aria-sort` 只标在当前真正排序的那一列上。
-- 每行一个 `.region-table__btn`，`aria-label` 必须说清按下去会发生什么（`进入 X 地图详情` / `查看 X 的公开人数`）。
+- 每行**两个** `.region-table__btn`：「查看」（`data-action="view"`，轻点语义：可下钻则进省地图，否则开公开人数面板）与「详情」（`data-action="detail"`，强制开面板）。`aria-label` 必须说清按下去会发生什么（`进入 X 地图详情` / `查看 X 的公开人数`；「详情」为 `查看 X 的人数与同学信息`，未登录时补「需先输入口令」）。「详情」用 `.region-table__btn--secondary` 降一档呈现主次。
 - **表头不许 `position: sticky`**：粘性表头 + `position: fixed` 的底部面板会一起盖住 Tab 进入的行内按钮（WCAG 2.2 2.4.11）。
 
 ```css

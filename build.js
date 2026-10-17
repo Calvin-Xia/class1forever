@@ -142,6 +142,7 @@ const requiredFiles = [
     'scripts/check-runtime.mjs',
     'scripts/local-runtime.mjs',
     'tests/api-contract.test.mjs',
+    'tests/map-touch.test.mjs',
     '.github/workflows/ci.yml'
 ];
 

@@ -50,6 +50,17 @@ jobs:
       - name: API contract tests
         run: npm run test:api
 
+      # 真浏览器手势语义回归：轻点下钻；长按 / 右键 / 轻点台湾开面板且**保持打开**；
+      # 「地区一览」键盘等价。这类缺陷只在真 Chromium 的
+      # 「触摸事件 → 浏览器合成鼠标事件 → click」时序里出现。
+      # Playwright 的浏览器二进制不进 npm 依赖，所以在这一步单独装
+      # （--with-deps 会把 Ubuntu 需要的系统库一起装上）。
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Touch gesture regression (real Chromium)
+        run: npm run test:touch
+
       - name: EdgeOne static target and application contracts
         run: npm run check:edgeone
 
