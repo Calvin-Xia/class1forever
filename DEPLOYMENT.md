@@ -97,8 +97,14 @@ npx wrangler secret put DETAILS_SESSION_SECRET
 
 > 注意：**Pages 项目的 Secrets 与 Worker 的 Secrets 是两套**。切换那天需要把这两个名字重新绑到 Worker 上，
 > 否则详情功能直接不可用（`npx wrangler secret list` 核对名字）。
-> 预览环境同名配置：`npx wrangler secret put DETAILS_PASSPHRASE --env preview`（以及 `DETAILS_SESSION_SECRET`）——
-> 但先看一下 `docs/cutover-runbook.md` §4 关于 `--env preview` 实际绑到哪个 KV namespace 的提醒。
+>
+> **不要用 `--env preview` 配"预览环境"**：本仓库的 wrangler 命令会被重定向到 Astro 适配器生成的
+> `dist/server/wrangler.json`，那份配置里**没有 `env.preview` 块**（只有 `definedEnvironments:["preview"]`），
+> 所以 `npx wrangler secret put <name> --env preview` 实际写的是**生产 worker `class1forever`**；
+> KV 同理（`--env preview` 解析到生产 namespace `e6c9c4ff…`）。要配置 PR 预览那个独立 worker，
+> 显式点名或指定派生配置：`npx wrangler secret put DETAILS_PASSPHRASE --name class1forever-preview`
+> （或 `--config .wrangler/preview/wrangler.json`）。正常路径不需要手工设置：`preview.yml` 在上传/自举时
+> 用 `--secrets-file` 写入 demo 口令；手工自举序列见 `docs/ci-deployment.md` 的「PR 预览」一节。
 
 可选变量：
 
