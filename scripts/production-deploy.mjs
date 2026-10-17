@@ -352,13 +352,105 @@ async function verifyPreview() {
     console.log(JSON.stringify({ phase: 'edgeone-preview', deploymentId: deployment.id, runtimeVerified: true }));
 }
 
-async function verifyAssets(platform) {
-    const manifest = read('assets.json');
-    await parallelFiles(manifest.files, async file => {
-        const r = await request(platform, '/_astro/' + file.name);
-        check(r.status === 200 && digest(r.bytes) === file.sha256, 'LIVE_ASSET_BYTES_MISMATCH_' + platform.toUpperCase());
-    });
-    console.log(JSON.stringify({ phase: 'verify-assets', platform, files: manifest.files.length, passed: true }));
+/**
+ * 发布后读回资产的有界重试参数。
+ *
+ * 为什么必须重试：EO 兼容部署在被控制面确认后，新 chunk **还要一段时间才传播到边缘**。
+ * 线上实测：成功 run 是「确认 → 读回通过」间隔 33.1 秒；失败 run 只有 **0.54 秒**就逐个读回，
+ * 于是 `LIVE_ASSET_BYTES_MISMATCH_EDGEONE` —— 事后 40 分钟复现，123 个文件逐字节不符 0 个，
+ * 内容本来就对，只是当时边缘还没有。只读校验可以安全重试（发布 CLI 绝不重试）。
+ * 最坏总等待 = 0+2+5+10+20 = 37 秒，加上 5 轮读回（约 2~4 秒/轮，6 并发）≈ 1 分钟内。
+ */
+const ASSET_VERIFY_DELAYS_MS = [0, 2000, 5000, 10000, 20000];
+/** 失败诊断里最多列几个文件名（不要把上百个名字全倒进一行日志）。 */
+const ASSET_VERIFY_MAX_NAMES = 5;
+/** 诊断里 digest 只取前 12 位：足够区分内容不同，又不会把长串灌进日志。 */
+const ASSET_DIGEST_PREFIX = 12;
+
+function shortDigest(value) {
+    return value == null ? '-' : String(value).slice(0, ASSET_DIGEST_PREFIX);
+}
+
+/**
+ * 逐个读回 `/_astro/<name>` 并比对 sha256，带**有界重试 + 逐文件诊断**。
+ *
+ * 依赖全部可注入（manifest / request / log / sleep / delays），测试据此在离线环境里注入
+ * 「第一轮缺文件、第二轮齐全」「始终缺同一个文件」「字节不同」三种 fetch，不必碰生产。
+ *
+ * 判定语义：
+ *   - 只有**最后一轮**仍有失败才抛出，错误码保持 `LIVE_ASSET_BYTES_MISMATCH_<PLATFORM>`；
+ *     消息里追加平台、失败文件名、HTTP 状态与两个 digest 的前 12 位（上次线上失败只给了一个码，
+ *     复盘时被判为不可诊断）。
+ *   - 每一轮失败都打一行 `{"phase":"verify-assets-retry", …}`，据此区分「边缘还没传播」（状态码
+ *     多为 404、下一轮就通过）与「内容真的不一致」（状态码 200、digest 不同、每轮都一样）。
+ *   - 成功那行保持原样：`{"phase":"verify-assets","platform":…,"files":N,"passed":true}`。
+ */
+export async function verifyAssets(platform, dependencies = {}) {
+    const {
+        manifest = read('assets.json'),
+        request: requestImpl = request,
+        log = console.log,
+        sleep = ms => new Promise(resolve => setTimeout(resolve, ms)),
+        delays = ASSET_VERIFY_DELAYS_MS
+    } = dependencies;
+
+    const code = 'LIVE_ASSET_BYTES_MISMATCH_' + platform.toUpperCase();
+    let failures = [];
+
+    for (let attempt = 0; attempt < delays.length; attempt += 1) {
+        /* 第一次立即读回；之后按 delays 的节奏等待（0 也照样让出事件循环，别把「0 间隔」
+           变成「同一个 tick 里连打同一张边缘」）。 */
+        if (attempt > 0) await sleep(delays[attempt]);
+
+        failures = [];
+        await parallelFiles(manifest.files, async file => {
+            let status = null;
+            let liveDigest = null;
+            let transport = null;
+            try {
+                const response = await requestImpl(platform, '/_astro/' + file.name);
+                status = response.status;
+                liveDigest = response.status === 200 ? digest(response.bytes) : null;
+            } catch (error) {
+                /* 单个文件的网络抖动不该让这一轮直接中止：记进失败清单，下一轮重试。 */
+                transport = error instanceof Error && /^[A-Za-z]{1,32}$/.test(error.name) ? error.name.toUpperCase() : 'UNKNOWN';
+            }
+            if (status !== 200 || liveDigest !== file.sha256) {
+                failures.push({ name: file.name, status, live: liveDigest, expected: file.sha256, transport });
+            }
+        });
+
+        if (failures.length === 0) {
+            log(JSON.stringify({ phase: 'verify-assets', platform, files: manifest.files.length, passed: true }));
+            return;
+        }
+
+        const shown = failures.slice(0, ASSET_VERIFY_MAX_NAMES);
+        log(JSON.stringify({
+            phase: 'verify-assets-retry',
+            platform,
+            attempt: attempt + 1,
+            maxAttempts: delays.length,
+            failed: failures.length,
+            digestMismatch: failures.filter(failure => failure.status === 200).length,
+            names: shown.map(failure => failure.name),
+            statuses: shown.map(failure => failure.status),
+            nextRetryInMs: attempt < delays.length - 1 ? delays[attempt + 1] : null
+        }));
+    }
+
+    const shown = failures.slice(0, ASSET_VERIFY_MAX_NAMES);
+    const details = shown.map(failure => ({
+        name: failure.name,
+        status: failure.status,
+        live: shortDigest(failure.live),
+        expected: shortDigest(failure.expected),
+        ...(failure.transport ? { transport: failure.transport } : {})
+    }));
+    throw new Error(
+        `${code} platform=${platform} attempts=${delays.length} failed=${failures.length}` +
+            `${failures.length > shown.length ? ` showing=${shown.length}` : ''} details=${JSON.stringify(details)}`
+    );
 }
 
 /**
@@ -432,21 +524,39 @@ export async function deploy(dependencies = {}) {
     if (environment.GITHUB_STEP_SUMMARY) fs.appendFileSync(environment.GITHUB_STEP_SUMMARY, `## Dual production deployment\n\n- Commit: ${result.sha}\n- Release: ${result.release}\n- CF and EO production verified; previous chunks retained.\n- Data, KV bindings, routes and DNS preserved; existing Worker secrets are left in place by --keep-vars (values are never read back or compared).\n- Public chunks per platform: ${read('assets.json').files.length}\n`);
 }
 
+/**
+ * 把顶层 catch 到的错误分成「分类码 + 结构化诊断 + cause」。
+ *
+ * 契约：分类码是消息的**第一个字段**（`<CODE>` 或 `<CODE> key=value …`），`<CODE>` 必须匹配
+ * `^[A-Z0-9_]+$`。这样资产读回失败可以把 `platform=… failed=… details=[…]` 附在码后面，
+ * 而日志里的 `error` 字段仍然是 `LIVE_ASSET_BYTES_MISMATCH_<PLATFORM>`（外部契约不变）。
+ *
+ * 安全边界：只有「第一个字段是严格码」的才透出 detail。未分类的错误（TypeError、网络异常等）
+ * 一律降级成 `PRODUCTION_DEPLOY_FAILED` 且**不打印 message** —— 它可能带 URL、服务器响应片段
+ * 或凭据，只暴露 error.name 的类别。
+ */
+export function classifyFailure(error) {
+    const message = typeof error?.message === 'string' ? error.message : '';
+    const [firstToken, ...rest] = message.split(' ');
+    const classified = /^[A-Z0-9_]+$/.test(firstToken || '');
+    return {
+        classified,
+        code: classified ? firstToken : 'PRODUCTION_DEPLOY_FAILED',
+        detail: classified ? rest.join(' ') : '',
+        cause: error instanceof Error && /^[A-Za-z]{1,32}$/.test(error.name) ? error.name.toUpperCase() : 'UNKNOWN'
+    };
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
     const commands = { diagnose: diagnoseTransport, prepare, 'stage-compatibility': stageCompatibility, 'verify-preview': verifyPreview, deploy };
     Promise.resolve().then(() => { check(process.argv.length === 3 && Object.hasOwn(commands, process.argv[2]), 'INVALID_PRODUCTION_COMMAND'); return commands[process.argv[2]](); }).catch(error => {
-        const classified = /^[A-Z0-9_]+$/.test(error.message);
-        /* 未分类的错误只暴露 error.name（TypeError / TimeoutError …），绝不打印 message：
-           它可能带 URL、服务器响应片段或凭据。同时把失败写进会作为 artifact 上传的
-           result.json —— 上一次线上失败就只有一行 PRODUCTION_DEPLOY_FAILED，无从判断。 */
-        const cause = error instanceof Error && /^[A-Za-z]{1,32}$/.test(error.name) ? error.name.toUpperCase() : 'UNKNOWN';
-        const code = classified ? error.message : 'PRODUCTION_DEPLOY_FAILED';
-        console.error(JSON.stringify({ error: code, phase: lastPhase || null, ...(classified ? {} : { cause }) }));
+        const { classified, code, detail, cause } = classifyFailure(error);
+        console.error(JSON.stringify({ error: code, phase: lastPhase || null, ...(detail ? { detail } : {}), ...(classified ? {} : { cause }) }));
         try {
             const file = path.join(WORK, 'result.json');
             if (fs.existsSync(file)) {
                 const current = JSON.parse(fs.readFileSync(file, 'utf8'));
-                current.failure = { code, cause, phase: lastPhase || null };
+                current.failure = { code, cause, phase: lastPhase || null, ...(detail ? { detail } : {}) };
                 fs.writeFileSync(file, JSON.stringify(current, null, 2) + '\n');
             }
         } catch (_ignored) { /* 证据写入失败不能掩盖原始失败 */ }

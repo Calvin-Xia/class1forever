@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { coordinatedDeploy, deployEdgeone, deploymentCandidate, eoApi, validateManifest, validatePreviousPage, responseDiagnostic, stageCompatibility, deploy, cloudflareState, edgeoneProject, edgeoneProductionDeployment, assertEdgeoneProductionUnchanged, assertMainNotSuperseded, assertProductionEnvironment, assertUnchangedSincePrepare } from '../scripts/production-deploy.mjs';
+import { coordinatedDeploy, deployEdgeone, deploymentCandidate, eoApi, validateManifest, validatePreviousPage, responseDiagnostic, stageCompatibility, deploy, cloudflareState, edgeoneProject, edgeoneProductionDeployment, assertEdgeoneProductionUnchanged, assertMainNotSuperseded, assertProductionEnvironment, assertUnchangedSincePrepare, verifyAssets, classifyFailure } from '../scripts/production-deploy.mjs';
 
 const config = JSON.parse(fs.readFileSync(new URL('../config/production.json', import.meta.url), 'utf8'));
 const state = () => ({ release: 'prod_20261015_01', sessionNamespace: config.sessionNamespace, dataNamespace: config.dataNamespace, workersDev: true, previews: true, routes: [...config.routes.map(pattern => ({ pattern, script: config.worker })), { pattern: 'other.example/*', script: 'other-worker' }] });
@@ -252,4 +253,136 @@ test('EO control-plane transport and body failures get their own codes instead o
         if (originalToken === undefined) delete process.env.EDGEONE_API_TOKEN;
         else process.env.EDGEONE_API_TOKEN = originalToken;
     }
+});
+
+/* 2026-10-17 的线上发布被「读回太急」卡住：EO 兼容部署控制面确认后 **0.54 秒**就读回资产，
+   新 chunk 还没传播到边缘 → `LIVE_ASSET_BYTES_MISMATCH_EDGEONE`（事后复现：123 个文件逐字节
+   不符 0 个）。以下三个用例把「有界重试」「逐文件诊断」「错误码不变」固定下来，全部用注入的
+   request 离线构造，不碰生产网络。 */
+const assetSha = value => crypto.createHash('sha256').update(value).digest('hex');
+const assetBodies = names => new Map(names.map(name => [name, Buffer.from('body-of-' + name)]));
+const assetManifest = names => ({ schema: 1, files: names.map(name => ({ name, sha256: assetSha('body-of-' + name) })) });
+
+test('asset read-back retries while the edge is still propagating and keeps the success line shape', async () => {
+    const names = ['app.aaaa.js', 'chunk.bbbb.css', 'motion.cccc.js'];
+    const bodies = assetBodies(names);
+    const lines = [];
+    let pass = 0;
+
+    await verifyAssets('edgeone', {
+        manifest: assetManifest(names),
+        delays: [0, 0, 0],
+        sleep: async () => { pass += 1; }, // 每次「等待」＝进入下一轮
+        log: line => lines.push(line),
+        request: async (_platform, pathname) => {
+            const name = pathname.replace('/_astro/', '');
+            /* 第一轮：边缘还没传播（两个新 chunk 404）；第二轮：齐全。 */
+            if (pass === 0 && name !== names[0]) return { status: 404, headers: {}, bytes: Buffer.from('not propagated yet') };
+            return { status: 200, headers: {}, bytes: bodies.get(name) };
+        }
+    });
+
+    const retries = lines.map(line => JSON.parse(line)).filter(entry => entry.phase === 'verify-assets-retry');
+    assert.equal(retries.length, 1);
+    assert.equal(retries[0].platform, 'edgeone');
+    assert.equal(retries[0].attempt, 1);
+    assert.equal(retries[0].maxAttempts, 3);
+    assert.equal(retries[0].failed, 2);
+    assert.deepEqual(retries[0].names.slice().sort(), [names[1], names[2]].sort());
+    assert.deepEqual(retries[0].statuses, [404, 404]);
+    assert.equal(retries[0].digestMismatch, 0);
+    assert.equal(retries[0].nextRetryInMs, 0);
+
+    /* 成功那一行的形状保持不变：外部验收脚本可能按字段读它。 */
+    assert.deepEqual(JSON.parse(lines.at(-1)), { phase: 'verify-assets', platform: 'edgeone', files: 3, passed: true });
+    assert.equal(lines.length, 2);
+});
+
+test('a file that never appears fails only after the bounded retries, with name and status in the message', async () => {
+    const names = ['app.aaaa.js', 'chunk.bbbb.css'];
+    const bodies = assetBodies(names);
+    const lines = [];
+    const missing = names[1];
+
+    await assert.rejects(
+        verifyAssets('edgeone', {
+            manifest: assetManifest(names),
+            delays: [0, 0, 0],
+            sleep: async () => {},
+            log: line => lines.push(line),
+            request: async (_platform, pathname) =>
+                pathname.endsWith(missing)
+                    ? { status: 404, headers: {}, bytes: Buffer.from('still missing') }
+                    : { status: 200, headers: {}, bytes: bodies.get(names[0]) }
+        }),
+        error => {
+            assert.match(error.message, /^LIVE_ASSET_BYTES_MISMATCH_EDGEONE/);
+            assert.match(error.message, /platform=edgeone/);
+            assert.match(error.message, /attempts=3/);
+            assert.match(error.message, /failed=1/);
+            assert.ok(error.message.includes(missing), `消息里应有失败文件名 ${missing}：${error.message}`);
+            assert.ok(error.message.includes('"status":404'), `消息里应有 HTTP 状态：${error.message}`);
+            assert.ok(error.message.includes('"live":"-"'), `404 没有 live digest，应为 "-"：${error.message}`);
+            assert.ok(error.message.includes(`"expected":"${assetSha('body-of-' + missing).slice(0, 12)}"`), error.message);
+            return true;
+        }
+    );
+
+    const retries = lines.map(line => JSON.parse(line)).filter(entry => entry.phase === 'verify-assets-retry');
+    assert.equal(retries.length, 3, '每一轮失败都要打一行 retry JSON');
+    assert.deepEqual(retries.map(entry => entry.failed), [1, 1, 1]);
+    assert.equal(retries.at(-1).nextRetryInMs, null, '最后一轮不应再声明下一次间隔');
+});
+
+test('a byte difference is reported with both digests and stays distinguishable from a 404', async () => {
+    const names = ['app.aaaa.js', 'chunk.bbbb.css'];
+    const bodies = assetBodies(names);
+    const lines = [];
+    const tampered = names[1];
+    const tamperedBytes = Buffer.from('tampered bytes');
+
+    await assert.rejects(
+        verifyAssets('cloudflare', {
+            manifest: assetManifest(names),
+            delays: [0],
+            sleep: async () => {},
+            log: line => lines.push(line),
+            request: async (_platform, pathname) =>
+                pathname.endsWith(tampered)
+                    ? { status: 200, headers: {}, bytes: tamperedBytes }
+                    : { status: 200, headers: {}, bytes: bodies.get(names[0]) }
+        }),
+        error => {
+            assert.match(error.message, /^LIVE_ASSET_BYTES_MISMATCH_CLOUDFLARE/);
+            assert.ok(error.message.includes(tampered), error.message);
+            assert.ok(error.message.includes('"status":200'), error.message);
+            assert.ok(!error.message.includes('"status":404'), `字节不同必须与 404 可区分：${error.message}`);
+            assert.ok(error.message.includes(`"live":"${assetSha(tamperedBytes).slice(0, 12)}"`), error.message);
+            assert.ok(error.message.includes(`"expected":"${assetSha('body-of-' + tampered).slice(0, 12)}"`), error.message);
+            return true;
+        }
+    );
+
+    const retries = lines.map(line => JSON.parse(line)).filter(entry => entry.phase === 'verify-assets-retry');
+    assert.equal(retries.length, 1);
+    assert.equal(retries[0].digestMismatch, 1);
+    assert.deepEqual(retries[0].statuses, [200]);
+});
+
+test('the top-level classifier keeps the error code and only surfaces structured detail for classified codes', () => {
+    const classified = classifyFailure(new Error('LIVE_ASSET_BYTES_MISMATCH_EDGEONE platform=edgeone attempts=5 failed=1 details=[{"name":"x.js","status":404}]'));
+    assert.equal(classified.classified, true);
+    assert.equal(classified.code, 'LIVE_ASSET_BYTES_MISMATCH_EDGEONE');
+    assert.match(classified.detail, /platform=edgeone/);
+    assert.match(classified.detail, /"name":"x\.js"/);
+
+    /* 未分类的错误绝不透出 message：它可能带 URL、响应片段或凭据，只允许暴露 name 类别。 */
+    const opaque = classifyFailure(new TypeError('https://user:secret@api.example/v1?token=abc failed with 500'));
+    assert.equal(opaque.classified, false);
+    assert.equal(opaque.code, 'PRODUCTION_DEPLOY_FAILED');
+    assert.equal(opaque.detail, '');
+    assert.equal(opaque.cause, 'TYPEERROR');
+
+    assert.equal(classifyFailure(new Error('MAIN_SUPERSEDED_BEFORE_DEPLOY')).code, 'MAIN_SUPERSEDED_BEFORE_DEPLOY');
+    assert.equal(classifyFailure(new Error('MAIN_SUPERSEDED_BEFORE_DEPLOY')).detail, '');
 });
