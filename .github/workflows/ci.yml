@@ -23,9 +23,8 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          # astro 6 的 engines 要求 node >= 22.12.0（wrangler >= 22.0.0），
-          # 所以这里用 24，不再用 node 20。
-          node-version: 24
+          # 固定 2026-10-21 安全版本，避免命中尚未修复 CVE-2026-111497 的 24.x 缓存。
+          node-version: '24.22.1'
           cache: npm
 
       - name: Install dependencies
